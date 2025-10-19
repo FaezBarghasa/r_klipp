@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "A no_std driver for the DRV8825 stepper motor driver."
-repository = "https://github.com/your-repo/mcu-drivers"
+
 
 [dependencies]
 embedded-hal = { workspace = true }

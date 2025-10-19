@@ -2,14 +2,12 @@
 name = "klipper-proto"
 version = "0.1.0"
 edition = "2021"
-authors = ["Your Name <you@example.com>"]
+authors = ["Faez Barghasa <faez.barghasa.org@gmail.com>"]
 description = "A canonical Rust implementation of the Klipper host <-> MCU messaging protocol."
 license = "MIT"
-repository = "https://github.com/your-username/klipper-proto"
 readme = "README.md"
 keywords = ["klipper", "3dprinting", "mcu", "no_std"]
 categories = ["embedded", "network"]
-documentation = "https://docs.rs/klipper-proto"
 
 [features]
 default = ["std"]

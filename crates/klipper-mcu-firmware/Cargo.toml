@@ -2,7 +2,7 @@
 name = "klipper-mcu-firmware"
 version = "0.1.0"
 edition = "2021"
-authors = ["Your Name <you@example.com>"]
+authors = ["Faez Barghasa <faez.barghasa.org@gmail.com>"]
 license = "MIT" # Or your chosen license
 description = "A no_std MCU firmware for Klipper"
 

@@ -1,0 +1,22 @@
+[package]
+name = "firmware-builder"
+version = "0.1.0"
+edition = "2021"
+authors = ["The r_klipp Developers"]
+description = "A command-line utility for building the r_klipp MCU firmware."
+license = "MIT"
+repository = "https://github.com/faezbarghasa/r_klipp"
+
+[dependencies]
+# Dependencies for a command-line tool
+clap = { workspace = true, features = ["derive"] }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+# This crate might need to interact with other crates to get build info in the future
+klipper-mcu-firmware = { path = "../klipper-mcu-firmware", optional = true }
+
+[[bin]]
+name = "firmware-builder"
+path = "src/main.rs"

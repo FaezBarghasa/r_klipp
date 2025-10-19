@@ -2,10 +2,9 @@
 name = "motion"
 version = "0.1.0"
 edition = "2021"
-authors = ["Your Name <you@example.com>"]
+authors = ["Faez Barghasa <faez.barghasa.org@gmail.com>"]
 description = "A deterministic motion planner and kinematics library for host and MCU."
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/your-username/motion"
 keywords = ["motion-control", "kinematics", "no_std", "robotics", "cnc"]
 categories = ["embedded", "no-std", "science::robotics"]
 

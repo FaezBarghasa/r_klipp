@@ -1,0 +1,62 @@
+[workspace]
+resolver = "2"
+
+# List all the crates in the workspace. This allows running commands like `cargo build --workspace`
+# from the root directory.
+members = [
+    "crates/compat-layer",
+    "crates/firmware-builder",
+    "crates/klipper-host",
+    "crates/klipper-mcu-firmware",
+    "crates/klipper-proto",
+    "crates/motion",
+    "crates/sim",
+    "crates/thermal",
+
+    # Crates from the mcu-drivers workspace are included directly
+    "crates/mcu-drivers/driver-drv8825",
+    "crates/mcu-drivers/driver-endstop",
+    "crates/mcu-drivers/driver-thermistor",
+    "crates/mcu-drivers/driver-tmc",
+]
+
+# Default members to run when no specific package is chosen
+default-members = [
+    "crates/klipper-host",
+    "crates/klipper-mcu-firmware",
+]
+
+# Common dependency versions for all crates in the workspace.
+# This helps ensure consistency and simplifies version management.
+[workspace.dependencies]
+anyhow = "1.0"
+bytes = "1.6.0"
+clap = { version = "4.5.8", features = ["derive"] }
+critical-section = "1.1.2"
+defmt = "0.3.8"
+embedded-hal = "1.0.0"
+embedded-hal-mock = "0.10.0"
+fixed = { version = "1.25.0", features = ["serde"] }
+futures = { version = "0.3.30", default-features = false, features = ["async-await"] }
+heapless = "0.8.0"
+nb = "1.1.0"
+num-traits = "0.2.19"
+postcard = { version = "1.0.8", default-features = false, features = ["use-std"] }
+serde = { version = "1.0.203", features = ["derive"] }
+serde_json = "1.0.120"
+thiserror = "1.0.61"
+tokio = { version = "1.38.0", features = ["full"] }
+tokio-util = { version = "0.7.11", features = ["codec"] }
+tracing = "0.1.40"
+tracing-subscriber = "0.3.18"
+
+# Global build profiles for the entire workspace
+[profile.dev]
+opt-level = 1
+
+[profile.release]
+codegen-units = 1
+debug = true # Include debug symbols in release builds for better backtraces
+lto = "fat"
+opt-level = "z" # Optimize for binary size
+strip = true
