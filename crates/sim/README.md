@@ -1,27 +1,31 @@
-# Klipper Firmware Simulator
+# Klipper in Rust: Simulator Crate
 
-This crate provides a simulation environment for the Klipper Rust firmware. It allows the firmware to be compiled and run on a host machine, which is useful for development, testing, and debugging without requiring physical hardware.
+## Overview
+
+The `sim` crate provides a simulator for the Klipper in Rust MCU firmware. It allows the firmware logic to be compiled and run as a native application on a host machine (e.g., a PC).
+
+This is an invaluable tool for development, debugging, and testing, as it provides a much faster and more convenient development cycle than testing on physical hardware.
 
 ## Features
 
-- **Hardware Abstraction**: Simulates the MCU hardware, allowing the firmware to run on a standard computer.
-- **Testing and Debugging**: Enables rapid testing of firmware logic in a controlled environment.
-- **CI Integration**: Can be used in Continuous Integration (CI) pipelines to run automated tests.
+*   **Hardware Abstraction**: Provides a simulated `Hardware Abstraction Layer (HAL)` that mimics the behavior of the real MCU peripherals. For example, it provides a simulated UART that can be connected to a pseudo-terminal, and simulated GPIOs that can be toggled and monitored.
+*   **Host Integration**: The simulator can be connected to host-side test scripts or a simulated Klipper host, allowing for end-to-end testing of the entire software stack.
+*   **Logging and Debugging**: When running in the simulator, logs can be printed directly to the console, and standard debugging tools like `gdb` or `lldb` can be used.
+*   **No Hardware Required**: Allows for the development and testing of large parts of the firmware without needing access to a physical 3D printer or MCU board.
 
 ## Usage
 
-This crate is a development tool and is not intended for production use. To run the simulator, you can use the following command:
+To run the simulator, simply execute `cargo run` from within this crate's directory.
 
 ```bash
-cargo run -p klipper-mcu-firmware --features sim
+cd crates/sim
+cargo run
 ```
 
-This will build and run the firmware in simulation mode.
+The simulator will start and listen for a connection from a host application.
 
-## Contributing
+## How it Works
 
-Contributions to improve the simulator are welcome. Please see the main project's [contributor guide](../../docs/contributors.md) for more information.
+The simulator works by using conditional compilation (`#[cfg(...)]`) to replace the real hardware drivers with simulated versions when the `sim` feature is enabled.
 
-## License
-
-This crate is licensed under the MIT License. See the [LICENSE](../../LICENSE) file for details.
+The main application logic in `klipper-mcu-firmware` is written against the generic `embedded-hal` traits, so it can be compiled with either the real HAL for the target MCU or the simulated HAL provided by this crate. This allows the same high-level application code to run in both environments.

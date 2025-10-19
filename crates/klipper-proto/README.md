@@ -1,35 +1,56 @@
-# Klipper Protocol Crate
+# Klipper in Rust: Protocol Definition Crate
 
-This crate provides a canonical Rust implementation of the Klipper host-to-MCU messaging protocol. It is designed for both `std` and `no_std` environments, making it suitable for host-side applications and MCU firmware alike.
+## Overview
+
+The `klipper-proto` crate provides the core data structures and serialization/deserialization logic for the Klipper communication protocol. It is a foundational crate used by both the MCU firmware and host-side tools to ensure that both ends of the communication link are in sync.
+
+This crate is a `no_std` library, making it suitable for use in resource-constrained embedded environments.
 
 ## Features
 
-- **Canonical Protocol Implementation**: Correctly implements Klipper's binary framing, compression, and command/response system.
-- **`std` and `no_std` Support**: Usable on both host-side applications and on the MCU. The `std` feature is enabled by default.
-- **Type-Safe**: Uses Rust's type system to represent Klipper commands and responses, reducing runtime errors.
-- **Minimal Dependencies**: Keeps `no_std` dependencies to a minimum.
+*   **Strongly-Typed Messages**: All Klipper protocol messages are defined as Rust enums and structs, leveraging the type system to prevent errors related to incorrect message formats or parameter types.
+*   **Zero-Copy Deserialization**: The deserialization logic is designed to be highly efficient, avoiding memory allocations where possible by parsing messages directly from the receive buffer.
+*   **Compile-Time Correctness**: By defining the protocol in a single, shared crate, we can verify at compile time that the firmware and host tools are compatible.
+*   **Extensibility**: The protocol definition is designed to be easily extended with new messages and parameters as the firmware evolves.
 
 ## Usage
 
-Add this crate to your `Cargo.toml`:
+This crate is primarily used as a dependency by other crates in the workspace.
 
-```toml
-[dependencies]
-klipper-proto = { version = "0.1.0", default-features = false, features = ["alloc"] }
+### Defining a Message
+
+Messages are defined in the `src/messages.rs` file. Each message is a struct that derives the `Serialize` and `Deserialize` traits.
+
+```rust
+// Example of a message definition
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SetHeaterTemperature {
+    pub heater_id: u8,
+    pub target_temp: f32,
+}
 ```
 
-For `no_std` environments, disable the default `std` feature and enable `alloc`. For host-side applications, you can enable the `std` feature for additional helpers.
+### Serializing and Deserializing
 
-## Protocol Details
+The crate provides functions for serializing a message struct into a byte buffer and for deserializing a byte buffer back into a message struct.
 
-The Klipper protocol is a binary protocol that uses a framing mechanism with sync bytes (`0x7E`), a length, a payload, and a CRC checksum. It includes a simple dictionary-based compression scheme. This crate tracks the Klipper protocol as it evolves and provides a `CommandRegistry` to manage the command dictionary established at connection time.
+```rust
+use klipper_proto::messages::{Message, SetHeaterTemperature};
+use klipper_proto::codec::KlipperCodec;
 
-Payloads are serialized using `postcard`, a `serde` format designed for constrained environments.
+fn example_usage() {
+    let message = Message::SetHeaterTemperature(SetHeaterTemperature {
+        heater_id: 0,
+        target_temp: 200.0,
+    });
 
-## Contributing
+    // Serialize the message
+    let mut buffer = [0u8; 64];
+    let encoded_len = KlipperCodec::encode(&message, &mut buffer).unwrap();
 
-Contributions to improve the protocol implementation are welcome. Please see the main project's [contributor guide](../../docs/contributors.md) for more information.
+    // Deserialize the message
+    let decoded_message = KlipperCodec::decode(&buffer[..encoded_len]).unwrap();
 
-## License
-
-This crate is licensed under the MIT License. See the [LICENSE](../../LICENSE) file for details.
+    assert_eq!(message, decoded_message);
+}
+```

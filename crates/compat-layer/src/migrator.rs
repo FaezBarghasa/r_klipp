@@ -8,13 +8,28 @@ use std::collections::HashMap;
 /// A report containing warnings or other notes from the migration process.
 #[derive(Debug, Default)]
 pub struct MigrationReport {
+    /// A list of warnings generated during the migration.
+    /// These are non-fatal issues that the user should be aware of.
     pub warnings: Vec<String>,
+    /// A list of sections from the original config that were not understood
+    /// and were therefore ignored by the migrator.
     pub unsupported_sections: Vec<String>,
 }
 
 /// Migrates a raw `printer.cfg` string into a `PrinterConfig` and a `MigrationReport`.
 ///
-/// This is the main entry point for the library.
+/// This is the main entry point for the library. It orchestrates the parsing of the
+/// INI-like format and the subsequent mapping of that data into the strongly-typed
+/// `PrinterConfig` struct.
+///
+/// # Arguments
+///
+/// * `content` - A string slice containing the entire content of the `printer.cfg` file.
+///
+/// # Returns
+///
+/// A `Result` containing a tuple of the migrated `PrinterConfig` and a `MigrationReport`,
+/// or a `MigrationError` if a fatal error occurs.
 pub fn migrate_config(content: &str) -> Result<(PrinterConfig, MigrationReport), MigrationError> {
     let parsed_config = parse_ini(content)?;
     let mut report = MigrationReport::default();
@@ -22,14 +37,15 @@ pub fn migrate_config(content: &str) -> Result<(PrinterConfig, MigrationReport),
     Ok((config, report))
 }
 
-/// Maps the parsed key-value data into the strongly-typed `PrinterConfig`.
+/// Maps the parsed key-value data from `ParsedConfig` into the strongly-typed `PrinterConfig`.
+/// It iterates through the known sections and populates the struct fields accordingly.
 fn map_to_structs(
     parsed: &ParsedConfig,
     report: &mut MigrationReport,
 ) -> Result<PrinterConfig, MigrationError> {
     let mut config = PrinterConfig::default();
 
-    // --- Printer Section (Required) ---
+    // The [printer] section is mandatory.
     let printer_section = parsed
         .get("printer")
         .ok_or_else(|| MigrationError::MissingSection("printer".to_string()))?;
@@ -38,7 +54,7 @@ fn map_to_structs(
     config.max_velocity = get_parsed(printer_section, "max_velocity", "printer")?;
     config.max_accel = get_parsed(printer_section, "max_accel", "printer")?;
 
-    // --- Process other sections ---
+    // Process other known sections.
     let mut processed_sections = vec!["printer"];
     for (section_name, section_data) in parsed {
         if section_name.starts_with("stepper_") {
@@ -62,7 +78,8 @@ fn map_to_structs(
         }
     }
 
-    // --- Store unprocessed sections ---
+    // Any sections that were not processed are stored in the `other_sections` map
+    // and noted in the report.
     for (section_name, section_data) in parsed {
         if !processed_sections.contains(&section_name.as_str()) {
             config
@@ -75,6 +92,7 @@ fn map_to_structs(
     Ok(config)
 }
 
+/// Constructs a `StepperConfig` from a generic section data map.
 fn build_stepper_config(
     section_name: &str,
     data: &HashMap<String, String>,
@@ -88,6 +106,7 @@ fn build_stepper_config(
     })
 }
 
+/// Constructs an `AxisConfig` which includes a stepper and its position information.
 fn build_axis_config(
     section_name: &str,
     data: &HashMap<String, String>,
@@ -100,6 +119,7 @@ fn build_axis_config(
     })
 }
 
+/// Constructs a `HeaterConfig` for either an extruder or a heater bed.
 fn build_heater_config(
     section_name: &str,
     data: &HashMap<String, String>,
@@ -116,6 +136,7 @@ fn build_heater_config(
         filament_diameter: None,
     };
 
+    // If it's an extruder, it also has stepper and filament properties.
     if is_extruder {
         heater.stepper = Some(build_stepper_config(section_name, data)?);
         heater.nozzle_diameter = Some(get_parsed(data, "nozzle_diameter", section_name)?);
@@ -127,6 +148,8 @@ fn build_heater_config(
 
 // --- Helper functions for safe value extraction ---
 
+/// Extracts a required string value from a section's data.
+/// Returns a `MigrationError::MissingKey` if the key is not found.
 fn get_required(
     section_data: &HashMap<String, String>,
     key: &str,
@@ -141,6 +164,8 @@ fn get_required(
         })
 }
 
+/// Extracts a value from a section's data and parses it into a specified type.
+/// Returns a `MigrationError` if the key is missing or the value cannot be parsed.
 fn get_parsed<T>(
     section_data: &HashMap<String, String>,
     key: &str,

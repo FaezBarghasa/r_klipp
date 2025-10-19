@@ -7,6 +7,7 @@
 
 use crate::gcode::{parse_gcode, GCode};
 use anyhow::Result;
+use std::path::Path;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::{UnixListener, UnixStream};
 use tokio::sync::mpsc::Sender;
@@ -78,4 +79,3 @@ pub async fn start_virtual_printer(path: &str, gcode_sender: Sender<GCode>) -> R
         }
     }
 }
-

@@ -1,21 +1,35 @@
-# Compatibility Layer Crate
+# Klipper in Rust: Compatibility Layer Crate
 
-This crate provides a compatibility layer for interfacing with C-based components of the Klipper ecosystem. It is intended to bridge the gap between the pure Rust firmware and any external C libraries or legacy code that may be required for certain features.
+## Overview
+
+The `compat-layer` crate provides a compatibility layer to interface with existing C-based Klipper components or other C libraries. This is crucial for incremental migration and for leveraging battle-tested C codebases where a pure-Rust alternative is not yet available.
+
+This crate is designed to be a temporary bridge, with the long-term goal of replacing all C dependencies with safe, idiomatic Rust code.
 
 ## Features
 
-- **FFI Bindings**: Contains Foreign Function Interface (FFI) bindings to C-based Klipper code.
-- **Data Structure Conversion**: Provides utilities for converting data structures between Rust and C.
-- **Safe Abstractions**: Offers safe Rust wrappers around unsafe C functions.
+*   **C-ABI Bindings**: Provides safe Rust wrappers around C functions and data structures.
+*   **Memory Management**: Includes utilities for safely managing memory that is shared between Rust and C.
+*   **Error Handling**: Defines a clear strategy for propagating errors between the two language boundaries.
 
 ## Usage
 
-This crate is a utility for the main `klipper-mcu-firmware` and is used when interacting with C code. It is not intended for standalone use.
+To use this crate, add it as a dependency in your `Cargo.toml` and use the provided wrapper functions to call into the C code.
 
-## Contributing
+```rust
+// Example of calling a C function via the compat layer
+use compat_layer::legacy_c_code;
 
-Contributions to improve the compatibility layer are welcome. Please see the main project's [contributor guide](../../docs/contributors.md) for more information.
+fn do_something_with_c() {
+    // The unsafe block is necessary when calling C functions
+    unsafe {
+        legacy_c_code::do_something();
+    }
+}
+```
 
-## License
+## Safety
 
-This crate is licensed under the MIT License. See the [LICENSE](../../LICENSE) file for details.
+**Warning**: This crate contains a significant amount of `unsafe` code by its very nature. Interfacing with C requires careful handling of raw pointers, memory allocation, and data lifetimes. All `unsafe` blocks are carefully reviewed and documented, but they remain a potential source of bugs.
+
+When using this crate, it is the caller's responsibility to uphold the safety invariants required by the underlying C functions.
