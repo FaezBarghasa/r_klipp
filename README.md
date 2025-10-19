@@ -24,6 +24,31 @@ Our philosophy is to leverage Rust's safety and concurrency features to create a
   - **Thermal Protection**: Advanced thermal runaway protection and sensor failure detection to prevent fire hazards.
   - **Memory Safety**: Written in Rust to eliminate entire classes of bugs like buffer overflows and data races.
 
+## File Structure
+
+```
+.
+├── boards/             # Board-specific configurations and pinouts
+├── ci/                 # Continuous integration scripts and workflows
+├── config/             # Example Klipper configuration files
+├── crates/             # All Rust source code, organized as a Cargo workspace
+│   ├── compat-layer/
+│   ├── firmware-builder/
+│   ├── klipper-host/
+│   ├── klipper-mcu-firmware/ # The main firmware application
+│   ├── klipper-proto/
+│   ├── mcu-drivers/
+│   ├── motion/
+│   ├── sim/
+│   └── thermal/
+├── docs/               # In-depth documentation
+├── tests/              # Integration and hardware-in-the-loop (HIL) tests
+├── tools/              # Helper scripts and tools for development
+├── .gitignore
+├── Cargo.toml          # Workspace manifest
+└── README.md
+```
+
 ## Workspace Structure
 
 This repository is a Cargo workspace that contains the following key crates:
