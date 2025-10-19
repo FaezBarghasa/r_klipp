@@ -49,7 +49,7 @@ This is the recommended method for both flashing and debugging.
 1.  **Connect the Board**: Connect the debug probe to your computer via USB.
 2.  **Run the Command**: Execute the `cargo embed` command with the appropriate feature flag for your board.
     ```bash
-    cargo embed --release -p klipper-m-firmware --features mks_skipr
+    cargo embed --release -p klipper-mcu-firmware --features mks_skipr
     ```
 3.  **Verify**: The tool should automatically detect your probe and the target MCU, flash the firmware, and open a logging terminal.
 
