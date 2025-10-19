@@ -1,0 +1,60 @@
+[package]
+name = "klipper-mcu-firmware"
+version = "0.1.0"
+edition = "2021"
+authors = ["Your Name <you@example.com>"]
+license = "MIT" # Or your chosen license
+description = "A no_std MCU firmware for Klipper"
+
+[dependencies]
+cortex-m = "0.7.7"
+cortex-m-rt = "0.7.3"
+defmt = { version = "0.3.8", optional = true }
+defmt-rtt = { version = "0.4.1", optional = true }
+embassy-executor = { version = "0.5.0", features = ["nightly", "arch-cortex-m", "executor-thread"], optional = true }
+embassy-stm32 = { version = "0.1.0", features = ["defmt", "stm32f407vg", "memory-x", "time-driver-any", "exti"], optional = true }
+embassy-time = { version = "0.3.0", features = ["defmt", "defmt-timestamp-uptime"], optional = true }
+embassy-sync = { version = "0.5.0", features = ["defmt"], optional = true }
+embedded-hal = "1.0.0"
+embedded-hal-async = "1.0.0"
+futures = { version = "0.3.30", default-features = false, features = ["async-await"] }
+heapless = "0.8.0"
+panic-probe = { version = "0.3.2", features = ["print-defmt"], optional = true }
+rtic = { version = "2.2.0", optional = true }
+rtic-monotonics = { version = "2.0.0", features = ["cortex-m-systick"], optional = true }
+stm32f4xx-hal = { version = "0.23.0", features = ["stm32f407"], optional = true}
+fixed = "1.25.0"
+
+
+[features]
+default = ["embassy-rt"]
+embassy-rt = ["dep:embassy-executor", "dep:embassy-stm32", "dep:embassy-time", "dep:embassy-sync"]
+rtic-rt = ["dep:rtic", "dep:rtic-monotonics", "dep:stm32f4xx-hal"]
+defmt-logging = ["dep:defmt", "dep:defmt-rtt", "dep:panic-probe"]
+
+[profile.dev]
+codegen-units = 1
+debug = 2
+debug-assertions = true
+incremental = false
+opt-level = 1
+overflow-checks = true
+
+[profile.release]
+codegen-units = 1
+debug = 2
+debug-assertions = false
+incremental = false
+lto = "fat"
+opt-level = "z"
+overflow-checks = false
+
+[[test]]
+name = "safety_tests"
+path = "tests/safety_tests.rs"
+harness = true
+
+[[test]]
+name = "heater_tests"
+path = "tests/heater_tests.rs"
+harness = true

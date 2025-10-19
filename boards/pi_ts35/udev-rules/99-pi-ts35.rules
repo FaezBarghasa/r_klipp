@@ -1,0 +1,5 @@
+# UDEV rule for the BTT PI-TS35 Touchscreen
+# This rule ensures that the touchscreen input device has the correct permissions
+# for non-root users, which is often required by display managers.
+
+ACTION=="add", KERNEL=="event*", ATTRS{name}=="*btt-pi-ts35*", TAG+="uaccess"

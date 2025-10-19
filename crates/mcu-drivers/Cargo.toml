@@ -1,0 +1,16 @@
+[workspace]
+resolver = "2"
+members = [
+    "driver-tmc",
+    "driver-thermistor",
+    "driver-drv8825",
+    "driver-endstop",
+]
+
+# Common dependencies for all crates in the workspace
+[workspace.dependencies]
+embedded-hal = "1.0.0"
+embedded-hal-mock = "0.10.0"
+num-traits = "0.2.17"
+fixed = { version = "1.25.0", features = ["serde"] }
+

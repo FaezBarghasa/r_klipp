@@ -1,0 +1,23 @@
+[package]
+name = "driver-tmc"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "A no_std driver for Trinamic TMC stepper motor drivers (e.g., TMC2209)."
+repository = "https://github.com/your-repo/mcu-drivers"
+
+[dependencies]
+embedded-hal = { workspace = true }
+bitfield = "0.14.0"
+
+[dev-dependencies]
+embedded-hal-mock = { workspace = true }
+
+[features]
+default = []
+# Enable this feature for host-based testing and examples
+std = []
+# Specific driver models
+tmc2209 = []
+tmc2208 = []
+# Add other models like tmc2130 here

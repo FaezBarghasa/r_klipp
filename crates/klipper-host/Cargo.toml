@@ -1,0 +1,33 @@
+[package]
+name = "klipper-host"
+version = "0.1.0"
+edition = "2021"
+description = "A Rust-based host process for Klipper 3D printer firmware."
+license = "GPL-3.0-or-later"
+
+[dependencies]
+tokio = { version = "1.38.0", features = ["full"] }
+actix-web = "4.8.0"
+actix-web-actors = "4.3.0"
+actix = "0.13.5"
+actix-rt = "2.10.0"
+serde = { version = "1.0.203", features = ["derive"] }
+serde_json = "1.0.120"
+clap = { version = "4.5.8", features = ["derive"] }
+tracing = "0.1.40"
+tracing-subscriber = "0.3.18"
+anyhow = "1.0.86"
+tokio-serial = "5.4.4"
+futures-util = "0.3.30"
+bytes = "1.6.0"
+parking_lot = "0.12.3"
+configparser = "3.0.4"
+thiserror = "1.0.61"
+tokio-util = { version = "0.7.11", features = ["codec"] }
+crossbeam-channel = "0.5.13"
+rand = "0.8.5"
+mimalloc = { version = "0.1.42", default-features = false }
+
+[workspace]
+members = ["klipper-host"]
+

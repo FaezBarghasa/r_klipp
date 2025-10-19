@@ -1,0 +1,10 @@
+!/crates/compat-layer/target/
+!/crates/klipper-mcu-firmware/target/
+!/crates/firmware-builder/target/
+!/crates/klipper-host/target/
+!/crates/klipper-proto/target/
+!/crates/mcu-drivers/target/
+!/crates/motion/target/
+!/crates/sim/target/
+!/crates/thermal/target/
+

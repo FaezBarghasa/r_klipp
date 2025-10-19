@@ -1,0 +1,77 @@
+//! Simulation example for the motion crate.
+//!
+//! This example plans a series of moves and, if the `serde-support` feature is
+//! enabled, it serializes the resulting step event trace to a `trace.json` file.
+//!
+//! Usage:
+//! cargo run --example simulate --features serde-support
+
+use motion::kinematics::CartesianKinematics;
+use motion::planner::{Move, Planner, TrapezoidalPlanner};
+use motion::CartesianPoint;
+
+#[cfg(feature = "serde-support")]
+use std::fs::File;
+#[cfg(feature = "serde-support")]
+use std::io::BufWriter;
+
+fn main() {
+    println!("Running motion simulation...");
+
+    // 1. Configure kinematics
+    let kinematics = CartesianKinematics {
+        steps_per_mm_x: 80.0,
+        steps_per_mm_y: 80.0,
+        steps_per_mm_z: 400.0,
+    };
+
+    // 2. Create a planner
+    let planner = TrapezoidalPlanner::default();
+
+    // 3. Define a sequence of moves
+    let moves = vec![
+        Move {
+            from: CartesianPoint { x: 0.0, y: 0.0, z: 5.0 },
+            to: CartesianPoint { x: 100.0, y: 0.0, z: 5.0 },
+            max_velocity: 150.0,
+            max_acceleration: 2000.0,
+        },
+        Move {
+            from: CartesianPoint { x: 100.0, y: 0.0, z: 5.0 },
+            to: CartesianPoint { x: 100.0, y: 100.0, z: 5.0 },
+            max_velocity: 150.0,
+            max_acceleration: 2000.0,
+        },
+        Move {
+            from: CartesianPoint { x: 100.0, y: 100.0, z: 5.0 },
+            to: CartesianPoint { x: 0.0, y: 0.0, z: 5.0 },
+            max_velocity: 200.0,
+            max_acceleration: 3000.0,
+        },
+    ];
+
+    // 4. Plan all moves and collect the steps
+    #[cfg(feature = "alloc")]
+    {
+        let trace: Vec<_> = moves
+            .into_iter()
+            .flat_map(|mv| planner.plan_move_to_vec(&kinematics, mv))
+            .collect();
+
+        println!("Generated {} step events.", trace.len());
+
+        // 5. Output trace to a file if serde is enabled
+        #[cfg(feature = "serde-support")]
+        {
+            println!("Writing trace to trace.json...");
+            let file = File::create("trace.json").expect("Could not create trace.json");
+            let writer = BufWriter::new(file);
+            serde_json::to_writer_pretty(writer, &trace).expect("Failed to serialize trace");
+            println!("Done.");
+        }
+    }
+    #[cfg(not(feature = "alloc"))]
+    {
+        println!("This example requires the 'alloc' feature to collect steps into a Vec.");
+    }
+}
