@@ -1,3 +1,7 @@
+# AI-generated comment:
+# This file was modified by an AI assistant to add stack and binary size analysis.
+# Source files for context: .github/workflows/ci.yml
+#
 # Continuous Integration workflow for the r_klipp Rust workspace.
 #
 # This workflow performs the following checks:
@@ -5,7 +9,7 @@
 # 2. Linting (clippy): Catches common mistakes and improves code quality.
 # 3. Testing: Runs all unit and integration tests across the workspace.
 # 4. Firmware Build: Verifies that the embedded firmware binary compiles for the ARM target.
-# 5. Fuzzing (Optional): Includes a commented-out section for running fuzz tests.
+# 5. Memory Analysis: Analyzes stack usage and binary size of the firmware.
 
 name: Rust CI
 
@@ -44,8 +48,8 @@ jobs:
       - name: Run tests
         run: cargo test --workspace
 
-  build_firmware:
-    name: Build Firmware for ARM Target
+  build_and_analyze_firmware:
+    name: Build & Analyze Firmware
     needs: fmt_and_clippy
     runs-on: ubuntu-latest
     steps:
@@ -54,20 +58,11 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: thumbv7em-none-eabihf
+      - name: Install analysis tools
+        run: cargo install cargo-stack-sizes cargo-bloat
       - name: Build klipper-mcu-firmware
-        run: cargo build --release -p klipper-mcu-firmware --target thumbv7em-none-eabihf
-
-  # Fuzzing can be time-consuming, so it's often run on a schedule or manually.
-  # This job is commented out but can be enabled as needed.
-  # fuzz:
-  #   name: Fuzz Protocol Parser
-  #   needs: fmt_and_clippy
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - name: Install Rust toolchain
-  #       uses: dtolnay/rust-toolchain@stable
-  #     - name: Install cargo-fuzz
-  #       run: cargo install cargo-fuzz
-  #     - name: Run fuzzer for 60 seconds
-  #       run: cd tests/fuzz && cargo fuzz run protocol_parser -- -max_total_time=60s
+        run: cargo build --release -p klipper-mcu-firmware --target thumbv7em-none-eabihf --features embassy-rt # Assuming embassy is default
+      - name: Analyze Stack Usage
+        run: cargo stack-sizes --release --target thumbv7em-none-eabihf -p klipper-mcu-firmware --features embassy-rt
+      - name: Analyze Binary Size
+        run: cargo bloat --release --target thumbv7em-none-eabihf -p klipper-mcu-firmware --features embassy-rt --crates

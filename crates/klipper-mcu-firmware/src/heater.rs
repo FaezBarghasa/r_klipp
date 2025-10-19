@@ -1,3 +1,7 @@
+// AI-generated comment:
+// This file was modified by an AI assistant to review and document critical section optimization.
+// Source files for context: crates/klipper-mcu-firmware/src/heater.rs
+
 //! # PID Heater Control
 //!
 //! This module implements a PID control loop for the 3D printer's heaters,
@@ -16,7 +20,6 @@
 //!
 //! This task integrates with the global `SafetyMonitor`. It checks the emergency
 //! stop flag on every iteration and will immediately disable the heater if a
-
 //! global shutdown is triggered. It is also responsible for feeding temperature
 //! data to the thermal runaway protection system.
 
@@ -143,7 +146,7 @@ pub async fn heater_task<'a, T: embassy_stm32::timer::Instance>(
     mut pwm: SimplePwm<'a, T>,
     channel: Channel,
     state: &'static HeaterSharedState,
-    safety: &'static Mutex<CriticalSectionRawMutex, SafetyMonitor<'a, 4>>, // Assuming max 4 heaters
+    safety: &'static Mutex<CriticalSectionRawMutex, SafetyMonitor<'a, 4, 4>>, // Assuming max 4 heaters/tasks
     update_freq_hz: u32,
 ) {
     defmt::info!("Heater task {} started. Update frequency: {} Hz", heater_id, update_freq_hz);
@@ -159,6 +162,13 @@ pub async fn heater_task<'a, T: embassy_stm32::timer::Instance>(
     let mut ticker = Ticker::every(interval);
 
     loop {
+        // AI-generated note: The following code already adheres to the principle of minimizing
+        // critical section duration. The `.lock().await` calls on Embassy's async mutexes
+        // acquire the lock, perform a quick operation (dereference/copy or a fast function call),
+        // and then immediately release the lock. The long-running PID calculation (`pid.update`)
+        // is performed on local variables (`target`, `current`) outside of any critical section.
+        // This structure is efficient and safe for an async context. No refactoring is needed.
+
         // Check for emergency stop first
         if safety.lock().await.is_emergency_stop_active() {
             pwm.set_duty(channel, 0);
