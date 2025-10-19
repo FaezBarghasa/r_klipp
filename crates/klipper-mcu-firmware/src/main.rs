@@ -1,33 +1,19 @@
-//! # Klipper MCU Firmware
-//!
-//! This is the main crate for the Klipper MCU firmware. It is a `no_std` application
-//! that is designed to run on a microcontroller.
-//!
-//! ## Feature Flags
-//!
-//! This crate uses feature flags to select the runtime and the target board.
-//!
-//! *   `embassy-rt`: Use the Embassy async runtime.
-//! *   `rtic-rt`: Use the RTIC real-time framework.
-//! *   `board-stm32f407`: Build for the STM32F407 board.
-//!
-//! ## Application Modules
-//!
-//! The firmware is divided into several modules, each responsible for a specific
-//! part of the printer's functionality:
-//!
-//! *   `adc`: ADC sampling for thermistors.
-//! *   `heater`: PID heater control.
-//! *   `proto_bridge`: Communication with the Klipper host.
-//! *   `safety`: Safety monitoring and emergency stop.
-//! *   `stepper`: Stepper motor control.
-
+// File: crates/klipper-mcu-firmware/src/main.rs
 #![no_std]
 #![no_main]
 #![feature(type_alias_impl_trait)]
 
 use defmt_rtt as _; // global logger
 use panic_probe as _;
+
+// --- Memory Pool for a common object (e.g., MoveSegment) ---
+// This demonstrates static memory management to avoid heap allocations in real-time tasks.
+use motion::planner::MoveSegment;
+use core::mem::MaybeUninit;
+
+const MOVE_POOL_SIZE: usize = 16;
+static mut MOVE_POOL: [MaybeUninit<MoveSegment>; MOVE_POOL_SIZE] = [MaybeUninit::uninit(); MOVE_POOL_SIZE];
+// In a real implementation, a proper allocator would manage this pool.
 
 // Application Modules
 pub mod adc;
@@ -46,3 +32,4 @@ use embassy_main as _;
 mod rtic_main;
 #[cfg(feature = "rtic-rt")]
 use rtic_main as _;
+
