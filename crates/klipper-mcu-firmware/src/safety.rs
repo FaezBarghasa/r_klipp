@@ -1,3 +1,4 @@
+// File path: crates/klipper-mcu-firmware/src/safety.rs
 #![deny(clippy::all)]
 #![deny(warnings)]
 
@@ -25,12 +26,6 @@
 //!   provides a fast, interrupt-safe way to signal a shutdown condition. Higher-level
 //!   application code is responsible for polling this flag and acting on it immediately
 //!   by disabling all heaters, motors, and other outputs.
-//!
-//! ## Performance
-//!
-//! The safety checks are designed to be lightweight and can be run frequently
-//! (e.g., every 250-1000ms) without impacting real-time performance. No heap
-//! allocations are used, and all state is managed on the stack.
 
 use core::sync::atomic::{AtomicBool, Ordering};
 use embassy_stm32::wdg::IndependentWatchdog;
@@ -45,6 +40,10 @@ pub enum SafetyError {
     TempTooLow { heater_id: usize, temp: f32 },
     /// Temperature is above the configured maximum limit, suggesting a sensor disconnect.
     TempTooHigh { heater_id: usize, temp: f32 },
+    /// A stepper driver reported a fault condition (e.g., overtemperature).
+    StepperDriverFault { driver_mask: u8 },
+    /// A critical task failed to check in within its deadline.
+    TaskStalled { task_id: usize },
 }
 
 /// Configuration and state for monitoring a single thermal zone.
@@ -120,30 +119,32 @@ impl ThermalMonitor {
 
 /// The main safety supervisor for the entire MCU.
 /// It aggregates all safety-critical components.
-pub struct SafetyMonitor<'a, const N: usize> {
-    thermal_monitors: [ThermalMonitor; N],
+pub struct SafetyMonitor<'a, const NUM_HEATERS: usize, const NUM_TASKS: usize> {
+    thermal_monitors: [ThermalMonitor; NUM_HEATERS],
     watchdog: IndependentWatchdog<'a>,
     /// Global flag indicating an emergency stop has been triggered.
     /// This MUST be polled by high-level tasks to shut down hardware.
     emergency_stop_active: AtomicBool,
+    /// Timestamps of the last check-in for each monitored task.
+    last_check_in: [Instant; NUM_TASKS],
+    /// The deadline for each task to check in.
+    task_deadlines: [Duration; NUM_TASKS],
 }
 
-impl<'a, const N: usize> SafetyMonitor<'a, N> {
+impl<'a, const NUM_HEATERS: usize, const NUM_TASKS: usize> SafetyMonitor<'a, NUM_HEATERS, NUM_TASKS> {
     /// Creates a new `SafetyMonitor`.
-    ///
-    /// # Arguments
-    /// * `thermal_monitors` - An array of configured `ThermalMonitor`s.
-    /// * `watchdog` - An initialized `IndependentWatchdog` instance. The watchdog
-    ///   is immediately started upon creation of the `SafetyMonitor`.
     pub fn new(
-        thermal_monitors: [ThermalMonitor; N],
+        thermal_monitors: [ThermalMonitor; NUM_HEATERS],
         mut watchdog: IndependentWatchdog<'a>,
+        task_deadlines: [Duration; NUM_TASKS],
     ) -> Self {
         watchdog.unleash();
         Self {
             thermal_monitors,
             watchdog,
             emergency_stop_active: AtomicBool::new(false),
+            last_check_in: [Instant::now(); NUM_TASKS],
+            task_deadlines,
         }
     }
 
@@ -152,40 +153,54 @@ impl<'a, const N: usize> SafetyMonitor<'a, N> {
     pub fn check_thermal_state(&mut self, heater_id: usize, temp: f32) {
         if let Some(monitor) = self.thermal_monitors.get_mut(heater_id) {
             if let Err(e) = monitor.check(heater_id, temp) {
-                // A thermal fault was detected, trigger a shutdown.
                 self.trigger_emergency_stop(e);
             }
         }
     }
 
-    /// Triggers a global emergency stop.
-    /// This sets the `emergency_stop_active` flag to `true`.
-    /// It is an idempotent operation.
-    pub fn trigger_emergency_stop(&mut self, reason: SafetyError) {
-        // Use `swap` to ensure we only log the first reason for the shutdown.
-        if self.emergency_stop_active.swap(true, Ordering::SeqCst) == false {
-            // This was the first time we triggered the E-stop. Log it.
-            // In a real system, you might send a message to the host here.
-            defmt::error!("EMERGENCY STOP TRIGGERED: {:?}", reason);
+    /// Checks the fault status of stepper drivers.
+    /// `fault_pin_states` is a bitmask where each bit corresponds to a driver's fault pin.
+    /// A high bit indicates a fault.
+    pub fn check_stepper_faults(&mut self, fault_pin_states: u8) {
+        if fault_pin_states != 0 {
+            self.trigger_emergency_stop(SafetyError::StepperDriverFault { driver_mask: fault_pin_states });
+        }
+    }
 
-            // Here you would add code to immediately and directly disable all
-            // hardware outputs (heaters, motors, etc.).
-            // e.g., unsafe { (*pac::GPIOX::ptr()).bsrr.write(|w| w.set_br(..)); }
+    /// Allows a task to "check-in", resetting its software watchdog timer.
+    pub fn task_check_in(&mut self, task_id: usize) {
+        if let Some(check_in) = self.last_check_in.get_mut(task_id) {
+            *check_in = Instant::now();
+        }
+    }
+
+    /// Iterates through all monitored tasks and checks if any have missed their deadline.
+    pub fn check_task_stalls(&mut self) {
+        let now = Instant::now();
+        for i in 0..NUM_TASKS {
+            if now.duration_since(self.last_check_in[i]) > self.task_deadlines[i] {
+                self.trigger_emergency_stop(SafetyError::TaskStalled { task_id: i });
+            }
+        }
+    }
+
+    /// Triggers a global emergency stop.
+    pub fn trigger_emergency_stop(&mut self, reason: SafetyError) {
+        if self.emergency_stop_active.swap(true, Ordering::SeqCst) == false {
+            defmt::error!("EMERGENCY STOP TRIGGERED: {:?}", reason);
         }
     }
 
     /// Returns `true` if an emergency stop is currently active.
-    /// This should be polled by all tasks that control hardware outputs.
     #[inline]
     pub fn is_emergency_stop_active(&self) -> bool {
         self.emergency_stop_active.load(Ordering::SeqCst)
     }
 
     /// "Feeds" the independent watchdog.
-    /// This MUST be called periodically from a high-priority task to prevent
-    /// the MCU from resetting.
     #[inline]
     pub fn feed_watchdog(&mut self) {
         self.watchdog.feed();
     }
 }
+

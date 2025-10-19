@@ -19,10 +19,14 @@
 //!     junction between two moves to allow for faster, smoother cornering without
 //!     coming to a complete stop.
 
+#![cfg_attr(not(feature = "std"), no_std)]
+
 #[cfg(not(feature = "std"))]
-use libm::{fabsf, sqrtf};
+use libm::{fabsf, fmaxf, fminf, powf, sqrtf};
 #[cfg(feature = "std")]
-use std::primitive::f32::{fabs as fabsf, sqrt as sqrtf};
+use std::primitive::f32::{
+    fabs as fabsf, max as fmaxf, min as fminf, powf, sqrt as sqrtf,
+};
 
 use crate::{
     errors::PlannerError,
@@ -30,10 +34,12 @@ use crate::{
     StepCommand,
 };
 use heapless::spsc::{Producer, Queue};
-use heapless::Deque;
+use heapless::{Deque, Vec};
 
 const MAX_AXES: usize = 8;
 const CLOCK_FREQ: f32 = 100_000_000.0; // Example: 100 MHz timer frequency
+const MAX_SHAPER_EXTRA_STEPS: usize = 16;
+const EXTRUDER_AXIS: usize = 3; // Typically axis E is the 4th one (index 3)
 
 /// A segment of a move with a defined S-curve velocity profile.
 #[derive(Copy, Clone, Debug, Default)]
@@ -41,14 +47,25 @@ pub struct MoveSegment {
     pub steps: [i32; MAX_AXES],
     pub direction_mask: u8,
     pub total_steps: u32,
-    pub junction_deviation: f32, // Max deviation for cornering speed calculation
+    pub junction_deviation: f32,
+
     // S-Curve parameters
-    pub acceleration_distance: f32,
-    pub cruise_start_step: u32,
-    pub decel_start_step: u32,
-    pub initial_interval: u32,
-    pub cruise_interval: u32,
-    pub accel_rate: f32,
+    pub distance: f32,
+    pub start_v: f32,
+    pub cruise_v: f32,
+    pub end_v: f32,
+    pub accel: f32,
+    pub jerk: f32,
+
+    // Time for each phase
+    pub t_j1: f32, // increasing accel
+    pub t_a: f32,  // constant accel
+    pub t_j2: f32, // decreasing accel
+    pub t_c: f32,  // cruise
+    pub t_j3: f32, // increasing decel
+    pub t_d: f32,  // constant decel
+    pub t_j4: f32, // decreasing decel
+
     // Links to profiles
     pub pa: Option<PressureAdvance>,
     pub shaper: Option<InputShaper>,
@@ -59,14 +76,16 @@ pub struct MotionPlanner {
     move_queue: Queue<MoveSegment, 64>,
     lookahead_queue: Deque<MoveSegment, 8>,
     pub current_position: [i32; MAX_AXES],
+    pub steps_per_mm: [f32; MAX_AXES],
 }
 
 impl MotionPlanner {
-    pub fn new() -> Self {
+    pub fn new(steps_per_mm: [f32; MAX_AXES]) -> Self {
         Self {
             move_queue: Queue::new(),
             lookahead_queue: Deque::new(),
             current_position: [0; MAX_AXES],
+            steps_per_mm,
         }
     }
 
@@ -76,40 +95,99 @@ impl MotionPlanner {
         target_pos: [i32; MAX_AXES],
         velocity: f32,
         accel: f32,
+        jerk: f32,
         junction_deviation: f32,
     ) -> Result<(), PlannerError> {
-        // ... [Complex S-curve planning logic would go here] ...
-        // This is a simplified placeholder that still uses trapezoidal logic
-        // for demonstration, as a full S-curve implementation is extensive.
-
         let mut steps = [0; MAX_AXES];
         let mut direction_mask = 0;
+        let mut move_dist_sq = 0.0;
         for i in 0..MAX_AXES {
             steps[i] = target_pos[i] - self.current_position[i];
             if steps[i] > 0 {
                 direction_mask |= 1 << i;
             }
+            if i != EXTRUDER_AXIS {
+                let axis_dist = steps[i] as f32 / self.steps_per_mm[i];
+                move_dist_sq += axis_dist * axis_dist;
+            }
         }
-        let total_steps = steps.iter().map(|s| s.abs() as u32).max().unwrap_or(0);
+        let distance = sqrtf(move_dist_sq);
+
+        let total_steps = steps[0..EXTRUDER_AXIS]
+            .iter()
+            .map(|s| s.abs() as u32)
+            .max()
+            .unwrap_or(0);
+
         if total_steps == 0 {
+            // Extruder-only move, handle separately if needed
             return Ok(());
         }
 
-        let accel_steps = (velocity * velocity / (2.0 * accel)) as u32;
-        let cruise_interval = (CLOCK_FREQ / velocity) as u32;
+        // Simplified S-curve planning. A full implementation would involve lookahead
+        // to calculate start_v and end_v based on junction velocities.
+        // For now, assume moves start and end at zero velocity.
+        let start_v = 0.0;
+        let end_v = 0.0;
+
+        // Calculate maximum achievable velocity and acceleration for this move length
+        let max_v_for_dist = sqrtf(distance * accel + (start_v * start_v + end_v * end_v) / 2.0);
+        let cruise_v = fminf(velocity, max_v_for_dist);
+
+        // Time to accelerate from start_v to cruise_v
+        let accel_time = (cruise_v - start_v) / accel;
+        let accel_dist = start_v * accel_time + 0.5 * accel * accel_time * accel_time;
+
+        // Time to decelerate from cruise_v to end_v
+        let decel_time = (cruise_v - end_v) / accel;
+        let decel_dist = cruise_v * decel_time - 0.5 * accel * decel_time * decel_time;
+
+        let (t_j1, t_a, t_j2, t_c, t_j3, t_d, t_j4);
+
+        if accel_dist + decel_dist > distance {
+            // Triangle profile (no cruise phase)
+            t_c = 0.0;
+            // Re-calculate accel/decel for a shorter move
+            let accel_time = sqrtf(distance / accel); // Simplified
+            t_j1 = fminf(accel_time / 2.0, accel / jerk);
+            t_a = accel_time - 2.0 * t_j1;
+            t_j2 = t_j1;
+            t_j3 = t_j1;
+            t_d = t_a;
+            t_j4 = t_j1;
+        } else {
+            // Trapezoid profile
+            let cruise_dist = distance - accel_dist - decel_dist;
+            t_c = cruise_dist / cruise_v;
+
+            t_j1 = fminf(accel_time / 2.0, accel / jerk);
+            t_a = accel_time - 2.0 * t_j1;
+            t_j2 = t_j1;
+
+            t_j3 = fminf(decel_time / 2.0, accel / jerk);
+            t_d = decel_time - 2.0 * t_j3;
+            t_j4 = t_j3;
+        }
 
         let segment = MoveSegment {
             steps,
             direction_mask,
             total_steps,
             junction_deviation,
-            acceleration_distance: accel_steps as f32,
-            cruise_start_step: accel_steps,
-            decel_start_step: total_steps.saturating_sub(accel_steps),
-            initial_interval: (0.676 * CLOCK_FREQ / sqrtf(accel)) as u32,
-            cruise_interval,
-            accel_rate: (2.0 * accel) / (CLOCK_FREQ * CLOCK_FREQ),
-            pa: None, // Will be attached later
+            distance,
+            start_v,
+            cruise_v,
+            end_v,
+            accel,
+            jerk,
+            t_j1,
+            t_a,
+            t_j2,
+            t_c,
+            t_j3,
+            t_d,
+            t_j4,
+            pa: None,
             shaper: None,
         };
 
@@ -124,50 +202,134 @@ impl MotionPlanner {
     pub fn generate_steps(
         &mut self,
         producer: &mut Producer<'static, StepCommand, 256>,
-    ) -> Result<u32, ()> {
+    ) -> Result<(), ()> {
         let segment = self.move_queue.dequeue().ok_or(())?;
         let mut errors = [0i32; MAX_AXES];
-        let mut last_interval = segment.initial_interval;
+        let dominant_axis_steps = segment.total_steps;
 
-        for n in 1..=segment.total_steps {
-            let mut stepper_mask = 0;
-            // ... [Bresenham's line algorithm as before] ...
+        let mut shaped_intervals: Vec<(u32, u32), MAX_SHAPER_EXTRA_STEPS> = Vec::new();
+        let mut extruder_steps_to_add = 0.0;
 
-            // --- S-Curve Velocity Profile ---
-            let interval = if n <= segment.cruise_start_step {
-                // S-Curve Accel Phase
-                let factor = sqrtf(n as f32 / segment.acceleration_distance);
-                (segment.initial_interval as f32 * (1.0 - factor) + segment.cruise_interval as f32 * factor) as u32
-            } else if n > segment.decel_start_step {
-                // S-Curve Decel Phase
-                let steps_into_decel = n - segment.decel_start_step;
-                let total_decel_steps = segment.total_steps - segment.decel_start_step;
-                let factor = sqrtf(steps_into_decel as f32 / total_decel_steps as f32);
-                (segment.cruise_interval as f32 * (1.0 - factor) + segment.initial_interval as f32 * factor) as u32
+        let total_time = segment.t_j1 + segment.t_a + segment.t_j2 + segment.t_c + segment.t_j3 + segment.t_d + segment.t_j4;
+        if total_time <= 0.0 { return Ok(()); }
+
+        let inv_total_time = 1.0 / total_time;
+
+        for n in 1..=dominant_axis_steps {
+            // Calculate current time `t` in the move based on step `n`
+            let t = (n as f32 / dominant_axis_steps as f32) * total_time;
+
+            let (v, a) = self.get_velocity_and_accel(&segment, t);
+            let interval = if v > 0.0 {
+                (CLOCK_FREQ / v * segment.distance / dominant_axis_steps as f32) as u32
             } else {
-                segment.cruise_interval // Cruise
+                u32::MAX
             };
 
-            let mut final_interval = interval;
+            // Bresenham's line algorithm for non-dominant axes
+            let mut stepper_mask = 0;
+            for i in 0..MAX_AXES {
+                if i == EXTRUDER_AXIS { continue; }
+                errors[i] += segment.steps[i].abs();
+                if errors[i] * 2 >= dominant_axis_steps as i32 {
+                    stepper_mask |= 1 << i;
+                    errors[i] -= dominant_axis_steps as i32;
+                }
+            }
+
             // --- Apply Input Shaping ---
             if let Some(shaper) = segment.shaper {
-                final_interval = shaper.apply(final_interval as f64) as u32;
+                if shaper.num_impulses > 1 {
+                    let current_ticks = n * interval; // simplified time
+                    for i in 0..shaper.num_impulses {
+                        let (time_offset, amplitude) = shaper.impulses[i];
+                        let shaped_time = current_ticks + (time_offset * CLOCK_FREQ) as u32;
+                        let shaped_interval = (interval as f32 / amplitude) as u32;
+
+                        // This is a simplified convolution. A real one would be more complex.
+                        // We add shaped intervals to a buffer to be sorted and emitted.
+                        shaped_intervals.push((shaped_time, shaped_interval)).ok();
+                    }
+                }
             }
 
             // --- Apply Pressure Advance ---
             if let Some(pa) = segment.pa {
-                // This is a simplified model. A real implementation would adjust
-                // extruder steps relative to movement steps.
-                let velocity = CLOCK_FREQ / interval as f32;
-                let pa_offset = pa.get_advance_time(velocity as f64);
-                // logic to apply offset to extruder steps would go here
+                let extruder_steps_per_mm = self.steps_per_mm[EXTRUDER_AXIS];
+                let expected_extrusion = (segment.steps[EXTRUDER_AXIS] as f32 / dominant_axis_steps as f32);
+                let pa_steps = pa.get_advance_steps(v, a, extruder_steps_per_mm);
+                extruder_steps_to_add += expected_extrusion + pa_steps;
+            } else {
+                extruder_steps_to_add += segment.steps[EXTRUDER_AXIS] as f32 / dominant_axis_steps as f32;
             }
 
-            let cmd = StepCommand::new(stepper_mask, segment.direction_mask, final_interval as u16);
-            producer.enqueue(cmd).map_err(|_| ())?;
-            last_interval = interval;
+            if extruder_steps_to_add >= 1.0 {
+                stepper_mask |= 1 << EXTRUDER_AXIS;
+                extruder_steps_to_add -= 1.0;
+            }
+
+            if shaped_intervals.is_empty() {
+                let cmd = StepCommand::new(stepper_mask as u8, segment.direction_mask, interval as u16);
+                producer.enqueue(cmd).map_err(|_| ())?;
+            }
         }
-        Ok(segment.total_steps)
+
+        // Drain the shaped intervals if any
+        if !shaped_intervals.is_empty() {
+            // A real implementation would merge/sort these intervals and emit them.
+            // This is a placeholder for that complex logic.
+            if let Some(&(_, interval)) = shaped_intervals.get(0) {
+                let cmd = StepCommand::new(1, segment.direction_mask, interval as u16);
+                producer.enqueue(cmd).map_err(|_| ())?;
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Calculates instantaneous velocity and acceleration at time `t` in a move.
+    fn get_velocity_and_accel(&self, s: &MoveSegment, t: f32) -> (f32, f32) {
+        let j = s.jerk;
+        // Accel phase
+        let t1 = s.t_j1;
+        let t2 = t1 + s.t_a;
+        let t3 = t2 + s.t_j2;
+        // Cruise phase
+        let t4 = t3 + s.t_c;
+        // Decel phase
+        let t5 = t4 + s.t_j3;
+        let t6 = t5 + s.t_d;
+
+        if t < t1 { // Increasing acceleration
+            let v = s.start_v + 0.5 * j * t * t;
+            let a = j * t;
+            (v, a)
+        } else if t < t2 { // Constant acceleration
+            let v = s.start_v + 0.5 * j * t1 * t1 + s.accel * (t - t1);
+            let a = s.accel;
+            (v, a)
+        } else if t < t3 { // Decreasing acceleration
+            let dt = t - t2;
+            let v = s.cruise_v - 0.5 * j * (t3 - t) * (t3 - t);
+            let a = j * (t3 - t);
+            (v, a)
+        } else if t < t4 { // Cruise
+            (s.cruise_v, 0.0)
+        } else if t < t5 { // Increasing deceleration
+            let dt = t - t4;
+            let v = s.cruise_v - 0.5 * j * dt * dt;
+            let a = -j * dt;
+            (v, a)
+        } else if t < t6 { // Constant deceleration
+            let dt = t - t5;
+            let v = s.cruise_v - 0.5 * j * s.t_j3 * s.t_j3 - s.accel * dt;
+            let a = -s.accel;
+            (v, a)
+        } else { // Decreasing deceleration
+            let dt = t - t6;
+            let v = s.end_v + 0.5 * j * (s.t_j4 - dt) * (s.t_j4 - dt);
+            let a = -j * (s.t_j4 - dt);
+            (v, a)
+        }
     }
 }
-
