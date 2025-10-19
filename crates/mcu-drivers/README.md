@@ -1,27 +1,57 @@
-# MCU Drivers Crate
+# Klipper in Rust: MCU and Peripheral Drivers Crate
 
-This crate provides a collection of `no_std` drivers for various micro-controller peripherals and external components. These drivers are designed to be portable across different hardware platforms by depending only on the `embedded-hal` traits.
+## Overview
 
-## Guiding Principles
+The `mcu-drivers` crate provides a Hardware Abstraction Layer (HAL) and a collection of drivers for various MCU peripherals and external components commonly found in 3D printers.
 
-- **`no_std` First**: All drivers are designed for bare-metal environments. An `std` feature is provided for host-based testing and simulation.
-- **HAL Agnostic**: By relying on `embedded-hal` traits, these drivers can be used with any MCU that has a corresponding HAL implementation.
-- **Testable**: Each driver includes a robust test suite using `embedded-hal-mock` to verify correctness without needing physical hardware.
-- **Usable by Klipper**: The APIs are designed to be easily integrated into firmware projects like Klipper.
+This crate is a `no_std` library, designed to be portable across different MCU architectures.
 
-## Available Drivers
+## Structure
 
-- **TMC Drivers**: A driver for Trinamic stepper motor controllers (e.g., TMC2209) supporting configuration and control over UART.
-- **Thermistor Drivers**: A library for converting NTC thermistor ADC readings to temperature using either lookup tables or polynomial equations.
+This crate is organized as a collection of sub-crates and modules, each providing a driver for a specific piece of hardware.
+
+*   **HAL Implementation**: Contains the implementation of the `embedded-hal` traits for our supported MCUs (e.g., `stm32f4xx-hal`).
+*   **Stepper Drivers**: Drivers for common stepper motor drivers, such as:
+    *   `driver-tmc`: A generic driver for Trinamic stepper motors, supporting communication over SPI or UART.
+    *   `driver-drv8825`: A driver for the DRV8825 stepper motor controller.
+*   **Sensor Drivers**:
+    *   `driver-thermistor`: A driver for reading thermistors and converting ADC values to temperature.
+    *   `driver-endstop`: A driver for reading the state of mechanical or optical endstops.
+*   **Other Peripherals**: Drivers for other components like fans, heaters, and displays.
+
+## Design Philosophy
+
+*   **`embedded-hal` Compliance**: All drivers are written against the traits defined in the `embedded-hal` crate. This makes them generic and reusable across any MCU that has an `embedded-hal` implementation.
+*   **Asynchronous API**: Where appropriate, drivers expose an asynchronous API that is compatible with the `embassy` framework. This allows for non-blocking access to peripherals.
+*   **Feature-Gated**: Each driver and HAL implementation is enabled via a Cargo feature flag, allowing users to compile only the code they need, which is essential for resource-constrained MCUs.
 
 ## Usage
 
-This crate is a core component of the `klipper-mcu-firmware` and is not intended to be used as a standalone library. The drivers are integrated into the main firmware to control the printer's hardware.
+To use a driver from this crate, enable the corresponding feature in your `Cargo.toml` and initialize the driver with the appropriate peripheral from your HAL.
 
-## Contributing
+```rust
+// Example of initializing a TMC2209 stepper driver
+use mcu_drivers::driver_tmc::Tmc2209;
+use stm32f4xx_hal::prelude::*;
+use stm32f4xx_hal::serial::{Config, Serial};
 
-Contributions to add new drivers or improve existing ones are welcome. Please see the main project's [contributor guide](../../docs/contributors.md) for more information.
+fn setup_stepper_driver() {
+    let dp = stm32f4xx_hal::pac::Peripherals::take().unwrap();
+    let rcc = dp.RCC.constrain();
+    let clocks = rcc.cfgr.freeze();
+    let gpioa = dp.GPIOA.split();
 
-## License
+    let tx = gpioa.pa2.into_alternate_af7();
+    let rx = gpioa.pa3.into_alternate_af7();
+    let serial = Serial::new(
+        dp.USART2,
+        (tx, rx),
+        Config::default().baudrate(115200.bps()),
+        &clocks,
+    )
+    .unwrap();
 
-This crate is licensed under the MIT License. See the [LICENSE](../../LICENSE) file for details.
+    let mut driver = Tmc2209::new(serial);
+    driver.set_run_current(800); // Set run current to 800mA
+}
+```

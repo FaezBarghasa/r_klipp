@@ -9,11 +9,9 @@
 //!
 //! ## Safety
 //!
-//! All arithmetic operations are implemented using checked variants (`checked_add`,
-//! `checked_mul`, etc.) to prevent panics from overflows in release builds. In a
-//! production system, these would ideally be replaced with saturating arithmetic
-//! (`saturating_add`, etc.) to ensure the controller continues to operate predictably
-//! even under extreme error conditions.
+//! All arithmetic operations are implemented using saturating variants (`saturating_add`,
+//! `saturating_sub`, etc.) to prevent panics from overflows and ensure the
+//! controller continues to operate predictably even under extreme error conditions.
 //!
 //! ## Performance
 //!

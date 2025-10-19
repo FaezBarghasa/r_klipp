@@ -1,52 +1,92 @@
-# Architecture Overview
+# Klipper in Rust: System Architecture
 
-This document provides a high-level overview of the Klipper Rust firmware architecture. The system is designed to be modular, safe, and performant, leveraging the strengths of the Rust programming language.
+This document provides a high-level overview of the architecture for the Klipper MCU firmware written in Rust. It is intended for developers who want to understand the design principles, component interactions, and overall structure of the firmware.
 
-## Host-MCU Split
+## Core Principles
 
-Klipper's architecture is split into two main components:
+The firmware is designed around the following core principles:
 
-1.  **Host Software (`klipper-host`)**: A high-level process that runs on a general-purpose computer (like a Raspberry Pi). It is responsible for:
-    *   Parsing G-code files.
-    *   Handling motion planning and kinematics.
-    *   Managing the user interface (e.g., web interface).
-    *   Sending commands to the MCU.
+1.  **Safety and Reliability**: Leveraging Rust's compile-time guarantees to prevent common embedded systems bugs (e.g., race conditions, buffer overflows, null pointer dereferencing). A multi-layered safety system is implemented to handle runtime faults.
+2.  **Asynchronous Execution**: Using the `embassy` framework for cooperative multitasking. This allows for efficient, non-blocking handling of I/O and concurrent tasks without the overhead of a traditional RTOS.
+3.  **Modularity and Portability**: The codebase is organized into modular crates with clear interfaces. A Hardware Abstraction Layer (HAL) isolates hardware-specific code, making it easier to port the firmware to different MCUs.
+4.  **Performance**: Critical paths, such as the stepper motor control loop, are highly optimized for low-latency and deterministic execution.
 
-2.  **MCU Firmware (`klipper-mcu-firmware`)**: A real-time firmware that runs on the 3D printer's microcontroller (MCU). It is responsible for:
-    *   Executing commands received from the host.
-    *   Controlling stepper motors with precise timing.
-    *   Monitoring sensors (thermistors, endstops).
-    *   Managing heaters and fans.
+## System Components
 
-This split allows the computationally intensive tasks to be handled by the more powerful host computer, while the MCU focuses on real-time control.
+The firmware is composed of several key components that work together to control the 3D printer.
 
-## Workspace Crates
+![System Diagram](https://i.imgur.com/your-diagram.png)  <!-- Placeholder for a future diagram -->
 
-The project is organized as a Cargo workspace, with each crate having a specific responsibility:
+### 1. Host Communication Interface
 
-*   **`klipper-mcu-firmware`**: The main firmware application that runs on the MCU. It integrates all the other `no_std` crates into a single binary.
+*   **Description**: This component manages the communication link (typically USB or UART) with the Klipper host software.
+*   **Responsibilities**:
+    *   Receiving and deserializing commands from the host.
+    *   Sending responses and sensor data back to the host.
+    *   Maintaining protocol synchronization.
+*   **Implementation**: It uses an async, non-blocking reader and writer task that interfaces with the MCU's serial peripheral. The `klipper-proto` crate defines the data structures and serialization logic.
 
-*   **`klipper-host`**: The host-side software that runs on a general-purpose computer. It communicates with the MCU and provides a user interface.
+### 2. Command Dispatcher
 
-*   **`klipper-proto`**: Defines the communication protocol between the host and the MCU. It provides serialization and deserialization for all commands and responses.
+*   **Description**: The central hub that routes incoming commands to the appropriate subsystems.
+*   **Responsibilities**:
+    *   Parsing the command queue from the host interface.
+    *   Validating command parameters.
+    *   Calling the corresponding functions in other modules (e.g., `motion`, `thermal`).
+*   **Implementation**: A state machine that reads from a command buffer and executes handlers based on the command ID.
 
-*   **`motion`**: Contains the motion control logic, including stepper pulse generation and motion planning.
+### 3. Motion Control Subsystem
 
-*   **`mcu-drivers`**: A collection of drivers for various MCU peripherals and external components, such as stepper motor drivers and thermistors.
+*   **Description**: Responsible for all printer movements. This is the most timing-critical part of the firmware.
+*   **Responsibilities**:
+    *   Managing a queue of trapezoidal motion blocks.
+    *   Generating precise step pulses for the stepper motors.
+    *   Monitoring endstops and triggering motion halts.
+*   **Implementation**:
+    *   It uses a dedicated high-priority task or interrupt handler.
+    *   The stepper pulse generation relies on hardware timers (e.g., PWM or general-purpose timers) to ensure jitter-free pulse trains.
+    *   The motion queue is carefully managed to ensure it never runs dry during a print, which would cause stuttering.
 
-*   **`compat-layer`**: A compatibility layer for interfacing with C-based components of the Klipper ecosystem.
+### 4. Thermal Management Subsystem
 
-*   **`sim`**: A simulation environment for running and testing the firmware on a host machine without requiring physical hardware.
+*   **Description**: Manages the temperature of heaters (e.g., hotend, bed) and monitors thermistors.
+*   **Responsibilities**:
+    *   Periodically sampling ADC channels connected to thermistors.
+    *   Converting ADC readings to temperature values.
+    *   Implementing a PID control loop to regulate heater PWM output.
+    *   Enforcing thermal safety limits.
+*   **Implementation**:
+    *   An async task runs at a fixed interval (e.g., every 100ms) to sample temperatures.
+    *   The PID controller updates the PWM duty cycle for each heater based on the target and current temperatures.
+    *   See `docs/safety.md` for details on the thermal safety features.
 
-## Communication Protocol
+### 5. Hardware Abstraction Layer (HAL)
 
-The host and MCU communicate over a serial connection using a custom binary protocol defined in the `klipper-proto` crate. The protocol is designed to be efficient and reliable, with features like command compression and checksums to ensure data integrity.
+*   **Description**: An abstraction layer that provides a consistent API for interacting with MCU peripherals.
+*   **Responsibilities**:
+    *   Wrapping low-level register access in safe, high-level Rust interfaces.
+    *   Providing drivers for peripherals like GPIO, UART, ADC, PWM, SPI, and I2C.
+*   **Implementation**:
+    *   The `mcu-drivers` crate contains HAL implementations for different MCU families (e.g., `stm32f4xx-hal`).
+    *   The main firmware code is written against the traits and types defined by `embedded-hal`, making it portable.
 
-## Real-Time Schedulers
+### 6. Safety and Monitoring Subsystem
 
-The `klipper-mcu-firmware` can be compiled with one of two real-time schedulers:
+*   **Description**: A dedicated subsystem that monitors the state of the printer and intervenes if an unsafe condition is detected.
+*   **Responsibilities**:
+    *   **Watchdog**: A hardware watchdog is continuously reset. If the main loop hangs, the watchdog will reset the MCU.
+    *   **Thermal Runaway Protection**: Monitors heaters to ensure they are heating up as expected and shuts them down if they exceed temperature limits or fail to reach the target.
+    *   **Sensor Failure Detection**: Detects disconnected or shorted thermistors.
+    *   **Emergency Stop**: Provides a mechanism to immediately halt all motion and disable all heaters.
+*   **Implementation**: A high-priority async task that runs checks at regular intervals. It has the authority to override other subsystems and put the machine into a safe state.
 
-*   **Embassy**: An `async/await` framework for writing concurrent, non-blocking code. This is the default scheduler.
-*   **RTIC (Real-Time For the Impatient)**: A framework for building real-time systems with predictable scheduling and minimal overhead.
+## Concurrency and Scheduling
 
-The choice of scheduler can be configured at compile time, allowing the firmware to be adapted to different hardware and performance requirements.
+The firmware uses the `embassy` executor to manage concurrent tasks. Key tasks include:
+
+*   `host_comm_task`: Handles serial communication with the Klipper host.
+*   `motion_control_task`: Manages the stepper motor queue and pulse generation.
+*   `thermal_control_task`: Runs the PID loop for all heaters.
+*   `safety_monitor_task`: Performs periodic safety checks.
+
+These tasks communicate with each other using message passing (channels) and shared state (mutexes) provided by the `embassy-sync` library. This ensures that access to shared resources (like hardware peripherals) is safe and free from data races.
