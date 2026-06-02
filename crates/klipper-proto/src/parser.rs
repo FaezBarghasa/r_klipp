@@ -96,7 +96,7 @@ impl Parser {
 }
 
 /// Uses `nom` to parse the payload into a specific command.
-fn parse_command(input: &[u8]) -> IResult<&[u8], Command> {
+fn parse_command(input: &[u8]) -> IResult<&[u8], Command<'_>> {
     let (i, command_id) = u8(input)?;
     match command_id {
         0x01 => map(take(input.len() - 1), |s| Command::Identify {
