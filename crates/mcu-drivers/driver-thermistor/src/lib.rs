@@ -117,10 +117,11 @@ mod tests {
     #[test]
     fn test_table_interpolation() {
         let thermistor = NtcThermistor::new(ConversionMode::Table(&TEMP_TABLE));
-        // Exactly halfway between 50°C and 25°C
+        // Calculate halfway ADC value
         let adc_mid = 852 + (1825 - 852) / 2;
         let temp = thermistor.temperature(adc_mid).unwrap();
-        assert!((temp - 37.5).abs() < 1e-6);
+        let expected = 50.0 + (adc_mid as f32 - 852.0) / (1825.0 - 852.0) * (25.0 - 50.0);
+        assert!((temp - expected).abs() < 1e-6);
     }
 
     #[test]

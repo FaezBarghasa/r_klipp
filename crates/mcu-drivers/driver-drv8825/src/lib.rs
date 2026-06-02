@@ -101,28 +101,45 @@ mod tests {
 
     #[test]
     fn test_drv8825_enable_disable() {
-        let step = PinMock::new(&[]);
-        let dir = PinMock::new(&[]);
+        let mut step = PinMock::new(&[]);
+        let mut dir = PinMock::new(&[]);
         let mut enable = PinMock::new(&[
             Transaction::set(State::Low),
             Transaction::set(State::High),
         ]);
-        let m0 = PinMock::new(&[]);
-        let m1 = PinMock::new(&[]);
-        let m2 = PinMock::new(&[]);
+        let mut m0 = PinMock::new(&[]);
+        let mut m1 = PinMock::new(&[]);
+        let mut m2 = PinMock::new(&[]);
 
-        let mut driver = Drv8825::new(step, dir, enable, m0, m1, m2);
+        let mut driver = Drv8825::new(&mut step, &mut dir, &mut enable, &mut m0, &mut m1, &mut m2);
         driver.enable().unwrap();
         driver.disable().unwrap();
 
-        driver.enable.done(); // Verify expectations
+        step.done();
+        dir.done();
+        enable.done();
+        m0.done();
+        m1.done();
+        m2.done();
     }
 
     #[test]
     fn test_drv8825_set_microsteps() {
-        let step = PinMock::new(&[]);
-        let dir = PinMock::new(&[]);
-        let enable = PinMock::new(&[]);
+        let mut step = PinMock::new(&[]);
+        let mut dir = PinMock::new(&[]);
+        let mut enable = PinMock::new(&[]);
+        let expectations = [
+            (
+                Transaction::set(State::High),
+                Transaction::set(State::Low),
+                Transaction::set(State::High),
+            ),
+            (
+                Transaction::set(State::Low),
+                Transaction::set(State::Low),
+                Transaction::set(State::Low),
+            ),
+        ];
         let [
             (m0_0, m1_0, m2_0),
             (m0_1, m1_1, m2_1),
@@ -132,10 +149,13 @@ mod tests {
         let mut m1 = PinMock::new(&[m1_0, m1_1]);
         let mut m2 = PinMock::new(&[m2_0, m2_1]);
 
-        let mut driver = Drv8825::new(step, dir, enable, &mut m0, &mut m1, &mut m2);
+        let mut driver = Drv8825::new(&mut step, &mut dir, &mut enable, &mut m0, &mut m1, &mut m2);
         driver.set_microsteps(Microsteps::ThirtySecond).unwrap();
         driver.set_microsteps(Microsteps::Full).unwrap();
 
+        step.done();
+        dir.done();
+        enable.done();
         m0.done();
         m1.done();
         m2.done();

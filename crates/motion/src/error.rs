@@ -7,4 +7,6 @@ pub enum PlannerError {
     QueueFull,
     /// The requested move is impossible (e.g., zero distance).
     InvalidMove,
+    /// Newton-Raphson root solver failed to converge.
+    ConvergenceFailed,
 }

@@ -49,25 +49,32 @@ mod tests {
     #[test]
     fn test_read_six_endstops() {
         // Create mock pins for 6 endstops
-        let mut pins = [
-            PinMock::new(&[Transaction::get(State::Low)]),
-            PinMock::new(&[Transaction::get(State::High)]),
-            PinMock::new(&[Transaction::get(State::Low)]),
-            PinMock::new(&[Transaction::get(State::High)]),
-            PinMock::new(&[Transaction::get(State::Low)]),
-            PinMock::new(&[Transaction::get(State::Low)]),
-        ];
+        let mut p0 = PinMock::new(&[Transaction::get(State::Low)]);
+        let mut p1 = PinMock::new(&[Transaction::get(State::High)]);
+        let mut p2 = PinMock::new(&[Transaction::get(State::Low)]);
+        let mut p3 = PinMock::new(&[Transaction::get(State::High)]);
+        let mut p4 = PinMock::new(&[Transaction::get(State::Low)]);
+        let mut p5 = PinMock::new(&[Transaction::get(State::Low)]);
 
-        let mut endstops = Endstops::new(pins);
+        let mut endstops = Endstops::new([
+            &mut p0,
+            &mut p1,
+            &mut p2,
+            &mut p3,
+            &mut p4,
+            &mut p5,
+        ]);
 
         let states = endstops.read_states().unwrap();
 
         assert_eq!(states, [false, true, false, true, false, false]);
 
-        // Verify that all mock expectations were met
-        // Note: The pins array was moved, so we can't iterate here.
-        // The `done()` check is implicitly handled when the mock object goes out of scope
-        // if it was created with the exact number of expected transactions.
+        p0.done();
+        p1.done();
+        p2.done();
+        p3.done();
+        p4.done();
+        p5.done();
     }
 }
 

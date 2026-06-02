@@ -51,16 +51,20 @@ impl PhBezier15 {
     }
 
     /// Solves the parameter t for a desired distance s using Newton-Raphson root convergence.
-    pub fn get_t_from_distance(&self, s: f64) -> f64 {
+    pub fn get_t_from_distance(&self, s: f64) -> Result<f64, crate::error::PlannerError> {
         let mut t = s / self.evaluate_arc_length(1.0); // Baseline linear estimate
         
-        for _ in 0..5 {
+        for _ in 0..8 {
             let current_s = self.evaluate_arc_length(t);
             let mut sigma_t = 0.0;
             
             // Compute the speed polynomial \sigma(t)
             for i in 0..15 {
                 sigma_t += self.sigma_coeffs[i] * t.powi(i as i32);
+            }
+            
+            if (current_s - s).abs() < 1e-9 {
+                return Ok(t.clamp(0.0, 1.0));
             }
             
             if sigma_t.abs() < 1e-12 {
@@ -70,7 +74,13 @@ impl PhBezier15 {
             let dt = (current_s - s) / sigma_t;
             t = (t - dt).clamp(0.0, 1.0);
         }
-        t
+        
+        let final_s = self.evaluate_arc_length(t);
+        if (final_s - s).abs() < 1e-9 {
+            Ok(t)
+        } else {
+            Err(crate::error::PlannerError::ConvergenceFailed)
+        }
     }
 
     /// Returns the exact spatial coordinates (X, Y) evaluated using De Casteljau reduction.
@@ -85,5 +95,38 @@ impl PhBezier15 {
             }
         }
         (x_eval[0], y_eval[0])
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_ph_bezier_properties() {
+        let p0 = (0.0, 0.0);
+        let p1 = (10.0, 0.0);
+        let segment_len = 10.0;
+        let curve = PhBezier15::new(p0, p1, segment_len);
+
+        // Verify start and end positions
+        let start_pos = curve.evaluate_position(0.0);
+        let end_pos = curve.evaluate_position(1.0);
+        assert!((start_pos.0 - p0.0).abs() < 1e-6);
+        assert!((start_pos.1 - p0.1).abs() < 1e-6);
+        assert!((end_pos.0 - p1.0).abs() < 1e-6);
+        assert!((end_pos.1 - p1.1).abs() < 1e-6);
+
+        // Verify arc length is monotonically increasing and reaches segment_len at t=1.0
+        let mid_len = curve.evaluate_arc_length(0.5);
+        let total_len = curve.evaluate_arc_length(1.0);
+        assert!(mid_len > 0.0);
+        assert!(mid_len < total_len);
+
+        // Solve t for half distance
+        let half_s = total_len / 2.0;
+        let t_half = curve.get_t_from_distance(half_s).unwrap();
+        let s_at_t = curve.evaluate_arc_length(t_half);
+        assert!((s_at_t - half_s).abs() < 1e-9);
     }
 }

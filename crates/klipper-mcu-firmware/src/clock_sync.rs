@@ -1,4 +1,4 @@
-// crates/klipper-mcu-firmware/src/clock_sync.rs
+use core::sync::atomic::{AtomicBool, Ordering};
 
 /// Real-Time Clock alignment parameters matching y = mx + c.
 #[derive(Copy, Clone, Debug)]
@@ -53,5 +53,63 @@ impl ClockSyncModel {
             self.intercept = (sum_y - self.slope * sum_x) / n;
             self.last_local_ticks = local_history[local_history.len() - 1];
         }
+    }
+}
+
+/// Double-buffered atomic wrapper for thread-safe lock-free updates of ClockSyncModel.
+pub struct SharedClockModel {
+    active: AtomicBool,
+    models: [ClockSyncModel; 2],
+}
+
+impl SharedClockModel {
+    pub const fn new() -> Self {
+        Self {
+            active: AtomicBool::new(false),
+            models: [ClockSyncModel::new(), ClockSyncModel::new()],
+        }
+    }
+
+    /// Read the active model (lock-free, safe to call from Priority 4 ISR)
+    #[inline(always)]
+    pub fn get_active(&self) -> ClockSyncModel {
+        let idx = self.active.load(Ordering::Acquire) as usize;
+        self.models[idx]
+    }
+
+    /// Update the inactive model and swap (called from Priority 1 task)
+    pub fn update(&mut self, local_history: &[u32], master_history: &[u64]) {
+        let active_idx = self.active.load(Ordering::Relaxed);
+        let inactive_idx = !active_idx;
+        
+        let mut model = self.models[active_idx as usize];
+        model.update_regression_model(local_history, master_history);
+        
+        self.models[inactive_idx as usize] = model;
+        self.active.store(inactive_idx, Ordering::Release);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_shared_clock_model_sync() {
+        let mut shared = SharedClockModel::new();
+        
+        // Assert initial slope/intercept
+        let active = shared.get_active();
+        assert_eq!(active.slope, 1.0);
+        
+        // Update regression
+        let local_history = [1000, 2000, 3000];
+        let master_history = [1005, 2010, 3015];
+        shared.update(&local_history, &master_history);
+
+        // Verify updated active model parameters
+        let active_updated = shared.get_active();
+        assert!((active_updated.slope - 1.01).abs() < 1e-4);
+        assert!((active_updated.intercept - (-5.0)).abs() < 1e-4);
     }
 }

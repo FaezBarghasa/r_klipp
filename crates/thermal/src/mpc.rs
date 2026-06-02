@@ -43,7 +43,7 @@ impl MpcThermalEngine {
     }
 
     /// Evaluates the hotend thermal step, returning the new power output command (0.0 to 1.0).
-    pub fn evaluate(&mut self, y_measured: f32, t_ambient: f32, u_prev: f32, volumetric_flow: f32) -> f32 {
+    pub fn step(&mut self, y_measured: f32, t_ambient: f32, u_prev: f32, volumetric_flow: f32) -> f32 {
         // 1. Prediction Step: Predict next states based on physical thermal dissipation
         let d0 = t_ambient;
         let d1 = volumetric_flow;
@@ -79,5 +79,35 @@ impl MpcThermalEngine {
         let feedforward_loss = (self.t_heater_est - t_ambient) * 0.0022 + volumetric_flow * 0.065;
         
         (feedback_power + feedforward_loss).clamp(0.0, 1.0)
+    }
+
+    pub fn get_sensor_temp(&self) -> f32 {
+        self.t_sensor_est
+    }
+
+    pub fn get_heater_temp(&self) -> f32 {
+        self.t_heater_est
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_mpc_thermal_convergence() {
+        let mut mpc = MpcThermalEngine::new(200.0);
+        let mut u = 0.0;
+        let t_ambient = 22.0;
+
+        // Simulate 50 step updates and ensure estimated temperatures increase towards target
+        for _ in 0..50 {
+            // Assume the physical sensor registers a slow warm up towards target
+            let y_measured = mpc.get_sensor_temp() + 5.0; 
+            u = mpc.step(y_measured, t_ambient, u, 0.0);
+        }
+
+        assert!(mpc.get_heater_temp() > 22.0);
+        assert!(u > 0.0);
     }
 }
