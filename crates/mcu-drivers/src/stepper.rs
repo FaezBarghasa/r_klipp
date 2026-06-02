@@ -1,184 +1,79 @@
 // crates/mcu-drivers/src/stepper.rs
+#![no_std]
 
-//! # Low-Latency Stepper Motor Control
-//!
-//! This module provides a hard real-time stepper motor controller optimized for
-//! extremely low latency (<10µs) and high throughput (>100,000 steps/sec).
-//!
-//! ## Pipelined Architecture for Lower Latency
-//!
-//! To achieve the lowest possible latency, this controller uses a pipelined
-//! execution model. The `StepperController` maintains a `next_command` that is
-//! fetched from the SPSC queue *ahead of time*.
-//!
-//! When the timer interrupt fires:
-//! 1.  **(Immediate)** The `next_command` is executed instantly. This involves only
-//!     fast GPIO register writes for direction and step pins.
-//! 2.  **(After Step)** The `interval_ticks` from the *just-executed* command is used
-//!     to schedule the *next* timer interrupt.
-//! 3.  **(Deferred)** The controller then dequeues the *following* command and prepares
-//!     it, storing it in `next_command` for the next interrupt cycle.
-//!
-//! This ensures that the time between the interrupt trigger and the step pulse is
-//! minimal and deterministic, as queue operations and conditional logic are not
-//! on the critical path.
-//!
-//! ## Safety
-//!
-//! - **Lock-Free:** Communication remains lock-free via the `heapless::spsc::Queue`.
-//! - **No Heap Allocations:** The module remains fully `#[no_std]` compliant.
-//! - **Atomic GPIO:** The `AtomicGpioPort` trait is designed to map directly to
-//!   hardware features like the `BSRR` register on STM32 MCUs, allowing for
-//!   single-instruction, atomic set/clear operations on multiple pins. This avoids
-//!   read-modify-write operations on the GPIO port, which would be non-atomic
-//!   and slower.
-//!
-//! ## Performance
-//!
-//! - **Interrupt Path:** The critical path within the interrupt is reduced to a few
-//!   GPIO writes and a timer register write. This is expected to execute in well
-//!   under 50 CPU cycles on a modern Cortex-M MCU.
-//! - **Jitter:** Minimized to near-zero by the pipelined design and atomic GPIO operations.
+use heapless::spsc::Queue;
 
-use core::cell::RefCell;
-use critical_section::Mutex;
-use heapless::spsc::{Consumer, Producer, Queue};
-
-/// A single step command to be executed by the `StepperController`.
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Default)]
-pub struct StepCommand {
-    pub stepper_mask: u8,
-    pub direction_mask: u8,
-    pub interval_ticks: u16,
+/// Representation of a single discrete stepping chunk dispatched to step timers.
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
+pub struct StepSegment {
+    /// Number of local master clock cycles to wait before toggling the step pin.
+    pub interval_ticks: u32,
+    /// Digital state of the direction pin (true = high, false = low).
+    pub direction: bool,
+    /// Bitmask of stepper motor enable lines to set/clear.
+    pub enable_mask: u8,
 }
-
-impl StepCommand {
-    pub const fn new(stepper_mask: u8, direction_mask: u8, interval_ticks: u16) -> Self {
-        Self { stepper_mask, direction_mask, interval_ticks }
-    }
-}
-
-pub type StepperProducer = Producer<'static, StepCommand>;
 
 pub struct StepperController<const N: usize> {
-    command_consumer: Consumer<'static, StepCommand>,
-    positions: [i32; N],
-    current_directions: u8,
-    next_command: Option<StepCommand>,
+    /// Lock-free ring buffer holding incoming calculated steps.
+    pub queue: Queue<StepSegment, N>,
+    /// Track current hardware direction pin state to prevent unnecessary GPIO writes.
+    pub current_dir: bool,
+    /// Target step pin bitmask for fast GPIO port writes.
+    pub step_pin_mask: u32,
 }
 
 impl<const N: usize> StepperController<N> {
-    pub fn new(command_consumer: Consumer<'static, StepCommand>) -> Self {
-        assert!(N <= 8, "This controller supports a maximum of 8 steppers.");
+    pub const fn new(step_pin_mask: u32) -> Self {
         Self {
-            command_consumer,
-            positions: [0; N],
-            current_directions: 0,
-            next_command: None,
+            queue: Queue::new(),
+            current_dir: false,
+            step_pin_mask,
         }
     }
 
-    pub fn start<STEP_PORT, DIR_PORT, TIMER>(
-        &mut self,
-        dir_port: &Mutex<RefCell<DIR_PORT>>,
-        timer: &Mutex<RefCell<TIMER>>,
-    ) where
-        DIR_PORT: AtomicGpioPort,
-        TIMER: Timer,
-    {
-        critical_section::with(|cs| {
-            self.prepare_next_command_internal(dir_port, cs);
-            if let Some(cmd) = self.next_command {
-                let timer = &mut *timer.borrow(cs).borrow_mut();
-                timer.schedule_next(cmd.interval_ticks.max(100));
-            }
-        });
-    }
-
-    /// The core interrupt handler, designed for minimum latency.
+    /// Executed by the communications task (Priority 1) to push calculated steps into the queue.
     #[inline(always)]
-    pub fn on_timer_interrupt<STEP_PORT, DIR_PORT, TIMER>(
-        &mut self,
-        step_port: &Mutex<RefCell<STEP_PORT>>,
-        dir_port: &Mutex<RefCell<DIR_PORT>>,
-        timer: &Mutex<RefCell<TIMER>>,
-    ) where
-        STEP_PORT: AtomicGpioPort,
-        DIR_PORT: AtomicGpioPort,
-        TIMER: Timer,
-    {
-        critical_section::with(|cs| {
-            if let Some(cmd_to_execute) = self.next_command.take() {
-                let step_port = &mut *step_port.borrow(cs).borrow_mut();
-                let timer = &mut *timer.borrow(cs).borrow_mut();
-
-                // --- CRITICAL PATH START ---
-                step_port.set_and_clear_atomic(cmd_to_execute.stepper_mask, cmd_to_execute.stepper_mask);
-                if cmd_to_execute.interval_ticks > 0 {
-                    timer.schedule_next(cmd_to_execute.interval_ticks);
-                } else {
-                    timer.trigger_now();
-                }
-                // --- CRITICAL PATH END ---
-
-                self.update_positions(cmd_to_execute.stepper_mask, cmd_to_execute.direction_mask);
-                self.prepare_next_command_internal(dir_port, cs);
-
-                if self.next_command.is_none() {
-                    timer.stop();
-                }
-            } else {
-                let timer = &mut *timer.borrow(cs).borrow_mut();
-                timer.stop();
-            }
-        });
+    pub fn enqueue_segment(&mut self, segment: StepSegment) -> Result<(), &'static str> {
+        self.queue.enqueue(segment).map_err(|_| "Error: Step queue is full. Real-time desync imminent.")
     }
 
-    fn prepare_next_command_internal<'cs, DIR_PORT>(
-        &mut self,
-        dir_port: &Mutex<RefCell<DIR_PORT>>,
-        cs: critical_section::CriticalSection<'cs>,
-    ) where
-        DIR_PORT: AtomicGpioPort,
-    {
-        if let Some(cmd) = self.command_consumer.dequeue() {
-            let direction_changes = self.current_directions ^ cmd.direction_mask;
-            if direction_changes != 0 {
-                let dir_port = &mut *dir_port.borrow(cs).borrow_mut();
-                dir_port.write(cmd.direction_mask);
-                self.current_directions = cmd.direction_mask;
+    /// High-Priority ISR Callback (Priority 5).
+    /// Updates physical output registers and configures the timer reload register for the next step.
+    /// 
+    /// # Arguments
+    /// * `bsrr_register` - Raw pointer to GPIO bit set/reset register (e.g., STM32 BSRR).
+    /// * `arr_register` - Raw pointer to the auto-reload match register of the timer.
+    #[inline(always)]
+    pub unsafe fn execute_next_step_isr(
+        &mut self, 
+        bsrr_register: *mut u32, 
+        arr_register: *mut u32
+    ) {
+        if let Some(segment) = self.queue.dequeue() {
+            // Write direction pin state directly to hardware register
+            if segment.direction != self.current_dir {
+                self.current_dir = segment.direction;
+                if self.current_dir {
+                    // Set direction pin high
+                    *bsrr_register = self.step_pin_mask;
+                } else {
+                    // Reset direction pin low
+                    *bsrr_register = self.step_pin_mask << 16;
+                }
             }
-            self.next_command = Some(cmd);
+            
+            // Set step pin high
+            *bsrr_register = self.step_pin_mask;
+            
+            // Write next step interval time directly into hardware auto-reload register
+            *arr_register = segment.interval_ticks;
+            
+            // Clear step pin (creates a pulse of minimum width based on CPU clock cycle speed)
+            *bsrr_register = self.step_pin_mask << 16;
         } else {
-            self.next_command = None;
+            // Underflow fallback: No moves in queue, safely halt timer
+            *arr_register = u32::MAX;
         }
     }
-
-    #[inline]
-    fn update_positions(&mut self, stepper_mask: u8, direction_mask: u8) {
-        for i in 0..N {
-            if (stepper_mask >> i) & 1 != 0 {
-                if (direction_mask >> i) & 1 != 0 {
-                    self.positions[i] = self.positions[i].wrapping_add(1);
-                } else {
-                    self.positions[i] = self.positions[i].wrapping_sub(1);
-                }
-            }
-        }
-    }
-
-    pub fn get_position(&self, stepper_index: usize) -> Option<i32> {
-        self.positions.get(stepper_index).copied()
-    }
-}
-
-pub trait AtomicGpioPort {
-    fn set_and_clear_atomic(&mut self, set_mask: u8, clear_mask: u8);
-    fn write(&mut self, mask: u8);
-}
-
-pub trait Timer {
-    fn schedule_next(&mut self, ticks: u16);
-    fn trigger_now(&mut self);
-    fn stop(&mut self);
 }

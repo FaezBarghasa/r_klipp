@@ -55,8 +55,8 @@ fn sqrtf(x: f32) -> f32 { x.sqrt() }
 use crate::{
     error::PlannerError,
     profile::{InputShaper, PressureAdvance},
-    StepCommand,
 };
+use mcu_drivers::stepper::StepSegment;
 use heapless::spsc::{Producer, Queue};
 use heapless::{Deque, Vec, binary_heap::{BinaryHeap, Min}};
 
@@ -208,7 +208,7 @@ impl MotionPlanner {
     /// Generates step commands for the next move in the queue.
     pub fn generate_steps(
         &mut self,
-        producer: &mut Producer<'static, StepCommand, 256>,
+        producer: &mut Producer<'static, StepSegment, 256>,
     ) -> Result<(), ()> {
         let mut segment = self.move_queue.dequeue().ok_or(())?;
         let mut errors = [0i32; MAX_AXES];
@@ -244,7 +244,11 @@ impl MotionPlanner {
             let mut prev_time = 0;
             while let Some(step) = shaper_heap.pop() {
                 let interval = step.time.saturating_sub(prev_time);
-                producer.enqueue(StepCommand::new(step.stepper_mask, segment.direction_mask, interval as u16)).map_err(|_| ())?;
+                producer.enqueue(StepSegment {
+                    interval_ticks: interval,
+                    direction: segment.direction_mask != 0,
+                    enable_mask: step.stepper_mask,
+                }).map_err(|_| ())?;
                 prev_time = step.time;
             }
 
@@ -258,7 +262,11 @@ impl MotionPlanner {
 
                 // (PA logic would go here)
 
-                producer.enqueue(StepCommand::new(stepper_mask as u8, segment.direction_mask, interval as u16)).map_err(|_| ())?;
+                producer.enqueue(StepSegment {
+                    interval_ticks: interval,
+                    direction: segment.direction_mask != 0,
+                    enable_mask: stepper_mask as u8,
+                }).map_err(|_| ())?;
             }
         }
         Ok(())

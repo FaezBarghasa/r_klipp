@@ -29,7 +29,7 @@ pub use error::PlannerError;
 pub use kinematics::{CoreXYKinematics, CartesianKinematics, Kinematics, StepperAxis};
 pub use planner::{MoveSegment, MotionPlanner};
 pub use profile::PressureAdvance;
-use mcu_drivers::stepper::StepCommand;
+use mcu_drivers::stepper::StepSegment;
 
 /// A point in 3D cartesian space.
 /// Units are typically in millimeters.
