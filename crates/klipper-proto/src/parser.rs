@@ -46,45 +46,48 @@ impl Parser {
     /// - `Err(Error)` if a recoverable error occurred (like a bad CRC), along
     ///   with the number of bytes to discard. The caller should advance their
     ///   buffer by this amount and try again.
-    pub fn parse<'a>(&self, input: &'a [u8]) -> Result<Option<(Message<'a>, usize)>, (Error, usize)> {
+    pub fn parse(&self, input: &[u8]) -> Result<Option<(Message, usize)>, (Error, usize)> {
         // Find the first sync byte
         if let Some(sync_pos) = input.iter().position(|&b| b == SYNC_BYTE) {
             let buffer = &input[sync_pos..];
             let original_len = buffer.len();
 
-            // The header is 4 bytes: [LEN, SEQ, CMD_ID, CMD_ID] (CMD_ID is u16)
-            if original_len < 4 {
-                return Ok(None); // Incomplete header
+            // The header must contain at least SYNC_BYTE and LEN byte
+            if original_len < 2 {
+                return Ok(None);
             }
 
-            let msg_len = buffer[0] as usize;
-            if original_len < msg_len {
-                return Ok(None); // Incomplete message payload
+            let msg_len = buffer[1] as usize; // Length of fields after the length byte
+            let expected_total_len = msg_len + 2; // SYNC_BYTE (1) + LEN (1) + msg_len
+
+            if original_len < expected_total_len {
+                return Ok(None); // Incomplete message
             }
 
-            // We have a full potential message. Slice it out.
-            // The full frame includes [LEN, SEQ, CMD, PAYLOAD, CRC]
-            let frame_with_len = &buffer[..msg_len];
-            let payload_and_crc = &frame_with_len[1..];
-            let payload = &payload_and_crc[..payload_and_crc.len() - 2];
-            let received_crc =
-                u16::from_be_bytes(payload_and_crc[payload_and_crc.len() - 2..].try_into().unwrap());
+            // Slice out the full frame (including sync and length)
+            let frame = &buffer[..expected_total_len];
+            
+            // The message block starts at index 1 (the LEN byte)
+            let msg_block = &frame[1..]; // Length is msg_len + 1
+            
+            let received_crc = u16::from_be_bytes(msg_block[msg_block.len() - 2..].try_into().unwrap());
+            let calculated_crc = crc16_ccitt(msg_block, msg_len - 1);
 
-            // Validate CRC
-            let calculated_crc = crc16_ccitt(frame_with_len, msg_len - 2);
             if received_crc != calculated_crc {
                 // CRC mismatch. Discard the sync byte and try again.
                 return Err((Error::InvalidCrc, sync_pos + 1));
             }
 
+            // The command payload starts at index 2 of msg_block (after LEN and SEQ)
+            let cmd_block = &msg_block[2..msg_block.len() - 2];
+
             // CRC is valid, now parse the command
-            match parse_command(payload) {
+            match parse_command(cmd_block) {
                 Ok((_rem, command)) => {
-                    let consumed = sync_pos + msg_len + 1; // +1 for the sync byte
+                    let consumed = sync_pos + expected_total_len;
                     Ok(Some((Message::Command(command), consumed)))
                 }
                 Err(_) => {
-                    // Payload is invalid for any known command. Discard and continue.
                     Err((Error::InvalidPayload, sync_pos + 1))
                 }
             }
@@ -96,11 +99,13 @@ impl Parser {
 }
 
 /// Uses `nom` to parse the payload into a specific command.
-fn parse_command(input: &[u8]) -> IResult<&[u8], Command<'_>> {
+fn parse_command(input: &[u8]) -> IResult<&[u8], Command> {
     let (i, command_id) = u8(input)?;
     match command_id {
-        0x01 => map(take(input.len() - 1), |s| Command::Identify {
-            dict_version: s,
+        0x01 => map(take(input.len() - 1), |s: &[u8]| {
+            let mut dict_version = heapless::Vec::new();
+            let _ = dict_version.extend_from_slice(s);
+            Command::Identify { dict_version }
         })(i),
         0x02 => Ok((i, Command::GetConfig)),
         0x03 => Ok((i, Command::GetStatus)),
@@ -122,6 +127,10 @@ fn parse_command(input: &[u8]) -> IResult<&[u8], Command<'_>> {
             pin,
             value,
         })(i),
-        _ => Ok((&[], Command::Unknown(command_id, i))),
+        _ => {
+            let mut unknown_payload = heapless::Vec::new();
+            let _ = unknown_payload.extend_from_slice(i);
+            Ok((&[], Command::Unknown(command_id, unknown_payload)))
+        }
     }
 }

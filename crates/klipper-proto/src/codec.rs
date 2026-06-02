@@ -75,6 +75,8 @@ impl Encoder<Message> for KlipperCodec {
         // 2. Calculate CRC on the unescaped payload
         let crc = Self::crc8_atm(serialized);
 
+        let start_idx = dst.len();
+
         // 3. Frame the message
         dst.reserve(3 + serialized.len()); // Conservative estimate
         dst.extend_from_slice(&[SYNC_BYTE, 0, crc]); // Length is placeholder for now
@@ -83,12 +85,12 @@ impl Encoder<Message> for KlipperCodec {
         Self::escape(serialized, dst);
 
         // 5. Update the length field
-        let frame_len = dst.len() - 1; // -1 for sync byte
+        let frame_len = dst.len() - start_idx - 1; // -1 for sync byte
         if frame_len > 255 {
             // This should be rare but is a protocol limitation
             return Err(Error::BufferTooSmall);
         }
-        dst[1] = frame_len as u8;
+        dst[start_idx + 1] = frame_len as u8;
 
         Ok(())
     }

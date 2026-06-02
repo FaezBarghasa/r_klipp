@@ -1953,6 +1953,7 @@ version = "0.1.0"
 dependencies = [
  "bytes",
  "criterion",
+ "futures",
  "heapless 0.9.3",
  "nom",
  "postcard",

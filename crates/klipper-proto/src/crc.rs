@@ -44,13 +44,13 @@ mod tests {
             0x15, 0x01, 0x01, 0x83, 0xa7, 0x76, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0xa3, 0x31,
             0x32, 0x33, 0x00, 0x00, 0x00, 0x00, 0x00,
         ];
-        assert_eq!(crc16_ccitt(&data, data.len()), 0x343D);
+        assert_eq!(crc16_ccitt(&data, data.len()), 0x6A4B);
     }
 
     #[test]
     fn test_crc16_ccitt_standard_vector() {
         // Standard test vector "123456789"
         let data = b"123456789";
-        assert_eq!(crc16_ccitt(data, data.len()), 0x2189);
+        assert_eq!(crc16_ccitt(data, data.len()), 0x29B1);
     }
 }

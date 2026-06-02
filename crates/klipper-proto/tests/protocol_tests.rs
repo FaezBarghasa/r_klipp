@@ -35,13 +35,13 @@ mod std_tests {
         roundtrip(Message::Response(Response::Config {
             is_config_valid: true,
             mcu_version: 12345,
-            mcu_name: "test_mcu".into(),
+            mcu_name: "test_mcu".try_into().unwrap(),
         }));
     }
 
     #[test]
     fn roundtrip_gcode_command() {
-        roundtrip(Message::Command(Command::GCode("G1 X10 Y10 F3000".into())));
+        roundtrip(Message::Command(Command::GCode("G1 X10 Y10 F3000".try_into().unwrap())));
     }
 
     #[test]
@@ -51,13 +51,14 @@ mod std_tests {
 
     #[test]
     fn roundtrip_gcode_error() {
-        roundtrip(Message::Response(Response::GCodeError("Unknown command".into())));
+        roundtrip(Message::Response(Response::GCodeError("Unknown command".try_into().unwrap())));
     }
 
     #[test]
     fn roundtrip_message_with_escapable_bytes() {
         // Create a message containing bytes that need escaping (0x7E, 0x7D)
-        roundtrip(Message::Command(Command::GCode("G1 X~} F3000".replace("~", "\x7E").replace("}", "\x7D").into())));
+        let s = "G1 X~} F3000".replace("~", "\x7E").replace("}", "\x7D");
+        roundtrip(Message::Command(Command::GCode(s.as_str().try_into().unwrap())));
     }
 
     #[test]

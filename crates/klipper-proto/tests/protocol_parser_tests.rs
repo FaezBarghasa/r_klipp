@@ -8,7 +8,7 @@ use klipper_proto::{
 
 /// Helper to construct a valid Klipper message frame for testing.
 fn build_test_frame(seq: u8, command_id: u8, payload: &[u8]) -> Vec<u8> {
-    let msg_len = 1 (seq) + 1 (cmd_id) + payload.len() + 2 (crc);
+    let msg_len = 1 /* seq */ + 1 /* cmd_id */ + payload.len() + 2 /* crc */;
     let mut frame = Vec::with_capacity(msg_len + 1);
     frame.push(SYNC_BYTE);
     frame.push(msg_len as u8);

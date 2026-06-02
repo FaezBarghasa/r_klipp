@@ -2,7 +2,6 @@
 
 use klipper_proto::commands::{Command, Message, Response};
 use klipper_proto::io::KlipperFramed;
-use tokio::io::DuplexStream;
 use futures::{SinkExt, StreamExt};
 
 #[tokio::main]
@@ -24,16 +23,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         Command::GetConfig => Message::Response(Response::Config {
                             is_config_valid: true,
                             mcu_version: 0x010000,
-                            mcu_name: "klipper-proto-mcu".into(),
+                            mcu_name: "klipper-proto-mcu".try_into().unwrap(),
                         }),
                         Command::GCode(gcode) => {
                             if gcode.starts_with("M112") {
-                                Message::Response(Response::GCodeError("Emergency stop".into()))
+                                Message::Response(Response::GCodeError("Emergency stop".try_into().unwrap()))
                             } else {
                                 Message::Response(Response::GCodeOk)
                             }
                         }
-                        _ => Message::Response(Response::Log("Unknown command".into())),
+                        _ => Message::Response(Response::Log("Unknown command".try_into().unwrap())),
                     };
                     println!("[Server] Sending response: {:?}", response);
                     if let Err(e) = framed.send(response).await {
@@ -66,7 +65,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Test 2: GCode command
     println!("\n[Client] Sending GCode command 'G28'...");
-    framed_client.send(Message::Command(Command::GCode("G28".into()))).await?;
+    framed_client.send(Message::Command(Command::GCode("G28".try_into().unwrap()))).await?;
     if let Some(Ok(Message::Response(resp))) = framed_client.next().await {
         println!("[Client] Received response: {:?}", resp);
         assert_eq!(resp, Response::GCodeOk);
