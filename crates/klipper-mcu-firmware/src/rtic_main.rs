@@ -1,7 +1,4 @@
 // File path: crates/klipper-mcu-firmware/src/rtic_main.rs
-// AI-generated comment:
-// This file was modified by an AI assistant to implement a first-class RTIC application structure.
-// Source files for context: crates/klipper-mcu-firmware/src/rtic_main.rs, crates/mcu-drivers/stepper.rs
 
 //! # RTIC-based Firmware Entry Point
 //!
@@ -28,57 +25,21 @@ mod app {
 
     // Workspace crates
     use crate::heater::{HeaterSharedState, PidController};
-    use mcu_drivers::stepper::{StepCommand, StepperController, AtomicGpioPort, Timer};
+    use mcu_drivers::stepper::{StepSegment, StepperController};
 
     const STEPPER_QUEUE_SIZE: usize = 256;
 
     type LedPin = gpiod::PD12<Output<PushPull>>;
 
-    // Queues for communication between tasks
-    static mut STEPPER_QUEUE: Queue<StepCommand, STEPPER_QUEUE_SIZE> = Queue::new();
-
-    // AI-generated note on architecture mismatch:
-    // The existing `StepperController` in `mcu-drivers` expects peripherals wrapped in
-    // `Mutex<RefCell<...>>`, which is idiomatic for Embassy but not for RTIC. In RTIC,
-    // resources are managed by the framework and passed via the context `cx`.
-    // To bridge this, we create simple proxy structs (`StepperTimerProxy`, `GpioProxy`)
-    // that hold RTIC's `local` resources and implement the traits `Timer` and `AtomicGpioPort`
-    // that the `StepperController` expects. This avoids modifying the shared `mcu-drivers` crate.
-
-    struct StepperTimerProxy<'a> {
-        tim: &'a mut CounterUs<TIM2>,
-    }
-    impl Timer for StepperTimerProxy<'_> {
-        fn schedule_next(&mut self, ticks: u16) {
-            self.tim.start(ticks.micros()).unwrap();
-        }
-        fn trigger_now(&mut self) {
-            self.tim.start(1.micros()).unwrap();
-        }
-        fn stop(&mut self) {
-            self.tim.cancel().unwrap();
-        }
-    }
-
-    // In a real implementation, GpioProxy would wrap GPIO Port peripherals.
-    // This is a simplified placeholder.
-    struct GpioProxy;
-    impl AtomicGpioPort for GpioProxy {
-        fn set_and_clear_atomic(&mut self, _set_mask: u8, _clear_mask: u8) { /* no-op */ }
-        fn write(&mut self, _mask: u8) { /* no-op */ }
-    }
-
-
     #[shared]
     struct Shared {
         usart_tx: Tx<USART1>,
+        stepper_controller: StepperController<STEPPER_QUEUE_SIZE>,
     }
 
     #[local]
     struct Local {
         led: LedPin,
-        stepper_controller: StepperController<8>,
-        stepper_producer: Producer<'static, StepCommand, STEPPER_QUEUE_SIZE>,
         stepper_timer: CounterUs<TIM2>,
         usart_rx: Rx<USART1>,
     }
@@ -115,9 +76,8 @@ mod app {
         let mut stepper_timer = dp.TIM2.counter_us(&clocks);
         stepper_timer.listen(TimerEvent::Update);
 
-        // Setup queues and controller
-        let (stepper_producer, stepper_consumer) = unsafe { STEPPER_QUEUE.split() };
-        let stepper_controller = StepperController::new(stepper_consumer);
+        // Setup stepper controller (e.g. step pin mask 1)
+        let stepper_controller = StepperController::new(1);
 
         // Schedule periodic software tasks
         heater_task::spawn().ok();
@@ -126,11 +86,9 @@ mod app {
         defmt::info!("RTIC Init complete.");
 
         (
-            Shared { usart_tx },
+            Shared { usart_tx, stepper_controller },
             Local {
                 led,
-                stepper_controller,
-                stepper_producer,
                 stepper_timer,
                 usart_rx,
             },
@@ -146,35 +104,38 @@ mod app {
     }
 
     /// Stepper interrupt. Highest priority task.
-    #[task(binds = TIM2, local = [stepper_controller, stepper_timer], priority = 4)]
+    #[task(binds = TIM2, shared = [stepper_controller], local = [stepper_timer], priority = 4)]
     fn stepper_isr(cx: stepper_isr::Context) {
         // Clear the interrupt flag
         cx.local.stepper_timer.clear_interrupt(TimerEvent::Update);
 
-        // Create proxies for the stepper controller
-        let mut timer_proxy = StepperTimerProxy { tim: cx.local.stepper_timer };
-
-        // These would be proper GPIO port proxies in a full implementation
-        let step_port_proxy = Mutex::new(RefCell::new(GpioProxy));
-        let dir_port_proxy = Mutex::new(RefCell::new(GpioProxy));
-        let timer_proxy_mutex = Mutex::new(RefCell::new(timer_proxy));
-
-        cx.local.stepper_controller.on_timer_interrupt(
-            &step_port_proxy,
-            &dir_port_proxy,
-            &timer_proxy_mutex
-        );
+        cx.shared.stepper_controller.lock(|controller| {
+            // Using typical STM32F4 registers for demo (BSRR for GPIOD, ARR for TIM2)
+            let bsrr = 0x4002_0C18 as *mut u32; // GPIOD BSRR
+            let arr = 0x4000_002C as *mut u32;  // TIM2 ARR
+            unsafe {
+                controller.execute_next_step_isr(bsrr, arr);
+            }
+        });
     }
 
     /// Communication Task - handles incoming serial data.
-    #[task(binds = USART1, local = [usart_rx, stepper_producer], priority = 2)]
+    #[task(binds = USART1, shared = [stepper_controller], local = [usart_rx], priority = 2)]
     fn usart_task(cx: usart_task::Context) {
         // This task would read bytes from cx.local.usart_rx,
         // feed them to a klipper-proto parser, and on receiving
-        // a valid `QueueStep` command, would push it to the
-        // cx.local.stepper_producer queue.
-        if let Ok(byte) = cx.local.usart_rx.read() {
+        // a valid step segment, would push it to the controller queue.
+        if let Ok(_byte) = cx.local.usart_rx.read() {
             // ... parsing logic here ...
+            // When segment is parsed:
+            let segment = StepSegment {
+                interval_ticks: 1000,
+                direction: true,
+                enable_mask: 1,
+            };
+            cx.shared.stepper_controller.lock(|controller| {
+                let _ = controller.enqueue_segment(segment);
+            });
         }
     }
 
@@ -196,4 +157,3 @@ mod app {
         }
     }
 }
-

@@ -16,7 +16,6 @@
 //! polynomial equation. The specific conversion method depends on the type of
 //! thermistor being used.
 
-use embassy_stm32::adc::Adc;
 use embassy_stm32::peripherals::ADC1;
 use embassy_stm32::gpio::AnyPin;
 

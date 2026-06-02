@@ -36,12 +36,13 @@ fn spawn_test_server() -> (String, api::AppState) {
     });
 
     let server_state = app_state.clone();
+    let thread_app_state = app_state.clone();
     let sp = socket_path.clone();
     std::thread::spawn(move || {
         let rt = actix_rt::System::new();
         rt.block_on(async {
             let api_server = api::start_api_server(0, server_state).unwrap(); // Port 0 for random port
-            let socket_server = klipper_host::virtual_printer::start_virtual_printer(&sp, app_state.gcode_sender);
+            let socket_server = klipper_host::virtual_printer::start_virtual_printer(&sp, thread_app_state.gcode_sender);
 
             tokio::select! {
                 _ = api_server => {},

@@ -15,7 +15,7 @@ async fn main(spawner: Spawner) {
     defmt::info!("Initializing Klipper MCU Firmware...");
 
     // Board-specific configuration and initialization.
-    let mut config = Config::default();
+    let config = Config::default();
     // Configure clocks here if needed, e.g., for high-speed stepping.
     // config.rcc.hse = Some(embassy_stm32::rcc::Hse { ... });
     let p = embassy_stm32::init(config);

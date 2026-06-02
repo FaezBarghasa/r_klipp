@@ -20,12 +20,12 @@ impl G4Profile {
     /// Builds a multi-phase velocity profiles boundary system to transition between states.
     pub fn generate_profile(
         start_vel: f64, 
-        end_vel: f64, 
+        _end_vel: f64, 
         max_vel: f64, 
         max_accel: f64, 
         max_jerk: f64, 
-        max_snap: f64, 
-        max_crackle: f64
+        _max_snap: f64, 
+        _max_crackle: f64
     ) -> Self {
         let mut phases = heapless::Vec::new();
         

@@ -108,7 +108,7 @@ impl GCodeDispatcher {
 
     /// Handles G0/G1 (Linear Move) commands.
     async fn handle_g0_g1(&mut self, gcode: GCode) -> Result<()> {
-        let mut current_pos = self.state.lock().position.clone();
+        let current_pos = self.state.lock().position.clone();
         let mut new_pos = current_pos.clone();
 
         for (param, value) in gcode.params {

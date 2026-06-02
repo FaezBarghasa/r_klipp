@@ -33,12 +33,11 @@ pub fn parse_ini(content: &str) -> Result<ParsedConfig, MigrationError> {
             continue;
         }
 
-        // Key-value pair
         if let Some(section_name) = &current_section_name {
-            let parts: Vec<&str> = line.splitn(2, '=').map(|s| s.trim()).collect();
-            if parts.len() == 2 {
-                let key = parts[0].to_string();
-                let value = parts[1].to_string();
+            let split_pos = line.find('=').or_else(|| line.find(':'));
+            if let Some(pos) = split_pos {
+                let key = line[..pos].trim().to_string();
+                let value = line[pos+1..].trim().to_string();
                 if let Some(section) = config.get_mut(section_name) {
                     section.insert(key, value);
                 }

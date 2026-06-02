@@ -3033,6 +3033,7 @@ dependencies = [
  "fixed",
  "float-cmp",
  "num-traits",
+ "rand 0.8.6",
  "serde",
 ]
 

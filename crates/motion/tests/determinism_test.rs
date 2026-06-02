@@ -1,13 +1,13 @@
 //! Tests for the motion planner's determinism and correctness.
 
 use motion::planner::MotionPlanner;
-use motion::StepCommand;
+use mcu_drivers::stepper::StepSegment;
 use heapless::spsc::Queue;
 
 #[test]
 fn test_planner_generates_correct_trapezoid_move() {
-    let mut planner = MotionPlanner::new();
-    static mut STEP_QUEUE: Queue<StepCommand, 256> = Queue::new();
+    let mut planner = MotionPlanner::new([80.0; 8]);
+    static mut STEP_QUEUE: Queue<StepSegment, 1024> = Queue::new();
     let (mut producer, mut consumer) = unsafe { STEP_QUEUE.split() };
 
     let mut target = [0; 8];
@@ -16,7 +16,8 @@ fn test_planner_generates_correct_trapezoid_move() {
 
     // Plan a 10mm x 10mm diagonal move
     // Velocity: 800 steps/sec, Accel: 1000 steps/sec^2
-    planner.plan_move(target, 800.0, 1000.0).unwrap();
+    planner.plan_move(target, 14.142136, 17.67767, 100000.0, 0.05).unwrap();
+    planner.finalize().unwrap();
 
     // Generate the steps into the queue
     let steps_generated = planner.generate_steps(&mut producer).unwrap();
@@ -32,12 +33,14 @@ fn test_planner_generates_correct_trapezoid_move() {
 
     // 1. First step should have both motors on, and a long initial interval.
     let s1 = consumer.dequeue().unwrap();
-    assert_eq!(s1.stepper_mask, 0b0000_0011); // X and Y
-    assert_eq!(s1.direction_mask, 0b0000_0011); // Both forward
+    println!("s1: enable_mask={:08b}, direction={}, interval_ticks={}", s1.enable_mask, s1.direction, s1.interval_ticks);
+    assert_eq!(s1.enable_mask, 0b0000_0011); // X and Y
+    assert_eq!(s1.direction, true); // Both forward
     assert!(s1.interval_ticks > 20000); // Should be slow initially
 
     // 2. Second step interval should be shorter (accelerating)
     let s2 = consumer.dequeue().unwrap();
+    println!("s2: enable_mask={:08b}, direction={}, interval_ticks={}", s2.enable_mask, s2.direction, s2.interval_ticks);
     assert!(s2.interval_ticks < s1.interval_ticks);
 
     // 3. Drain the queue and find the cruise phase

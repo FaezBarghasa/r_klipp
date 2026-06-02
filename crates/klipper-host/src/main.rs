@@ -31,17 +31,7 @@ use std::sync::Arc;
 use tokio::sync::mpsc;
 use tracing::info;
 
-mod api;
-mod batch;
-mod config;
-mod gcode;
-mod kinematics;
-mod mcu_client;
-mod state;
-mod virtual_printer;
-mod macro_engine;
-mod hil_analyzer;
-
+use klipper_host::{batch, config, state, api, virtual_printer, gcode, mcu_client};
 use config::PrinterConfig;
 use state::PrinterState;
 

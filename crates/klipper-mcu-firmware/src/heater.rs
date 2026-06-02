@@ -25,8 +25,7 @@
 
 use crate::fixed_point::Fixed16_16;
 use crate::safety::SafetyMonitor;
-use embassy_stm32::time::Hertz;
-use embassy_stm32::timer::simple_pwm::{PwmPin, SimplePwm};
+use embassy_stm32::timer::simple_pwm::SimplePwm;
 use embassy_stm32::timer::Channel;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::mutex::Mutex;

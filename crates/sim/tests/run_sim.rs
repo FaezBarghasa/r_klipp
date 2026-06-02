@@ -70,7 +70,7 @@ async fn main() -> Result<()> {
     tokio::time::sleep(Duration::from_millis(100)).await;
 
     // 2. Initialize the simulation host
-    let mut sim_host = SimHost::new(socket_path);
+    let _sim_host = SimHost::new(socket_path);
 
     // 3. Define a simple G-code file content
     let gcode_file_content = vec![

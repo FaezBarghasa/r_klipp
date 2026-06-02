@@ -46,8 +46,6 @@ pub mod boards;
 
 #[cfg(feature = "embassy-rt")]
 mod embassy_main;
-#[cfg(feature = "embassy-rt")]
-use embassy_main as _;
 
 #[cfg(feature = "rtic-rt")]
 mod rtic_main;

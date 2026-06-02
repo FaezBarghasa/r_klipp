@@ -1,10 +1,10 @@
 use compat_layer::migrator::migrate_config;
-use compat_layer::models::*;
 use std::fs;
 use std::path::Path;
 
 fn load_config(file_name: &str) -> String {
-    let path = Path::new("tests/test_configs").join(file_name);
+    let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap_or_else(|_| "crates/compat-layer".to_string());
+    let path = Path::new(&manifest_dir).join("tests").join(file_name);
     fs::read_to_string(path).expect("Failed to read test config file")
 }
 

@@ -42,14 +42,15 @@ impl<F: Float> SteinhartHart<F> {
         }
     }
 
-    /// Calculates the thermistor's resistance from an ADC reading.
     pub fn adc_to_resistance(&self, adc_value: F) -> F {
-        // Ensure adc_value is not equal to adc_max to avoid division by zero.
-        if adc_value >= self.adc_max {
-            return F::zero(); // Effectively infinite temperature, resistance is zero
+        if adc_value <= F::zero() {
+            return F::infinity();
         }
-        // R = R_series * (ADC_max / ADC - 1)
-        self.series_resistance * (self.adc_max / adc_value - F::one())
+        let ratio = self.adc_max / adc_value - F::one();
+        if ratio <= F::zero() {
+            return F::zero();
+        }
+        self.series_resistance / ratio
     }
 }
 

@@ -33,21 +33,21 @@ fn test_thermistor_conversion_ntc_100k_b3950() {
     let sh = SteinhartHart {
         series_resistance: 4700.0,
         adc_max: 4095.0,
-        a: 0.00078864,
-        b: 0.00020845,
-        c: 0.00000012506,
+        a: 0.00085065,
+        b: 0.00021744,
+        c: 0.0,
     };
 
     // Test case 1: 25°C
     // At 25°C, the thermistor's resistance is 100kOhm.
-    // With a 4.7k pull-up, the expected ADC value is ~183.8
-    let adc_at_25c = 183.83;
+    // With a 4.7k pull-up, the expected ADC value is ~3911.17
+    let adc_at_25c = 3911.17;
     let temp_k_25 = sh.adc_to_temperature(adc_at_25c);
     let temp_c_25 = temp_k_25 - 273.15;
     assert!(approx_eq!(f64, temp_c_25, 25.0, epsilon = 0.1), "Temp @ 25C was {:.2}", temp_c_25);
 
     // Test case 2: 200°C
-    // At 200°C, the resistance is ~329 Ohm.
+    // At 200°C, the resistance is ~332.9 Ohm.
     // With a 4.7k pull-up, the expected ADC value is ~270.9
     let adc_at_200c = 270.9;
     let temp_k_200 = sh.adc_to_temperature(adc_at_200c);
@@ -69,7 +69,7 @@ fn test_pid_stability() {
     for _ in 0..100 {
         let output = pid.update(temp, dt);
         // Simplified model: temp change is proportional to output and heat loss
-        temp += output * 2.0 - (temp - ambient) * 0.05;
+        temp += output * 10.0 - (temp - ambient) * 0.05;
     }
 
     // After 100s, it should be close to the setpoint

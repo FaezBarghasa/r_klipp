@@ -21,4 +21,6 @@ serde = { version = "1.0", default-features = false, features = ["derive"], opti
 [dev-dependencies]
 criterion = "0.5" # For benchmarking if needed later
 float-cmp = "0.9"
+rand = "0.8.5"
+
 

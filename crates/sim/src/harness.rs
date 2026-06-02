@@ -11,7 +11,7 @@ use std::io::Write;
 use std::path::Path;
 use std::process::Stdio;
 use std::time::SystemTime;
-use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+use tokio::io::{AsyncWriteExt, BufReader};
 use tokio::net::UnixStream;
 use tracing::{info, instrument};
 

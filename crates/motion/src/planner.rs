@@ -58,7 +58,7 @@ use crate::{
 };
 use mcu_drivers::stepper::StepSegment;
 use heapless::spsc::{Producer, Queue};
-use heapless::{Deque, Vec, binary_heap::{BinaryHeap, Min}};
+use heapless::{Deque, binary_heap::{BinaryHeap, Min}};
 
 const MAX_AXES: usize = 8;
 const CLOCK_FREQ: f32 = 100_000_000.0;
@@ -88,7 +88,11 @@ impl MoveSegment {
     pub fn get_move_vector_mm(&self, steps_per_mm: &[f32; MAX_AXES]) -> [f32; MAX_AXES - 1] {
         let mut vec = [0.0; MAX_AXES - 1];
         for i in 0..MAX_AXES-1 {
-            vec[i] = self.steps[i] as f32 / steps_per_mm[i];
+            vec[i] = if self.steps[i] == 0 {
+                0.0
+            } else {
+                self.steps[i] as f32 / steps_per_mm[i]
+            };
         }
         vec
     }
@@ -102,7 +106,7 @@ struct ScheduledStep {
 }
 impl Ord for ScheduledStep {
     fn cmp(&self, other: &Self) -> core::cmp::Ordering {
-        other.time.cmp(&self.time) // Reverse for min-heap
+        self.time.cmp(&other.time) // Normal comparison for Min heap
     }
 }
 impl PartialOrd for ScheduledStep {
@@ -148,7 +152,11 @@ impl MotionPlanner {
                 direction_mask |= 1 << i;
             }
             if i != EXTRUDER_AXIS {
-                let axis_dist = steps[i] as f32 / self.steps_per_mm[i];
+                let axis_dist = if steps[i] == 0 {
+                    0.0
+                } else {
+                    steps[i] as f32 / self.steps_per_mm[i]
+                };
                 move_dist_sq += axis_dist * axis_dist;
             }
         }
@@ -206,21 +214,22 @@ impl MotionPlanner {
     }
 
     /// Generates step commands for the next move in the queue.
-    pub fn generate_steps(
+    pub fn generate_steps<const N: usize>(
         &mut self,
-        producer: &mut Producer<'static, StepSegment, 256>,
-    ) -> Result<(), ()> {
-        let mut segment = self.move_queue.dequeue().ok_or(())?;
+        producer: &mut Producer<'static, StepSegment, N>,
+    ) -> Result<u32, ()> {
+        let segment = self.move_queue.dequeue().ok_or(())?;
         let mut errors = [0i32; MAX_AXES];
         let dominant_axis_steps = segment.total_steps;
 
-        let mut extruder_steps_to_add = 0.0;
+        let mut _extruder_steps_to_add = 0.0;
         let total_time = segment.t_j1 + segment.t_a + segment.t_j2 + segment.t_c + segment.t_j3 + segment.t_d + segment.t_j4;
-        if total_time <= 0.0 { return Ok(()); }
+        println!("dominant_steps={}, distance={}, start_v={}, cruise_v={}, end_v={}, accel={}, jerk={}, times: t_j1={}, t_a={}, t_j2={}, t_c={}, t_j3={}, t_d={}, t_j4={}", dominant_axis_steps, segment.distance, segment.start_v, segment.cruise_v, segment.end_v, segment.accel, segment.jerk, segment.t_j1, segment.t_a, segment.t_j2, segment.t_c, segment.t_j3, segment.t_d, segment.t_j4);
+        if total_time <= 0.0 { return Ok(0); }
 
         if let Some(shaper) = segment.shaper {
             // --- Input Shaping Path ---
-            let mut shaper_heap: BinaryHeap<ScheduledStep, Min, 64> = BinaryHeap::new();
+            let mut shaper_heap: BinaryHeap<ScheduledStep, Min, 2048> = BinaryHeap::new();
             let mut last_time_ticks: u32 = 0;
 
             for n in 1..=dominant_axis_steps {
@@ -256,7 +265,7 @@ impl MotionPlanner {
             // --- Standard Path (No Shaping) ---
             for n in 1..=dominant_axis_steps {
                 let t = (n as f32 / dominant_axis_steps as f32) * total_time;
-                let (v, a) = self.get_velocity_and_accel(&segment, t);
+                let (v, _a) = self.get_velocity_and_accel(&segment, t);
                 let interval = if v > 0.0 { (CLOCK_FREQ / v * segment.distance / dominant_axis_steps as f32) as u32 } else { u32::MAX };
                 let stepper_mask = self.bresenham_step(&mut errors, &segment.steps, dominant_axis_steps);
 
@@ -269,7 +278,7 @@ impl MotionPlanner {
                 }).map_err(|_| ())?;
             }
         }
-        Ok(())
+        Ok(dominant_axis_steps)
     }
 
     // --- Private Helper Functions ---
@@ -318,7 +327,7 @@ impl MotionPlanner {
             let max_v = fminf(seg1.cruise_v, seg2.cruise_v);
             let junction_v = fminf(sqrtf(junction_v_sq), max_v);
 
-            let mut seg1_mut = self.lookahead_queue.front_mut().unwrap();
+            let seg1_mut = self.lookahead_queue.front_mut().unwrap();
             seg1_mut.end_v = junction_v;
             Self::recalculate_timing(seg1_mut);
 

@@ -125,13 +125,13 @@ impl InputShaper {
                 self.num_impulses = 3;
             }
             ShaperType::EI => {
-                let v = if damping_ratio < 1.0 {
+                let _v = if damping_ratio < 1.0 {
                     let phi = acosf(damping_ratio);
                     2.0 * pi * damping_ratio / (phi * sqrtf(1.0 - damping_ratio * damping_ratio))
                 } else {
                     0.0
                 };
-                let w = 2.0 * pi * damping_ratio / (acosf(damping_ratio) * sqrtf(1.0 - damping_ratio*damping_ratio));
+                let _w = 2.0 * pi * damping_ratio / (acosf(damping_ratio) * sqrtf(1.0 - damping_ratio*damping_ratio));
                 let k2 = k*k;
                 let a1 = 1.0 / (1.0 + 3.0 * k + 3.0 * k2 + k2 * k);
                 let a2 = 3.0 * k * a1;

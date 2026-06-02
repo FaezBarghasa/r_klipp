@@ -18,9 +18,8 @@
 //! command would be sent to the stepper task, while a set heater temperature command
 //! would be sent to the heater task.
 
-use embassy_stm32::usart::{Uart, UartTx, UartRx};
 use embassy_stm32::peripherals::USART1;
-use embassy_stm32::gpio::{AnyPin, Pin};
+use embassy_stm32::gpio::AnyPin;
 
 
 /// The protocol bridge task.

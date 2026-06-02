@@ -7,7 +7,7 @@
 use crate::config::McuConfig;
 use crate::gcode::McuCommand;
 use crate::state::{PrinterState, PrinterStatus};
-use anyhow::{Context, Result};
+use anyhow::Result;
 use parking_lot::Mutex;
 use rand::Rng;
 use std::sync::Arc;

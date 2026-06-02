@@ -1,6 +1,5 @@
 // crates/klipper-host/src/macro_engine.rs
 use rhai::{Engine, AST, Scope};
-use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
 
 pub struct HostMacroEngine {
