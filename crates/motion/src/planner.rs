@@ -214,9 +214,9 @@ impl MotionPlanner {
     }
 
     /// Generates step commands for the next move in the queue.
-    pub fn generate_steps<const N: usize>(
+    pub fn generate_steps(
         &mut self,
-        producer: &mut Producer<'static, StepSegment, N>,
+        producer: &mut Producer<'static, StepSegment>,
     ) -> Result<u32, ()> {
         let segment = self.move_queue.dequeue().ok_or(())?;
         let mut errors = [0i32; MAX_AXES];

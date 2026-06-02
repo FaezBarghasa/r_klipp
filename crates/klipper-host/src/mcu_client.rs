@@ -102,7 +102,7 @@ pub async fn run_mock_mcu(mut mcu_rx: Receiver<McuCommand>, state: Arc<Mutex<Pri
     tokio::spawn(async move {
         loop {
             sleep(Duration::from_secs(2)).await;
-            let mut rng = rand::thread_rng();
+            let mut rng = rand::rng();
             let mut locked_state = temp_state.lock();
             if let Some(extruder_temp) = locked_state.temperatures.get_mut("extruder") {
                 extruder_temp.actual += rng.gen_range(-0.5..0.5);
