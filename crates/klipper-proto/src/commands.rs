@@ -40,6 +40,8 @@ pub enum Command<'a> {
         pin: u8,
         value: u16,
     },
+    GCode(&'a str),
+    EmergencyStop,
     // Add other commands as they are implemented...
     Unknown(u8, &'a [u8]),
 }
@@ -56,8 +58,13 @@ pub enum Response<'a> {
         // Define status fields as needed
     },
     Config {
-        // Define config fields as needed
+        is_config_valid: bool,
+        mcu_version: u32,
+        mcu_name: &'a str,
     },
+    GCodeOk,
+    GCodeError(&'a str),
+    Log(&'a str),
     // Add other responses...
     Unknown,
 }

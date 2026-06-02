@@ -52,10 +52,10 @@ overflow-checks = false
 
 [[test]]
 name = "safety_tests"
-path = "tests/safety_tests.rs"
+path = "test/safety_tests.rs"
 harness = true
 
 [[test]]
 name = "heater_tests"
-path = "tests/heater_tests.rs"
+path = "test/heater_tests.rs"
 harness = true

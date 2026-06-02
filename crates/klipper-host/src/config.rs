@@ -46,6 +46,7 @@ impl PrinterConfig {
         let mut config = Ini::new();
         config
             .load(path)
+            .map_err(anyhow::Error::msg)
             .with_context(|| format!("Failed to load configuration file: {:?}", path))?;
 
         let mcu = McuConfig {

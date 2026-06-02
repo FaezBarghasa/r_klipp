@@ -1,1 +1,0 @@
-{"rustc":7458672600737419911,"features":"[]","declared_features":"[\"defmt\", \"log\"]","target":4738556298589656385,"profile":11876527447619405325,"path":6190132095764676455,"deps":[],"local":[{"CheckDepInfo":{"dep_info":"debug/.fingerprint/embassy-futures-1ab08bab13e0cbfb/dep-lib-embassy_futures","checksum":false}}],"rustflags":[],"config":8247474407144887393,"compile_kind":0}

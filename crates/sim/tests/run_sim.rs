@@ -81,10 +81,6 @@ async fn main() -> Result<()> {
 
     // 4. Run the in-process host logic
     info!("Starting in-process host simulation...");
-    let host_handle = |reader, writer| {
-        let gcode = gcode_file_content.clone();
-        Box::pin(simple_host_logic(reader, writer, gcode, &mut sim_host))
-    };
 
     // Need to handle sim_host mutability carefully.
     // A more advanced version might use channels to send trace data.

@@ -28,6 +28,7 @@ pub async fn run_mcu_client(
         config.serial_port, config.baud_rate
     );
 
+    let mut mcu_rx = mcu_rx;
     loop {
         // Attempt to connect to the serial port.
         match tokio_serial::new(&config.serial_port, config.baud_rate).open_native_async() {
@@ -37,7 +38,7 @@ pub async fn run_mcu_client(
                 state.lock().status_message = "Printer is ready".to_string();
 
                 // If connection succeeds, run the communication loop.
-                if let Err(e) = mcu_comm_loop(port, mcu_rx, state.clone()).await {
+                if let Err(e) = mcu_comm_loop(port, &mut mcu_rx, state.clone()).await {
                     error!("MCU communication error: {}. Will attempt to reconnect.", e);
                 }
             }
@@ -58,7 +59,7 @@ pub async fn run_mcu_client(
 /// The main communication loop for reading from and writing to the MCU.
 async fn mcu_comm_loop(
     _port: SerialStream,
-    mut mcu_rx: Receiver<McuCommand>,
+    mcu_rx: &mut Receiver<McuCommand>,
     _state: Arc<Mutex<PrinterState>>,
 ) -> Result<()> {
     // In a real implementation, you would have two tasks:
@@ -99,9 +100,9 @@ pub async fn run_mock_mcu(mut mcu_rx: Receiver<McuCommand>, state: Arc<Mutex<Pri
     // Simulate periodic temperature updates.
     let temp_state = state.clone();
     tokio::spawn(async move {
-        let mut rng = rand::thread_rng();
         loop {
             sleep(Duration::from_secs(2)).await;
+            let mut rng = rand::thread_rng();
             let mut locked_state = temp_state.lock();
             if let Some(extruder_temp) = locked_state.temperatures.get_mut("extruder") {
                 extruder_temp.actual += rng.gen_range(-0.5..0.5);
