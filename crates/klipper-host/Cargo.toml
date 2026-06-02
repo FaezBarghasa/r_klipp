@@ -22,10 +22,10 @@ futures-util = "0.3.30"
 bytes = "1.6.0"
 parking_lot = "0.12.3"
 configparser = "3.0.4"
-thiserror = "1.0.61"
+thiserror = "2.0.18"
 tokio-util = { version = "0.7.11", features = ["codec"] }
 crossbeam-channel = "0.5.13"
-rand = "0.8.5"
+rand = "0.10.1"
 mimalloc = { version = "0.1.42", default-features = false }
 rhai = "1.19.0"
 

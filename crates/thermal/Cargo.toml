@@ -19,8 +19,8 @@ fixed = { workspace = true }
 serde = { version = "1.0", default-features = false, features = ["derive"], optional = true }
 
 [dev-dependencies]
-criterion = "0.5" # For benchmarking if needed later
-float-cmp = "0.9"
-rand = "0.8.5"
+criterion = "0.8.2" # For benchmarking if needed later
+float-cmp =0.10.0"
+rand = "0.10.1"
 
 

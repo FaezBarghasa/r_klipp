@@ -14,7 +14,7 @@ libm = { version = "0.2.8", optional = true }
 # Optional serde support for serialization
 serde = { version = "1.0", features = ["derive"], optional = true }
 # For the command queue
-heapless = "0.8.0"
+heapless = "0.9.3"
 # For the StepCommand definition from the stepper driver
 mcu-drivers = { path = "../mcu-drivers" }
 
@@ -33,7 +33,7 @@ serde-support = ["serde"]
 
 [dev-dependencies]
 # For running benchmarks
-criterion = "0.5"
+criterion = "0.8.2"
 # For serializing traces in examples/tests
 serde_json = "1.0"
 
