@@ -28,6 +28,3 @@ crossbeam-channel = "0.5.13"
 rand = "0.8.5"
 mimalloc = { version = "0.1.42", default-features = false }
 
-[workspace]
-members = ["klipper-host"]
-

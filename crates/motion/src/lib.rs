@@ -20,6 +20,9 @@ pub mod errors;
 pub mod kinematics;
 pub mod planner;
 pub mod profile;
+pub mod ph_beziers;
+pub mod g4_planner;
+pub mod homing;
 
 // Re-export core types for easier access
 pub use errors::PlannerError;

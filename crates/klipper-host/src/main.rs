@@ -39,6 +39,8 @@ mod kinematics;
 mod mcu_client;
 mod state;
 mod virtual_printer;
+mod macro_engine;
+mod hil_analyzer;
 
 use config::PrinterConfig;
 use state::PrinterState;

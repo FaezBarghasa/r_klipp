@@ -16,7 +16,7 @@ serde = { version = "1.0", features = ["derive"], optional = true }
 # For the command queue
 heapless = "0.8.0"
 # For the StepCommand definition from the stepper driver
-mcu-drivers = { path = "../mcu-drivers", package = "stepper" }
+mcu-drivers = { path = "../mcu-drivers" }
 
 
 [features]

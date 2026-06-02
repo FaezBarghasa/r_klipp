@@ -28,6 +28,7 @@ pub mod heater;
 pub mod proto_bridge;
 pub mod safety;
 pub mod stepper;
+pub mod clock_sync;
 pub mod fixed_point;
 
 // --- Runtime Selection ---

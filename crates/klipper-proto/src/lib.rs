@@ -33,6 +33,7 @@ extern crate alloc;
 pub mod commands;
 pub mod crc;
 pub mod parser;
+pub mod autoconfig;
 
 /// Common error type for the protocol crate.
 #[derive(Debug, PartialEq, Eq)]

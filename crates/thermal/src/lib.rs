@@ -21,6 +21,7 @@ pub mod filter;
 pub mod pid;
 pub mod safety;
 pub mod thermistor;
+pub mod mpc;
 
 // Re-export key types
 pub use filter::{Filter, LowPassFilter, MovingAverageFilter};

@@ -1,0 +1,11 @@
+/home/jrad/RustroverProjects/r_klipp/target/debug/deps/embassy_futures-1ab08bab13e0cbfb.d: /home/jrad/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/embassy-futures-0.1.2/src/lib.rs /home/jrad/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/embassy-futures-0.1.2/src/fmt.rs /home/jrad/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/embassy-futures-0.1.2/src/block_on.rs /home/jrad/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/embassy-futures-0.1.2/src/yield_now.rs /home/jrad/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/embassy-futures-0.1.2/src/join.rs /home/jrad/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/embassy-futures-0.1.2/src/select.rs /home/jrad/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/embassy-futures-0.1.2/src/../README.md
+
+/home/jrad/RustroverProjects/r_klipp/target/debug/deps/libembassy_futures-1ab08bab13e0cbfb.rmeta: /home/jrad/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/embassy-futures-0.1.2/src/lib.rs /home/jrad/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/embassy-futures-0.1.2/src/fmt.rs /home/jrad/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/embassy-futures-0.1.2/src/block_on.rs /home/jrad/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/embassy-futures-0.1.2/src/yield_now.rs /home/jrad/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/embassy-futures-0.1.2/src/join.rs /home/jrad/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/embassy-futures-0.1.2/src/select.rs /home/jrad/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/embassy-futures-0.1.2/src/../README.md
+
+/home/jrad/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/embassy-futures-0.1.2/src/lib.rs:
+/home/jrad/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/embassy-futures-0.1.2/src/fmt.rs:
+/home/jrad/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/embassy-futures-0.1.2/src/block_on.rs:
+/home/jrad/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/embassy-futures-0.1.2/src/yield_now.rs:
+/home/jrad/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/embassy-futures-0.1.2/src/join.rs:
+/home/jrad/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/embassy-futures-0.1.2/src/select.rs:
+/home/jrad/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/embassy-futures-0.1.2/src/../README.md:
