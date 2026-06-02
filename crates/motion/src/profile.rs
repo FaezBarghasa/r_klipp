@@ -5,7 +5,14 @@
 #[cfg(not(feature = "std"))]
 use libm::{acosf, cosf, expf, sqrtf};
 #[cfg(feature = "std")]
-use std::primitive::f32::{acos as acosf, cos, exp as expf, sqrt as sqrtf};
+#[inline]
+fn acosf(x: f32) -> f32 { x.acos() }
+#[cfg(feature = "std")]
+#[inline]
+fn expf(x: f32) -> f32 { x.exp() }
+#[cfg(feature = "std")]
+#[inline]
+fn sqrtf(x: f32) -> f32 { x.sqrt() }
 
 /// Pressure Advance model.
 ///

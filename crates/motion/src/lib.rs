@@ -16,7 +16,7 @@
 #[cfg(feature = "alloc")]
 extern crate alloc;
 
-pub mod errors;
+pub mod error;
 pub mod kinematics;
 pub mod planner;
 pub mod profile;
@@ -25,7 +25,7 @@ pub mod g4_planner;
 pub mod homing;
 
 // Re-export core types for easier access
-pub use errors::PlannerError;
+pub use error::PlannerError;
 pub use kinematics::{CoreXYKinematics, CartesianKinematics, Kinematics, StepperAxis};
 pub use planner::{MoveSegment, MotionPlanner};
 pub use profile::PressureAdvance;

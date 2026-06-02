@@ -1,7 +1,7 @@
 use thiserror::Error;
 
 /// Represents an error that can occur during the parsing or migration of a Klipper config.
-#[derive(Error, Debug, PartialEq)]
+#[derive(Error, Debug)]
 pub enum MigrationError {
     /// An error occurred while parsing the configuration file.
     #[error("Parsing error on line {0}: {1}")]

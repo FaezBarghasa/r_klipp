@@ -25,7 +25,7 @@
 //! - **Streaming**: It can handle partial messages, finding frame boundaries
 //!   in a continuous stream of bytes.
 //! - **Fuzzing-Resistant**: Robust checks for length and CRC prevent panics
--//!   or errors from malformed input.
+//!   or errors from malformed input.
 
 #[cfg(feature = "alloc")]
 extern crate alloc;

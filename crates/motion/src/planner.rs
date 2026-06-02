@@ -34,12 +34,26 @@
 #[cfg(not(feature = "std"))]
 use libm::{acosf, fabsf, fmaxf, fminf, powf, sqrtf};
 #[cfg(feature = "std")]
-use std::primitive::f32::{
-    acos as acosf, fabs as fabsf, max as fmaxf, min as fminf, powf, sqrt as sqrtf,
-};
+#[inline]
+fn acosf(x: f32) -> f32 { x.acos() }
+#[cfg(feature = "std")]
+#[inline]
+fn fabsf(x: f32) -> f32 { x.abs() }
+#[cfg(feature = "std")]
+#[inline]
+fn fmaxf(x: f32, y: f32) -> f32 { x.max(y) }
+#[cfg(feature = "std")]
+#[inline]
+fn fminf(x: f32, y: f32) -> f32 { x.min(y) }
+#[cfg(feature = "std")]
+#[inline]
+fn powf(x: f32, y: f32) -> f32 { x.powf(y) }
+#[cfg(feature = "std")]
+#[inline]
+fn sqrtf(x: f32) -> f32 { x.sqrt() }
 
 use crate::{
-    errors::PlannerError,
+    error::PlannerError,
     profile::{InputShaper, PressureAdvance},
     StepCommand,
 };
@@ -183,7 +197,7 @@ impl MotionPlanner {
     pub fn finalize(&mut self) -> Result<(), PlannerError> {
         self.process_lookahead()?;
         while let Some(mut segment) = self.lookahead_queue.pop_front() {
-            self.recalculate_timing(&mut segment);
+            Self::recalculate_timing(&mut segment);
             if self.move_queue.enqueue(segment).is_err() {
                 return Err(PlannerError::QueueFull);
             }
@@ -267,8 +281,8 @@ impl MotionPlanner {
 
     fn process_lookahead(&mut self) -> Result<(), PlannerError> {
         while self.lookahead_queue.len() >= 2 {
-            let seg1 = &self.lookahead_queue[0];
-            let seg2 = &self.lookahead_queue[1];
+            let seg1 = self.lookahead_queue.iter().nth(0).unwrap();
+            let seg2 = self.lookahead_queue.iter().nth(1).unwrap();
 
             let v1 = seg1.get_move_vector_mm(&self.steps_per_mm);
             let v2 = seg2.get_move_vector_mm(&self.steps_per_mm);
@@ -278,7 +292,7 @@ impl MotionPlanner {
             if v1_mag_sq < 1e-9 || v2_mag_sq < 1e-9 {
                 // Zero length move in lookahead, finalize and dequeue it
                 let mut seg = self.lookahead_queue.pop_front().unwrap();
-                self.recalculate_timing(&mut seg);
+                Self::recalculate_timing(&mut seg);
                 self.move_queue.enqueue(seg).map_err(|_| PlannerError::QueueFull)?;
                 continue;
             }
@@ -298,7 +312,7 @@ impl MotionPlanner {
 
             let mut seg1_mut = self.lookahead_queue.front_mut().unwrap();
             seg1_mut.end_v = junction_v;
-            self.recalculate_timing(seg1_mut);
+            Self::recalculate_timing(seg1_mut);
 
             let seg1_final = self.lookahead_queue.pop_front().unwrap();
 
@@ -311,7 +325,7 @@ impl MotionPlanner {
         Ok(())
     }
 
-    fn recalculate_timing(&self, s: &mut MoveSegment) {
+    fn recalculate_timing(s: &mut MoveSegment) {
         let accel_dist = (s.cruise_v * s.cruise_v - s.start_v * s.start_v) / (2.0 * s.accel);
         let decel_dist = (s.cruise_v * s.cruise_v - s.end_v * s.end_v) / (2.0 * s.accel);
 

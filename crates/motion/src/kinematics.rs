@@ -3,7 +3,9 @@
 #[cfg(not(feature = "std"))]
 use libm::{sqrt, fmax};
 #[cfg(feature = "std")]
-use std::f64::{sqrt, NAN};
+fn sqrt(x: f64) -> f64 {
+    x.sqrt()
+}
 
 use crate::CartesianPoint;
 
@@ -27,11 +29,8 @@ pub trait Kinematics {
     ///
     /// # Arguments
     /// * `point` - The target `CartesianPoint` (x, y, z).
-    ///
-    /// # Returns
-    /// An array of f64 where each element corresponds to a stepper's target position.
-    /// The order of axes is implementation-defined.
-    fn cartesian_to_stepper_positions(&self, point: CartesianPoint) -> [f64; Self::AXES];
+    /// * `out` - The output slice of size at least `Self::AXES` to write the target positions into.
+    fn cartesian_to_stepper_positions(&self, point: CartesianPoint, out: &mut [f64]);
 
     /// Calculate the total distance a move will travel in stepper space.
     ///
@@ -44,8 +43,10 @@ pub trait Kinematics {
     /// # Returns
     /// The length of the move vector in stepper-space.
     fn stepper_move_distance(&self, from: CartesianPoint, to: CartesianPoint) -> f64 {
-        let start_pos = self.cartesian_to_stepper_positions(from);
-        let end_pos = self.cartesian_to_stepper_positions(to);
+        let mut start_pos = [0.0; 8];
+        let mut end_pos = [0.0; 8];
+        self.cartesian_to_stepper_positions(from, &mut start_pos[..Self::AXES]);
+        self.cartesian_to_stepper_positions(to, &mut end_pos[..Self::AXES]);
 
         let mut dist_sq = 0.0;
         for i in 0..Self::AXES {
@@ -69,12 +70,10 @@ pub struct CartesianKinematics {
 impl Kinematics for CartesianKinematics {
     const AXES: usize = 3;
 
-    fn cartesian_to_stepper_positions(&self, point: CartesianPoint) -> [f64; Self::AXES] {
-        [
-            point.x * self.steps_per_mm_x,
-            point.y * self.steps_per_mm_y,
-            point.z * self.steps_per_mm_z,
-        ]
+    fn cartesian_to_stepper_positions(&self, point: CartesianPoint, out: &mut [f64]) {
+        out[0] = point.x as f64 * self.steps_per_mm_x;
+        out[1] = point.y as f64 * self.steps_per_mm_y;
+        out[2] = point.z as f64 * self.steps_per_mm_z;
     }
 }
 
@@ -93,12 +92,11 @@ pub struct CoreXYKinematics {
 impl Kinematics for CoreXYKinematics {
     const AXES: usize = 3;
 
-    fn cartesian_to_stepper_positions(&self, point: CartesianPoint) -> [f64; Self::AXES] {
+    fn cartesian_to_stepper_positions(&self, point: CartesianPoint, out: &mut [f64]) {
         // Z is independent
-        let z_pos = point.z * self.steps_per_mm_z;
+        out[2] = point.z as f64 * self.steps_per_mm_z;
         // CoreXY transform for A and B steppers
-        let a_pos = (point.x + point.y) * self.steps_per_mm_a;
-        let b_pos = (point.x - point.y) * self.steps_per_mm_b;
-        [a_pos, b_pos, z_pos]
+        out[0] = (point.x as f64 + point.y as f64) * self.steps_per_mm_a;
+        out[1] = (point.x as f64 - point.y as f64) * self.steps_per_mm_b;
     }
 }

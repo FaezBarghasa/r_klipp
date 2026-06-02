@@ -1,7 +1,6 @@
 // File: crates/klipper-mcu-firmware/src/main.rs
 #![no_std]
 #![no_main]
-#![feature(type_alias_impl_trait)]
 
 use defmt_rtt as _; // global logger
 use panic_probe as _;

@@ -1616,6 +1616,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "25ba4bd83f9415b58b4ed8dc5714c76e626a105be4646c02630ad730ad3b5aa4"
 dependencies = [
  "hash32",
+ "serde_core",
  "stable_deref_trait",
 ]
 
@@ -2020,7 +2021,8 @@ dependencies = [
 name = "mcu-drivers"
 version = "0.1.0"
 dependencies = [
- "heapless 0.8.0",
+ "critical-section",
+ "heapless 0.9.3",
 ]
 
 [[package]]

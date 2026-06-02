@@ -24,7 +24,7 @@ where
     /// Reads the state of a single endstop pin by its index.
     ///
     /// Returns `true` if the endstop is triggered (pin is high).
-    pub fn read_state(&self, index: usize) -> Result<bool, E> {
+    pub fn read_state(&mut self, index: usize) -> Result<bool, E> {
         self.pins[index].is_high()
     }
 
@@ -32,7 +32,7 @@ where
     ///
     /// Returns an array of booleans, where `true` typically indicates the
     /// endstop is triggered (e.g., the pin is high).
-    pub fn read_states(&self) -> Result<[bool; N], E> {
+    pub fn read_states(&mut self) -> Result<[bool; N], E> {
         let mut states = [false; N];
         for i in 0..N {
             states[i] = self.pins[i].is_high()?;
@@ -58,7 +58,7 @@ mod tests {
             PinMock::new(&[Transaction::get(State::Low)]),
         ];
 
-        let endstops = Endstops::new(pins);
+        let mut endstops = Endstops::new(pins);
 
         let states = endstops.read_states().unwrap();
 

@@ -27,7 +27,7 @@ fixed = "1.25.0"
 
 
 [features]
-default = ["embassy-rt"]
+default = ["embassy-rt", "defmt-logging"]
 embassy-rt = ["dep:embassy-executor", "dep:embassy-stm32", "dep:embassy-time", "dep:embassy-sync"]
 rtic-rt = ["dep:rtic", "dep:rtic-monotonics", "dep:stm32f4xx-hal"]
 defmt-logging = ["dep:defmt", "dep:defmt-rtt", "dep:panic-probe"]

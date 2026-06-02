@@ -29,7 +29,9 @@ pub struct HandshakeManifest {
 impl HandshakeManifest {
     /// Serializes the handshake manifest into a byte buffer using postcard for no_std environments
     pub fn serialize_to_buffer<'a>(&self, buffer: &'a mut [u8]) -> Result<&'a [u8], &'static str> {
-        postcard::to_slice(self, buffer).map_err(|_| "Postcard serialization failed")
+        postcard::to_slice(self, buffer)
+            .map(|s| s as &[u8])
+            .map_err(|_| "Postcard serialization failed")
     }
 
     /// Deserializes a manifest received from an MCU

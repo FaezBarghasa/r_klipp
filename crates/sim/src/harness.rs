@@ -78,7 +78,7 @@ impl SimHost {
     #[instrument(skip(self, host_logic))]
     pub async fn run_in_process<F>(&mut self, host_logic: F) -> Result<()>
     where
-        F: FnOnce(tokio::io::BufReader<tokio::net::UnixStream>, tokio::io::WriteHalf<tokio::net::UnixStream>) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<()>> + Send>>,
+        F: FnOnce(tokio::io::BufReader<tokio::io::ReadHalf<tokio::net::UnixStream>>, tokio::io::WriteHalf<tokio::net::UnixStream>) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<()>> + Send>>,
     {
         info!("Connecting to SimMcu for in-process simulation...");
         let stream = UnixStream::connect(&self.socket_path).await?;
