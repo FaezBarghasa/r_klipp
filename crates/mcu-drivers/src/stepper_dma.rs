@@ -8,6 +8,12 @@ pub struct DmaStepEngine {
     active_buffer: u8,
 }
 
+impl Default for DmaStepEngine {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl DmaStepEngine {
     pub const fn new() -> Self {
         Self {

@@ -12,8 +12,8 @@ use nom::{
     bytes::streaming::take,
     combinator::map,
     number::streaming::{be_u16, be_u32, be_i16, u8},
-    sequence::tuple,
     IResult,
+    Parser as _,
 };
 
 /// The sync byte that marks the beginning of every Klipper message.
@@ -106,11 +106,11 @@ fn parse_command(input: &[u8]) -> IResult<&[u8], Command> {
             let mut dict_version = heapless::Vec::new();
             let _ = dict_version.extend_from_slice(s);
             Command::Identify { dict_version }
-        })(i),
+        }).parse(i),
         0x02 => Ok((i, Command::GetConfig)),
         0x03 => Ok((i, Command::GetStatus)),
         0x10 => map(
-            tuple((be_u32, be_u16, be_i16)),
+            (be_u32, be_u16, be_i16),
             |(interval, count, add)| {
                 Command::QueueStep(CommandQueueStep {
                     interval_ticks: interval,
@@ -118,15 +118,15 @@ fn parse_command(input: &[u8]) -> IResult<&[u8], Command> {
                     add,
                 })
             },
-        )(i),
-        0x21 => map(tuple((u8, u8)), |(pin, value)| Command::SetDigitalOut {
+        ).parse(i),
+        0x21 => map((u8, u8), |(pin, value)| Command::SetDigitalOut {
             pin,
             value,
-        })(i),
-        0x20 => map(tuple((u8, be_u16)), |(pin, value)| Command::SetPwmOut {
+        }).parse(i),
+        0x20 => map((u8, be_u16), |(pin, value)| Command::SetPwmOut {
             pin,
             value,
-        })(i),
+        }).parse(i),
         _ => {
             let mut unknown_payload = heapless::Vec::new();
             let _ = unknown_payload.extend_from_slice(i);

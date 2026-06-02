@@ -11,8 +11,7 @@ pub trait Thermistor<Adc, Temp> {
 /// A thermistor model using the Steinhart-Hart equation.
 ///
 /// This is a common model for NTC thermistors. The coefficients (a, b, c) are
-/// typically provided by the thermistor manufacturer or can be calculated from
-
+/// Typically provided by the thermistor manufacturer or can be calculated from
 /// resistance-temperature data points.
 /// T = 1 / (a + b * ln(R) + c * (ln(R))^3)
 #[derive(Debug, Clone, Copy)]

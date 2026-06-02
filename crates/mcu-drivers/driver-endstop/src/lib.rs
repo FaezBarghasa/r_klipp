@@ -32,6 +32,7 @@ where
     ///
     /// Returns an array of booleans, where `true` typically indicates the
     /// endstop is triggered (e.g., the pin is high).
+    #[allow(clippy::needless_range_loop)]
     pub fn read_states(&mut self) -> Result<[bool; N], E> {
         let mut states = [false; N];
         for i in 0..N {

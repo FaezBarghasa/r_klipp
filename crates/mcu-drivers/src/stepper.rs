@@ -44,7 +44,9 @@ impl<const N: usize> StepperController<N> {
     /// 
     /// # Arguments
     /// * `bsrr_ptr` - Raw pointer to GPIO bit set/reset register (e.g., STM32 BSRR).
-    /// * `arr_ptr` - Raw pointer to the auto-reload match register of the timer.
+    /// # Safety
+    /// This function dereferences raw register pointers. The caller must ensure that `bsrr_ptr`
+    /// and `arr_ptr` are valid, non-null, and mapped to the appropriate MCU hardware registers.
     #[inline(always)]
     pub unsafe fn execute_next_step_isr(
         &mut self, 
