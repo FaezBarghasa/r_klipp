@@ -9,10 +9,9 @@ use crate::{
     Error,
 };
 use nom::{
-    bytes::streaming::{tag, take},
+    bytes::streaming::take,
     combinator::map,
-    error::Error as NomError,
-    number::streaming::{be_u16, be_u32, i16, u8},
+    number::streaming::{be_u16, be_u32, be_i16, u8},
     sequence::tuple,
     IResult,
 };
@@ -106,7 +105,7 @@ fn parse_command(input: &[u8]) -> IResult<&[u8], Command> {
         0x02 => Ok((i, Command::GetConfig)),
         0x03 => Ok((i, Command::GetStatus)),
         0x10 => map(
-            tuple((be_u32, be_u16, i16)),
+            tuple((be_u32, be_u16, be_i16)),
             |(interval, count, add)| {
                 Command::QueueStep(CommandQueueStep {
                     interval_ticks: interval,

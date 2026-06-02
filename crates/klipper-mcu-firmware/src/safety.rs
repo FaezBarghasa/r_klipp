@@ -32,7 +32,8 @@ use embassy_stm32::wdg::IndependentWatchdog;
 use embassy_time::{Duration, Instant};
 
 /// Represents a specific safety-related fault.
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Clone, Copy)]
+#[cfg_attr(feature = "defmt-logging", derive(defmt::Format))]
 pub enum SafetyError {
     /// Temperature rose faster than the configured maximum rate.
     ThermalRunaway { heater_id: usize, rate_of_change: f32 },
@@ -119,9 +120,9 @@ impl ThermalMonitor {
 
 /// The main safety supervisor for the entire MCU.
 /// It aggregates all safety-critical components.
-pub struct SafetyMonitor<'a, const NUM_HEATERS: usize, const NUM_TASKS: usize> {
+pub struct SafetyMonitor<'a, T: embassy_stm32::wdg::Instance, const NUM_HEATERS: usize, const NUM_TASKS: usize> {
     thermal_monitors: [ThermalMonitor; NUM_HEATERS],
-    watchdog: IndependentWatchdog<'a>,
+    watchdog: IndependentWatchdog<'a, T>,
     /// Global flag indicating an emergency stop has been triggered.
     /// This MUST be polled by high-level tasks to shut down hardware.
     emergency_stop_active: AtomicBool,
@@ -131,11 +132,11 @@ pub struct SafetyMonitor<'a, const NUM_HEATERS: usize, const NUM_TASKS: usize> {
     task_deadlines: [Duration; NUM_TASKS],
 }
 
-impl<'a, const NUM_HEATERS: usize, const NUM_TASKS: usize> SafetyMonitor<'a, NUM_HEATERS, NUM_TASKS> {
+impl<'a, T: embassy_stm32::wdg::Instance, const NUM_HEATERS: usize, const NUM_TASKS: usize> SafetyMonitor<'a, T, NUM_HEATERS, NUM_TASKS> {
     /// Creates a new `SafetyMonitor`.
     pub fn new(
         thermal_monitors: [ThermalMonitor; NUM_HEATERS],
-        mut watchdog: IndependentWatchdog<'a>,
+        mut watchdog: IndependentWatchdog<'a, T>,
         task_deadlines: [Duration; NUM_TASKS],
     ) -> Self {
         watchdog.unleash();
@@ -200,7 +201,7 @@ impl<'a, const NUM_HEATERS: usize, const NUM_TASKS: usize> SafetyMonitor<'a, NUM
     /// "Feeds" the independent watchdog.
     #[inline]
     pub fn feed_watchdog(&mut self) {
-        self.watchdog.feed();
+        self.watchdog.pet();
     }
 }
 

@@ -30,6 +30,9 @@ pub mod stepper;
 pub mod clock_sync;
 pub mod fixed_point;
 
+#[path = "../boards/mod.rs"]
+pub mod boards;
+
 // --- Runtime Selection ---
 // The firmware is designed to be runtime-agnostic and supports multiple real-time schedulers.
 // The choice of runtime is determined by feature flags passed at compile time. This allows

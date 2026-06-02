@@ -20,7 +20,7 @@
 //! still significantly faster and more deterministic than software floating-point
 //! operations on most Cortex-M MCUs.
 
-use core::ops::{Add, Div, Mul, Sub};
+use core::ops::{Add, Div, Mul, Sub, Neg};
 
 /// A 16.16 fixed-point number, represented by an `i32`.
 /// The upper 16 bits are the integer part, the lower 16 are the fractional part.
@@ -83,5 +83,12 @@ impl Div for Fixed16_16 {
         }
         let temp = (self.0 as i64) << FRAC_BITS;
         Self((temp / rhs.0 as i64) as i32)
+    }
+}
+
+impl Neg for Fixed16_16 {
+    type Output = Self;
+    fn neg(self) -> Self::Output {
+        Self(self.0.saturating_neg())
     }
 }

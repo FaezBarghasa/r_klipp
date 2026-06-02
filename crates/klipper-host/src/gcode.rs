@@ -44,7 +44,8 @@ pub fn parse_gcode(line: &str) -> Option<GCode> {
 
     for part in parts {
         let mut chars = part.chars();
-        if let (Some(key), Some(value_str)) = (chars.next(), chars.next_to_string().into()) {
+        if let Some(key) = chars.next() {
+            let value_str = chars.as_str();
             if let Ok(value) = value_str.parse::<f32>() {
                 params.push((key.to_ascii_uppercase(), value));
             }

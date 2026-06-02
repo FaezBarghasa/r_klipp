@@ -50,13 +50,13 @@ impl PrinterConfig {
 
         let mcu = McuConfig {
             serial_port: config.get("mcu", "serial").context("[mcu] serial not found")?,
-            baud_rate: config.getuint("mcu", "baud").context("[mcu] baud not found")? as u32,
+            baud_rate: config.getuint("mcu", "baud").map_err(anyhow::Error::msg)?.context("[mcu] baud not found")? as u32,
         };
 
         let printer = PrinterInfoConfig {
             kinematics: config.get("printer", "kinematics").context("[printer] kinematics not found")?,
-            max_velocity: config.getuint("printer", "max_velocity").context("[printer] max_velocity not found")? as u32,
-            max_accel: config.getuint("printer", "max_accel").context("[printer] max_accel not found")? as u32,
+            max_velocity: config.getuint("printer", "max_velocity").map_err(anyhow::Error::msg)?.context("[printer] max_velocity not found")? as u32,
+            max_accel: config.getuint("printer", "max_accel").map_err(anyhow::Error::msg)?.context("[printer] max_accel not found")? as u32,
         };
 
         let stepper_x = Self::load_stepper(&config, "stepper_x")?;
@@ -75,8 +75,8 @@ impl PrinterConfig {
     /// Helper function to load a stepper configuration section.
     fn load_stepper(config: &Ini, section: &str) -> Result<StepperConfig> {
         Ok(StepperConfig {
-            steps_per_mm: config.getfloat(section, "steps_per_mm").with_context(|| format!("[{}] steps_per_mm not found", section))? as f32,
-            max_velocity: config.getfloat(section, "max_velocity").with_context(|| format!("[{}] max_velocity not found", section))? as f32,
+            steps_per_mm: config.getfloat(section, "steps_per_mm").map_err(anyhow::Error::msg)?.with_context(|| format!("[{}] steps_per_mm not found", section))? as f32,
+            max_velocity: config.getfloat(section, "max_velocity").map_err(anyhow::Error::msg)?.with_context(|| format!("[{}] max_velocity not found", section))? as f32,
         })
     }
 }

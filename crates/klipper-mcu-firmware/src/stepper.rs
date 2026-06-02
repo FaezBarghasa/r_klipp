@@ -14,7 +14,7 @@
 //!
 //! A hardware timer is used to generate the step pulses. The timer is configured to
 //! trigger an interrupt at the time of the next step in the queue. The interrupt
--//! service routine (ISR) then executes the step and schedules the next interrupt.
+//! service routine (ISR) then executes the step and schedules the next interrupt.
 
 /// The stepper control task.
 ///

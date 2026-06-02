@@ -141,12 +141,12 @@ impl PidController {
 /// * `safety` - A reference to the global `SafetyMonitor`.
 /// * `update_freq_hz` - How often the PID loop should run.
 #[embassy_executor::task]
-pub async fn heater_task<'a, T: embassy_stm32::timer::Instance>(
+pub async fn heater_task(
     heater_id: usize,
-    mut pwm: SimplePwm<'a, T>,
+    mut pwm: SimplePwm<'static, embassy_stm32::peripherals::TIM3>,
     channel: Channel,
     state: &'static HeaterSharedState,
-    safety: &'static Mutex<CriticalSectionRawMutex, SafetyMonitor<'a, 4, 4>>, // Assuming max 4 heaters/tasks
+    safety: &'static Mutex<CriticalSectionRawMutex, SafetyMonitor<'static, embassy_stm32::peripherals::IWDG, 4, 4>>, // Assuming max 4 heaters/tasks
     update_freq_hz: u32,
 ) {
     defmt::info!("Heater task {} started. Update frequency: {} Hz", heater_id, update_freq_hz);
