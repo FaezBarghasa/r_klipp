@@ -44,7 +44,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use embedded_hal_mock::pin::{Mock as PinMock, State, Transaction};
+    use embedded_hal_mock::eh1::digital::{Mock as PinMock, State, Transaction};
 
     #[test]
     fn test_read_six_endstops() {

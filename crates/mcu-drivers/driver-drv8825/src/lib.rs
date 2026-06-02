@@ -97,7 +97,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use embedded_hal_mock::pin::{Mock as PinMock, State, Transaction};
+    use embedded_hal_mock::eh1::digital::{Mock as PinMock, State, Transaction};
 
     #[test]
     fn test_drv8825_enable_disable() {
@@ -123,16 +123,14 @@ mod tests {
         let step = PinMock::new(&[]);
         let dir = PinMock::new(&[]);
         let enable = PinMock::new(&[]);
-        let expectations = [
-            // Set to 1/32
-            (Transaction::set(State::High), Transaction::set(State::Low), Transaction::set(State::High)),
-            // Set to Full
-            (Transaction::set(State::Low), Transaction::set(State::Low), Transaction::set(State::Low)),
-        ];
+        let [
+            (m0_0, m1_0, m2_0),
+            (m0_1, m1_1, m2_1),
+        ] = expectations;
 
-        let mut m0 = PinMock::new(&[expectations[0].0, expectations[1].0]);
-        let mut m1 = PinMock::new(&[expectations[0].1, expectations[1].1]);
-        let mut m2 = PinMock::new(&[expectations[0].2, expectations[1].2]);
+        let mut m0 = PinMock::new(&[m0_0, m0_1]);
+        let mut m1 = PinMock::new(&[m1_0, m1_1]);
+        let mut m2 = PinMock::new(&[m2_0, m2_1]);
 
         let mut driver = Drv8825::new(step, dir, enable, &mut m0, &mut m1, &mut m2);
         driver.set_microsteps(Microsteps::ThirtySecond).unwrap();
