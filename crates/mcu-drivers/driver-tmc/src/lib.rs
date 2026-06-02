@@ -30,9 +30,11 @@ pub enum Error<E> {
 
 #[cfg(test)]
 mod tests {
+    extern crate std;
+    use std::vec;
     use super::*;
-    use embedded_hal_mock::serial::{Mock as SerialMock, Transaction as SerialTransaction};
-    use embedded_hal_mock::pin::{Mock as PinMock, State as PinState, Transaction as PinTransaction};
+    use embedded_hal_mock::eh1::serial::{Mock as SerialMock, Transaction as SerialTransaction};
+    use embedded_hal_mock::eh1::digital::{Mock as PinMock, State as PinState, Transaction as PinTransaction};
 
     #[cfg(feature = "tmc2209")]
     use tmc2209::{Tmc2209, SlaveAddress};
@@ -46,11 +48,17 @@ mod tests {
         // Mock a UART peripheral and an EN pin
         let mut serial = SerialMock::new(&[
             // Set GCONF `pdn_disable` to true
-            SerialTransaction::write_many(vec![0x05, 0x00, 0x00, 0xC0, 0x01, 0x04, 0x31, 0xF9]),
-            // Set IHOLD_IRUN
-            SerialTransaction::write_many(vec![0x05, 0x00, 0x00, 0xC0, 0x10, 0x00, 0x0F, 0x0F, 0x29, 0x4D]),
+            SerialTransaction::write_many(vec![0x05, 0x00, 128, 0, 0, 0, 16, 113]),
+            SerialTransaction::flush(),
+            // Set IHOLD_IRUN (run current)
+            SerialTransaction::write_many(vec![0x05, 0x00, 144, 0, 0, 15, 0, 68]),
+            SerialTransaction::flush(),
+            // Set IHOLD_IRUN (hold current)
+            SerialTransaction::write_many(vec![0x05, 0x00, 144, 0, 0, 0, 15, 142]),
+            SerialTransaction::flush(),
             // Set CHOPCONF `mres` to 16 microsteps and enable driver
-            SerialTransaction::write_many(vec![0x05, 0x00, 0x00, 0xC0, 0x6C, 0x10, 0x00, 0x00, 0xC3, 0xB0, 0xF9]),
+            SerialTransaction::write_many(vec![0x05, 0x00, 236, 20, 0, 0, 0, 42]),
+            SerialTransaction::flush(),
         ]);
 
         let mut en_pin = PinMock::new(&[
@@ -79,11 +87,17 @@ mod tests {
         // Mock a UART peripheral and an EN pin
         let mut serial = SerialMock::new(&[
             // Set GCONF `pdn_disable` to true
-            SerialTransaction::write_many(vec![0x05, 0x00, 0x00, 0xC0, 0x01, 0x04, 0x31, 0xF9]),
-            // Set IHOLD_IRUN
-            SerialTransaction::write_many(vec![0x05, 0x00, 0x00, 0xC0, 0x10, 0x00, 0x0F, 0x0F, 0x29, 0x4D]),
+            SerialTransaction::write_many(vec![0x05, 0x00, 128, 0, 0, 0, 16, 113]),
+            SerialTransaction::flush(),
+            // Set IHOLD_IRUN (run current)
+            SerialTransaction::write_many(vec![0x05, 0x00, 144, 0, 0, 15, 0, 68]),
+            SerialTransaction::flush(),
+            // Set IHOLD_IRUN (hold current)
+            SerialTransaction::write_many(vec![0x05, 0x00, 144, 0, 0, 0, 15, 142]),
+            SerialTransaction::flush(),
             // Set CHOPCONF `mres` to 16 microsteps and enable driver
-            SerialTransaction::write_many(vec![0x05, 0x00, 0x00, 0xC0, 0x6C, 0x10, 0x00, 0x00, 0xC3, 0xB0, 0xF9]),
+            SerialTransaction::write_many(vec![0x05, 0x00, 236, 20, 0, 0, 0, 42]),
+            SerialTransaction::flush(),
         ]);
 
         let mut en_pin = PinMock::new(&[

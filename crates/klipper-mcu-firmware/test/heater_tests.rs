@@ -1,7 +1,13 @@
 #![cfg(test)]
 
-use crate::fixed_point::Fixed16_16;
-use crate::heater::PidController;
+#[path = "../src/fixed_point.rs"]
+mod fixed_point;
+
+#[path = "../src/heater.rs"]
+mod heater;
+
+use fixed_point::Fixed16_16;
+use heater::PidController;
 
 // --- Fixed-Point Math Tests ---
 

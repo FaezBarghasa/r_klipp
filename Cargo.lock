@@ -1031,6 +1031,8 @@ dependencies = [
  "bitfield 0.14.0",
  "embedded-hal 1.0.0",
  "embedded-hal-mock",
+ "embedded-hal-nb",
+ "nb 1.1.0",
 ]
 
 [[package]]

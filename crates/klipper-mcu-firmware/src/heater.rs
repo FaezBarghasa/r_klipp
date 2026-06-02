@@ -25,18 +25,26 @@
 
 use crate::fixed_point::Fixed16_16;
 use crate::safety::SafetyMonitor;
+
+#[cfg(feature = "embassy-rt")]
 use embassy_stm32::timer::simple_pwm::SimplePwm;
+#[cfg(feature = "embassy-rt")]
 use embassy_stm32::timer::Channel;
+#[cfg(feature = "embassy-rt")]
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
+#[cfg(feature = "embassy-rt")]
 use embassy_sync::mutex::Mutex;
+#[cfg(feature = "embassy-rt")]
 use embassy_time::{Duration, Ticker};
 
 /// Represents the shared state for a single heater.
+#[cfg(feature = "embassy-rt")]
 pub struct HeaterSharedState {
     pub target_temp: Mutex<CriticalSectionRawMutex, Fixed16_16>,
     pub current_temp: Mutex<CriticalSectionRawMutex, Fixed16_16>,
 }
 
+#[cfg(feature = "embassy-rt")]
 impl HeaterSharedState {
     pub const fn new() -> Self {
         Self {
@@ -51,7 +59,7 @@ pub struct PidController {
     kp: Fixed16_16,
     ki: Fixed16_16,
     kd: Fixed16_16,
-    integral: Fixed16_16,
+    pub integral: Fixed16_16,
     prev_error: Fixed16_16,
     // Output is clamped to 0..=max_duty (e.g., 0..=65535 for a 16-bit PWM)
     output_max: Fixed16_16,
@@ -124,7 +132,7 @@ impl PidController {
             output = self.output_max;
         }
 
-        output.0 as u16
+        output.0.to_num::<u16>()
     }
 }
 
@@ -139,6 +147,7 @@ impl PidController {
 /// * `state` - The shared state for this heater.
 /// * `safety` - A reference to the global `SafetyMonitor`.
 /// * `update_freq_hz` - How often the PID loop should run.
+#[cfg(feature = "embassy-rt")]
 #[embassy_executor::task]
 pub async fn heater_task(
     heater_id: usize,
@@ -184,7 +193,7 @@ pub async fn heater_task(
         // Feed the safety monitor with the latest temperature
         safety.lock().await.check_thermal_state(heater_id, current.to_float());
 
-        let duty = if target.0 <= 0 {
+        let duty = if target <= Fixed16_16::ZERO {
             pid.reset();
             0
         } else {

@@ -37,6 +37,7 @@ clap = { version = "4.6.1", features = ["derive"] }
 critical-section = "1.2"
 defmt = "1.1.0"
 embedded-hal = "1.0.0"
+embedded-hal-nb = "1.0.0"
 embedded-hal-mock = "0.11.0"
 fixed = { version = "1.25.0", features = ["serde"] }
 futures = { version = "0.3.30", default-features = false, features = ["async-await"] }

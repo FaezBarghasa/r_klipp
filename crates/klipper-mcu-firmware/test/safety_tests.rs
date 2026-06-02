@@ -1,6 +1,9 @@
 #![cfg(test)]
 
-use crate::safety::{SafetyError, ThermalMonitor};
+#[path = "../src/safety.rs"]
+mod safety;
+
+use safety::{SafetyError, ThermalMonitor};
 use embassy_time::{Duration, Instant};
 
 // Helper to create a default monitor for tests

@@ -27,9 +27,67 @@
 //!   application code is responsible for polling this flag and acting on it immediately
 //!   by disabling all heaters, motors, and other outputs.
 
+#[cfg(feature = "embassy-rt")]
 use core::sync::atomic::{AtomicBool, Ordering};
+#[cfg(feature = "embassy-rt")]
 use embassy_stm32::wdg::IndependentWatchdog;
+
+#[cfg(not(test))]
 use embassy_time::{Duration, Instant};
+
+#[cfg(test)]
+pub use mock_time::{Duration, Instant};
+
+#[cfg(test)]
+mod mock_time {
+    use std::sync::atomic::{AtomicU64, Ordering};
+    
+    static MOCK_TICKS: AtomicU64 = AtomicU64::new(1_000_000);
+
+    #[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
+    pub struct Instant {
+        ticks: u64,
+    }
+
+    impl Instant {
+        pub fn now() -> Self {
+            Self { ticks: MOCK_TICKS.load(Ordering::SeqCst) }
+        }
+        pub const fn from_ticks(ticks: u64) -> Self {
+            Self { ticks }
+        }
+        pub fn as_ticks(&self) -> u64 {
+            self.ticks
+        }
+        pub fn duration_since(&self, other: Self) -> Duration {
+            Duration { micros: self.ticks.saturating_sub(other.ticks) }
+        }
+    }
+
+    #[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
+    pub struct Duration {
+        pub(crate) micros: u64,
+    }
+
+    impl Duration {
+        pub fn from_secs(secs: u64) -> Self {
+            Self { micros: secs * 1_000_000 }
+        }
+        pub fn from_millis(millis: u64) -> Self {
+            Self { micros: millis * 1000 }
+        }
+        pub fn as_micros(&self) -> u64 {
+            self.micros
+        }
+    }
+
+    impl std::ops::AddAssign<Duration> for Instant {
+        fn add_assign(&mut self, other: Duration) {
+            MOCK_TICKS.fetch_add(other.micros, Ordering::SeqCst);
+            self.ticks = MOCK_TICKS.load(Ordering::SeqCst);
+        }
+    }
+}
 
 /// Represents a specific safety-related fault.
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -120,6 +178,7 @@ impl ThermalMonitor {
 
 /// The main safety supervisor for the entire MCU.
 /// It aggregates all safety-critical components.
+#[cfg(feature = "embassy-rt")]
 pub struct SafetyMonitor<'a, T: embassy_stm32::wdg::Instance, const NUM_HEATERS: usize, const NUM_TASKS: usize> {
     thermal_monitors: [ThermalMonitor; NUM_HEATERS],
     watchdog: IndependentWatchdog<'a, T>,
@@ -132,6 +191,7 @@ pub struct SafetyMonitor<'a, T: embassy_stm32::wdg::Instance, const NUM_HEATERS:
     task_deadlines: [Duration; NUM_TASKS],
 }
 
+#[cfg(feature = "embassy-rt")]
 impl<'a, T: embassy_stm32::wdg::Instance, const NUM_HEATERS: usize, const NUM_TASKS: usize> SafetyMonitor<'a, T, NUM_HEATERS, NUM_TASKS> {
     /// Creates a new `SafetyMonitor`.
     pub fn new(

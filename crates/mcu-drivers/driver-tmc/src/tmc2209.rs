@@ -2,7 +2,8 @@
 
 use crate::Error;
 use bitfield::bitfield;
-use embedded_hal::{digital::OutputPin, serial::Write};
+use embedded_hal::digital::OutputPin;
+use embedded_hal_nb::serial::Write;
 
 // Sync byte and slave address for UART communication
 const SYNC: u8 = 0x05;
@@ -112,7 +113,7 @@ where
     pub fn set_microsteps(&mut self, mres: Microsteps) -> Result<(), Error<E>> {
         let mut chop_conf = ChopConf(0);
         chop_conf.set_mres(mres as u32);
-        chop_conf.set_intpol(1); // Enable interpolation
+        chop_conf.set_intpol(true); // Enable interpolation
         self.write_register(Register::CHOPCONF, chop_conf.0)
     }
 
@@ -125,9 +126,11 @@ where
         datagram[3..7].copy_from_slice(&data.to_be_bytes());
         datagram[7] = self.calculate_crc(&datagram[0..7]);
 
-        self.serial
-            .write(&datagram)
-            .map_err(Error::Serial)
+        for &byte in &datagram {
+            nb::block!(self.serial.write(byte)).map_err(Error::Serial)?;
+        }
+        nb::block!(self.serial.flush()).map_err(Error::Serial)?;
+        Ok(())
     }
 
     /// Calculates the CRC8 for a given datagram.

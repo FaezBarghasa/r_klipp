@@ -21,30 +21,26 @@
 //! operations on most Cortex-M MCUs.
 
 use core::ops::{Add, Div, Mul, Sub, Neg};
+use fixed::types::I16F16;
 
-/// A 16.16 fixed-point number, represented by an `i32`.
-/// The upper 16 bits are the integer part, the lower 16 are the fractional part.
+/// A 16.16 fixed-point number, wrapping `fixed::types::I16F16`.
 #[derive(Copy, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub struct Fixed16_16(pub i32);
-
-const FRAC_BITS: i32 = 16;
-const SCALE: i32 = 1 << FRAC_BITS;
+pub struct Fixed16_16(pub I16F16);
 
 impl Fixed16_16 {
     /// The value zero.
-    pub const ZERO: Self = Self(0);
+    pub const ZERO: Self = Self(I16F16::ZERO);
     /// The value one.
-    pub const ONE: Self = Self(SCALE);
+    pub const ONE: Self = Self(I16F16::ONE);
 
     /// Creates a `Fixed16_16` from an `f32` float.
-    /// Performs scaling and rounds to the nearest integer.
-    pub const fn from_float(f: f32) -> Self {
-        Self((f * SCALE as f32) as i32)
+    pub fn from_float(f: f32) -> Self {
+        Self(I16F16::from_num(f))
     }
 
     /// Converts the `Fixed16_16` back to an `f32` float.
     pub fn to_float(self) -> f32 {
-        self.0 as f32 / SCALE as f32
+        self.0.to_num::<f32>()
     }
 }
 
@@ -64,25 +60,15 @@ impl Sub for Fixed16_16 {
 
 impl Mul for Fixed16_16 {
     type Output = Self;
-    /// Multiplies two fixed-point numbers.
-    /// The operation is `(a * b) >> 16`.
     fn mul(self, rhs: Self) -> Self::Output {
-        let temp = (self.0 as i64) * (rhs.0 as i64);
-        Self((temp >> FRAC_BITS) as i32)
+        Self(self.0.saturating_mul(rhs.0))
     }
 }
 
 impl Div for Fixed16_16 {
     type Output = Self;
-    /// Divides two fixed-point numbers.
-    /// The operation is `(a << 16) / b`.
     fn div(self, rhs: Self) -> Self::Output {
-        if rhs.0 == 0 {
-            // Return max value for division by zero to indicate an error condition
-            return Self(i32::MAX);
-        }
-        let temp = (self.0 as i64) << FRAC_BITS;
-        Self((temp / rhs.0 as i64) as i32)
+        Self(self.0.saturating_div(rhs.0))
     }
 }
 
