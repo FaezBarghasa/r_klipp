@@ -30,7 +30,7 @@ pub struct Parser;
 impl Parser {
     /// Creates a new `Parser`.
     pub fn new() -> Self {
-        Self::default()
+        Self {}
     }
 
     /// Attempts to parse a single message from the start of the given buffer.
