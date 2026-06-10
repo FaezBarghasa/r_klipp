@@ -1,3 +1,3 @@
 #![no_std]
 
-// Strict compile-time safety guards
+pub const ABSOLUTE_MAX_TEMPERATURE: f32 = 320.0;

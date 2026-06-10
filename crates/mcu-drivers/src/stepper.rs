@@ -1,82 +1,86 @@
-// crates/mcu-drivers/src/stepper.rs
+#![no_std]
+
 use heapless::spsc::Queue;
 
-/// Representation of a single discrete stepping chunk dispatched to step timers.
-#[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
+/// Represents a single movement segment for the stepper motor.
+#[derive(Clone, Copy, Debug)]
 pub struct StepSegment {
-    /// Number of local master clock cycles to wait before toggling the step pin.
+    /// Timer cycles to wait before the next step.
     pub interval_ticks: u32,
-    /// Digital state of the direction pin (true = high, false = low).
+    /// State of the direction pin (true = forward, false = backward).
     pub direction: bool,
-    /// Bitmask of stepper motor enable lines to set/clear.
+    /// Active enable lines bitmask.
     pub enable_mask: u8,
 }
 
+/// A lock-free, single-producer single-consumer stepper controller.
 pub struct StepperController<const N: usize> {
-    /// Lock-free ring buffer holding incoming calculated steps.
-    pub queue: Queue<StepSegment, N>,
-    /// Track current hardware direction pin state to prevent unnecessary GPIO writes.
-    pub current_dir: bool,
-    /// Target step pin bitmask for fast GPIO port writes.
-    pub step_pin_mask: u32,
-    /// Target direction pin bitmask for fast GPIO port writes.
-    pub dir_pin_mask: u32,
+    /// The lock-free queue containing the step segments.
+    queue: Queue<StepSegment, N>,
+    /// The currently active direction state to avoid redundant writes.
+    current_dir: bool,
+    /// The bitmask representing the step pin to toggle.
+    step_pin_mask: u32,
+    /// The bitmask representing the direction pin.
+    dir_pin_mask: u32,
 }
 
 impl<const N: usize> StepperController<N> {
-    pub const fn new(step_pin_mask: u32) -> Self {
+    /// Creates a new StepperController with the specified pin masks.
+    pub const fn new(step_pin_mask: u32, dir_pin_mask: u32) -> Self {
         Self {
             queue: Queue::new(),
             current_dir: false,
             step_pin_mask,
-            dir_pin_mask: step_pin_mask << 1,
+            dir_pin_mask,
         }
     }
 
-    /// Executed by the communications task (Priority 1) to push calculated steps into the queue.
-    #[inline(always)]
+    /// Pushes a new step segment into the lock-free queue without blocking.
+    ///
+    /// Returns an error if the queue is full.
     pub fn enqueue_segment(&mut self, segment: StepSegment) -> Result<(), &'static str> {
-        self.queue.enqueue(segment).map_err(|_| "Error: Step queue is full. Real-time desync imminent.")
+        self.queue.enqueue(segment).map_err(|_| "Stepper queue is full")
     }
 
-    /// High-Priority ISR Callback (Priority 5).
-    /// Updates physical output registers and configures the timer reload register for the next step.
-    /// 
-    /// # Arguments
-    /// * `bsrr_ptr` - Raw pointer to GPIO bit set/reset register (e.g., STM32 BSRR).
+    /// Executes the next step in the queue, writing directly to hardware registers.
+    ///
     /// # Safety
-    /// This function dereferences raw register pointers. The caller must ensure that `bsrr_ptr`
-    /// and `arr_ptr` are valid, non-null, and mapped to the appropriate MCU hardware registers.
+    /// This function performs raw pointer writes to hardware registers. The caller
+    /// must ensure that `bsrr_ptr` (Bit Set/Reset Register) and `arr_ptr` (Auto-Reload
+    /// Register) point to valid memory locations for the target MCU peripherals.
     #[inline(always)]
-    pub unsafe fn execute_next_step_isr(
-        &mut self, 
-        bsrr_ptr: *mut u32, 
-        arr_ptr: *mut u32
-    ) {
+    pub unsafe fn execute_next_step_isr(&mut self, bsrr_ptr: *mut u32, arr_ptr: *mut u32) {
         if let Some(segment) = self.queue.dequeue() {
-            // Write direction pin state directly to hardware register
-            if segment.direction != self.current_dir {
+            // Atomic evaluation and application of direction changes.
+            if self.current_dir != segment.direction {
                 self.current_dir = segment.direction;
-                if self.current_dir {
-                    // Set direction pin high
-                    *bsrr_ptr = self.dir_pin_mask;
+
+                // BSRR (Bit Set/Reset Register):
+                // Lower 16 bits set the pin, upper 16 bits reset the pin.
+                let val = if segment.direction {
+                    self.dir_pin_mask
                 } else {
-                    // Reset direction pin low
-                    *bsrr_ptr = self.dir_pin_mask << 16;
-                }
+                    self.dir_pin_mask << 16
+                };
+
+                // Write the direction bit-set state to the raw BSRR address.
+                core::ptr::write_volatile(bsrr_ptr, val);
             }
-            
-            // Set step pin high
-            *bsrr_ptr = self.step_pin_mask;
-            
-            // Write next step interval time directly into hardware auto-reload register
-            *arr_ptr = segment.interval_ticks;
-            
-            // Clear step pin (creates a pulse of minimum width based on CPU clock cycle speed)
-            *bsrr_ptr = self.step_pin_mask << 16;
-        } else {
-            // Underflow fallback: No moves in queue, safely halt timer
-            *arr_ptr = u32::MAX;
+
+            // Write interval_ticks directly to the Timer Auto-Reload (ARR) address.
+            core::ptr::write_volatile(arr_ptr, segment.interval_ticks);
+
+            // Toggle the step pin with minimum clock-cycle latency via BSRR.
+            // First, set the step pin high.
+            core::ptr::write_volatile(bsrr_ptr, self.step_pin_mask);
+
+            // Note: In a real implementation, a small delay or a separate timer match
+            // might be needed here depending on the motor driver's required pulse width.
+            // For this implementation, we immediately reset it for minimum latency.
+
+            // Then, set the step pin low (reset).
+            core::ptr::write_volatile(bsrr_ptr, self.step_pin_mask << 16);
         }
     }
 }

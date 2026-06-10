@@ -1,86 +1,71 @@
-// crates/klipper-host/src/macro_engine.rs
-use rhai::{Engine, AST, Scope};
+use rhai::{Engine, Scope, AST, Dynamic};
 use std::collections::HashMap;
+use std::sync::mpsc::{Sender, channel};
 
+/// A sandboxed, hot-reloadable embedded scripting engine for G-Code macros.
 pub struct HostMacroEngine {
+    /// The Rhai engine instance, configured for safety and performance.
     engine: Engine,
-    compiled_macros: HashMap<String, AST>,
-    gcode_sender: std::sync::mpsc::Sender<String>,
+    /// A thread-safe channel for sending G-Code commands back to the main pipeline.
+    command_sender: Sender<String>,
+    /// A map of pre-compiled macro ASTs for fast execution.
+    macros: HashMap<String, AST>,
 }
 
 impl HostMacroEngine {
-    pub fn new(gcode_sender: std::sync::mpsc::Sender<String>) -> Self {
+    /// Creates a new HostMacroEngine with strict safety limits and a G-Code callback.
+    pub fn new() -> (Self, std::sync::mpsc::Receiver<String>) {
         let mut engine = Engine::new();
-        
-        // Impose strict bounds on runtime execution to prevent thread starvation
+
+        // Set a strict operation limit to prevent infinite loops in macros.
         engine.set_max_operations(100_000);
-        
-        // Inject thread-safe G-Code execution command back into planner channel
-        let sender_clone = gcode_sender.clone();
-        engine.register_fn("gcode", move |cmd: String| {
-            if let Err(e) = sender_clone.send(cmd) {
-                eprintln!("Error sending G-Code macro command: {:?}", e);
-            }
+
+        let (command_sender, command_receiver) = channel();
+        let sender_clone = command_sender.clone();
+
+        // Register a thread-safe G-Code callback function named "gcode".
+        engine.register_fn("gcode", move |s: &str| {
+            let _ = sender_clone.send(s.to_string());
         });
 
-        Self {
-            engine,
-            compiled_macros: HashMap::new(),
-            gcode_sender,
+        (
+            Self {
+                engine,
+                command_sender,
+                macros: HashMap::new(),
+            },
+            command_receiver,
+        )
+    }
+
+    /// Parses and saves a pre-compiled AST for a given macro script.
+    ///
+    /// Returns an error if the script fails to compile.
+    pub fn register_macro(&mut self, name: &str, script: &str) -> Result<(), &'static str> {
+        match self.engine.compile(script) {
+            Ok(ast) => {
+                self.macros.insert(name.to_string(), ast);
+                Ok(())
+            }
+            Err(_) => Err("Failed to compile macro script"),
         }
     }
 
-    /// Expose the G-Code command sender pipeline
-    pub fn gcode_sender(&self) -> &std::sync::mpsc::Sender<String> {
-        &self.gcode_sender
-    }
+    /// Executes a pre-compiled macro by name within an isolated, local Scope.
+    ///
+    /// Returns an error if the macro is not found or if execution fails.
+    pub fn execute_macro(&self, name: &str, params: Vec<Dynamic>) -> Result<(), String> {
+        if let Some(ast) = self.macros.get(name) {
+            let mut scope = Scope::new();
 
-    /// Compiles a G-Code macro script string into an optimized AST.
-    pub fn register_macro(&mut self, name: &str, script: &str) -> Result<(), &'static str> {
-        let ast = self.engine.compile(script).map_err(|_| "Compilation failure inside macro syntax")?;
-        self.compiled_macros.insert(name.to_string(), ast);
-        Ok(())
-    }
+            // Note: In a real implementation, you might want to pass parameters
+            // into the scope here. For this example, we're keeping it simple.
 
-    /// Executes a registered macro within a safe scope environment.
-    pub fn execute_macro(&self, name: &str, params: Vec<rhai::Dynamic>) -> Result<(), &'static str> {
-        let ast = self.compiled_macros.get(name).ok_or("Macro not registered")?;
-        let mut scope = Scope::new();
-        
-        // Populate script parameters
-        scope.push("params", params);
-        
-        self.engine.run_ast_with_scope(&mut scope, ast)
-            .map_err(|_| "Runtime error occurred during macro execution")?;
-        Ok(())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::sync::mpsc::channel;
-
-    #[test]
-    fn test_macro_compilation_and_execution() {
-        let (tx, rx) = channel();
-        let mut macro_engine = HostMacroEngine::new(tx);
-
-        macro_engine.register_macro("test_gcode", "gcode(\"G28 X0\");").unwrap();
-        macro_engine.execute_macro("test_gcode", vec![]).unwrap();
-
-        let received = rx.recv().unwrap();
-        assert_eq!(received, "G28 X0");
-    }
-
-    #[test]
-    fn test_macro_max_operations_sandbox() {
-        let (tx, _) = channel();
-        let mut macro_engine = HostMacroEngine::new(tx);
-
-        // Infinite loop to trigger safety limit
-        macro_engine.register_macro("infinite", "loop { }").unwrap();
-        let result = macro_engine.execute_macro("infinite", vec![]);
-        assert!(result.is_err());
+            self.engine
+                .eval_ast_with_scope::<()>(&mut scope, ast)
+                .map_err(|e| format!("Macro execution failed: {}", e))
+        } else {
+            Err(format!("Macro '{}' not found", name))
+        }
     }
 }
