@@ -4,6 +4,20 @@ All notable changes to the `r_klipp` project will be documented in this file. Th
 
 ---
 
+## [0.5.1] - 2026-06-02
+
+This is a maintenance release that modernizes dependencies, improves the CI pipeline, and refactors several internal APIs for clarity and safety.
+
+### Changed
+- **Dependency Modernization**: Updated all Rust dependencies to their latest stable versions, including a move to the latest `nom` parser and `rand` crate APIs.
+- **CI Pipeline Improvements**: The CI pipeline now runs Clippy with target-specific checks for embedded firmware, ensuring higher code quality for both host and MCU targets.
+- **API Refinements**:
+    - The `StepperController::execute_next_step_isr` function now includes explicit safety documentation for its use of raw pointers.
+    - The `DmaStepEngine` now implements `Default`.
+    - Minor cleanup in the `thermistor` module.
+
+---
+
 ## [0.5.0] - 2026-06-02
 
 This release introduces major architectural overhauls, migrating core utilities to standard community-backed crates, optimizing kinematics with advanced curve profiling, implementing a State-Space thermal regulator, and establishing a robust testing framework.

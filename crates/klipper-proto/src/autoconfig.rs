@@ -3,8 +3,8 @@
 use heapless::Vec;
 use serde::{Deserialize, Serialize};
 
-/// Defines the hardware capabilities of a specific MCU pin.
-#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
+/// Enumerates the hardware capabilities available on a microcontroller pin.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum PinCapability {
     DigitalInput,
     DigitalOutput { max_current_ma: u8 },
@@ -13,44 +13,31 @@ pub enum PinCapability {
     StepTimerChannel { timer_id: u8 },
 }
 
-/// Describes a physical pin on the MCU and its available capabilities.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+/// Describes an individual pin and its assigned hardware capabilities.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PinDescriptor {
-    /// The hardware index of the pin.
     pub pin_index: u16,
-    /// A fixed-length null-padded string representing the pin name.
     pub name: [u8; 8],
-    /// A bitmask of supported alternate functions and capabilities.
-    pub capabilities_bitmask: u32,
+    pub capabilities: u32, // Bitmask mapping to PinCapability options
 }
 
-/// The main payload structure for handshake configuration.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+/// The Handshake Manifest sent from MCU to Host to configure the workspace layout.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct HandshakeManifest {
-    /// A fixed-length null-padded string representing the board's name.
     pub board_name: [u8; 32],
-    /// The core clock frequency of the MCU in Hertz.
     pub clock_speed_hz: u32,
-    /// The timer resolution in ticks used for step generation.
     pub step_resolution_ticks: u32,
-    /// A statically sized vector of pin descriptors.
     pub pins: Vec<PinDescriptor, 64>,
 }
 
 impl HandshakeManifest {
-    /// Serializes the manifest into a provided byte buffer using postcard.
-    ///
-    /// Returns a slice of the buffer containing the serialized data on success,
-    /// or a static string error message on failure.
-    pub fn serialize_to_buffer<'a>(&self, buffer: &'a mut [u8]) -> Result<&'a mut [u8], &'static str> {
-        postcard::to_slice(self, buffer).map_err(|_| "Failed to serialize HandshakeManifest")
+    /// Serializes the manifest into a binary postcard format buffer.
+    pub fn serialize_to_buffer<'a>(&self, buffer: &'a mut [u8]) -> Result<&'a [u8], &'static str> {
+        postcard::to_slice(self, buffer).map_err(|_| "Failed to serialize handshake manifest")
     }
 
-    /// Deserializes a manifest from a byte slice using postcard.
-    ///
-    /// Returns a new HandshakeManifest instance on success, or a static
-    /// string error message on failure.
+    /// Deserializes a postcard binary slice into a configuration manifest struct.
     pub fn deserialize_from_slice(slice: &[u8]) -> Result<Self, &'static str> {
-        postcard::from_bytes(slice).map_err(|_| "Failed to deserialize HandshakeManifest")
+        postcard::from_bytes(slice).map_err(|_| "Failed to deserialize handshake manifest")
     }
 }

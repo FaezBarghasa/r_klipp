@@ -1,71 +1,67 @@
-use rhai::{Engine, Scope, AST, Dynamic};
+use rhai::{Dynamic, Engine, Scope, AST};
 use std::collections::HashMap;
-use std::sync::mpsc::{Sender, channel};
+use std::sync::{Arc, Mutex};
+use std::sync::mpsc::Sender;
 
-/// A sandboxed, hot-reloadable embedded scripting engine for G-Code macros.
+/// A sandboxed interpreter for executing G-Code macros via Rhai.
 pub struct HostMacroEngine {
-    /// The Rhai engine instance, configured for safety and performance.
     engine: Engine,
-    /// A thread-safe channel for sending G-Code commands back to the main pipeline.
-    command_sender: Sender<String>,
-    /// A map of pre-compiled macro ASTs for fast execution.
-    macros: HashMap<String, AST>,
+    command_pipeline: Sender<String>,
+    asts: HashMap<String, AST>,
 }
 
 impl HostMacroEngine {
-    /// Creates a new HostMacroEngine with strict safety limits and a G-Code callback.
-    pub fn new() -> (Self, std::sync::mpsc::Receiver<String>) {
+    /// Initializes a new macro engine enforcing strict safety limitations.
+    pub fn new(command_pipeline: Sender<String>) -> Self {
         let mut engine = Engine::new();
 
-        // Set a strict operation limit to prevent infinite loops in macros.
+        // Enforce execution limits to prevent infinite loops locking the parser
         engine.set_max_operations(100_000);
 
-        let (command_sender, command_receiver) = channel();
-        let sender_clone = command_sender.clone();
+        // Share the sender safely across threading contexts for use inside the scripting environment closure
+        let tx_shared = Arc::new(Mutex::new(command_pipeline.clone()));
 
-        // Register a thread-safe G-Code callback function named "gcode".
-        engine.register_fn("gcode", move |s: &str| {
-            let _ = sender_clone.send(s.to_string());
+        // Register a thread-safe callback mapping named "gcode" to inject strings into the pipeline
+        engine.register_fn("gcode", move |cmd: &str| {
+            if let Ok(sender) = tx_shared.lock() {
+                // Ignore send errors in case the pipeline receiver is already disconnected
+                let _ = sender.send(cmd.to_string());
+            }
         });
 
-        (
-            Self {
-                engine,
-                command_sender,
-                macros: HashMap::new(),
-            },
-            command_receiver,
-        )
+        Self {
+            engine,
+            command_pipeline,
+            asts: HashMap::new(),
+        }
     }
 
-    /// Parses and saves a pre-compiled AST for a given macro script.
-    ///
-    /// Returns an error if the script fails to compile.
+    /// Compiles a script into an Abstract Syntax Tree (AST) and caches it in memory.
     pub fn register_macro(&mut self, name: &str, script: &str) -> Result<(), &'static str> {
-        match self.engine.compile(script) {
-            Ok(ast) => {
-                self.macros.insert(name.to_string(), ast);
-                Ok(())
-            }
-            Err(_) => Err("Failed to compile macro script"),
-        }
+        let ast = self
+            .engine
+            .compile(script)
+            .map_err(|_| "Failed to compile macro script into AST")?;
+        
+        self.asts.insert(name.to_string(), ast);
+        Ok(())
     }
 
-    /// Executes a pre-compiled macro by name within an isolated, local Scope.
-    ///
-    /// Returns an error if the macro is not found or if execution fails.
-    pub fn execute_macro(&self, name: &str, params: Vec<Dynamic>) -> Result<(), String> {
-        if let Some(ast) = self.macros.get(name) {
-            let mut scope = Scope::new();
-
-            // Note: In a real implementation, you might want to pass parameters
-            // into the scope here. For this example, we're keeping it simple.
-
-            self.engine
-                .eval_ast_with_scope::<()>(&mut scope, ast)
-                .map_err(|e| format!("Macro execution failed: {}", e))
-        } else {
-            Err(format!("Macro '{}' not found", name))
+    /// Evaluates a pre-compiled macro AST within an isolated local scope.
+    pub fn execute_macro(&self, name: &str, params: Vec<Dynamic>) -> Result<(), &'static str> {
+        let ast = self.asts.get(name).ok_or("Macro not found")?;
+        
+        let mut scope = Scope::new();
+        
+        // Inject parameters dynamically into the isolated scope block
+        for (index, param) in params.into_iter().enumerate() {
+            scope.push(format!("param_{}", index), param);
         }
+
+        self.engine
+            .eval_ast_with_scope::<()>(&mut scope, ast)
+            .map_err(|_| "Failed to execute macro AST")?;
+
+        Ok(())
     }
 }

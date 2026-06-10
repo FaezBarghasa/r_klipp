@@ -1,6 +1,6 @@
 # Developer Workflow
 
-This document outlines the recommended workflow for developing, testing, and profiling the Klipper in Rust firmware. Following these steps ensures code quality, consistency, and a smooth development process.
+This document outlines the recommended workflow for developing, testing, and profiling the `r_klipp` firmware. Following these steps ensures code quality, consistency, and a smooth development process.
 
 ---
 
@@ -89,9 +89,10 @@ The workspace features standard unit tests across most modules (host, thermal, m
     cargo test -p motion
     ```
 *   **Running Workspace Tests**:
+    Due to the `no_std` nature of the firmware, workspace tests should exclude the firmware and bare-metal driver crates:
     ```bash
-    # Run all tests in the workspace
-    cargo test --workspace
+    # Run tests in the workspace (excluding embedded components)
+    cargo test --workspace --exclude klipper-mcu-firmware --bins --lib --tests
     ```
 
 ### Hardware-in-the-Loop (HIL) Testing
@@ -127,6 +128,11 @@ Before committing or submitting a pull request, run the following quality checks
     cargo fmt --all
     ```
 2.  **Linting**:
+    Ensure that you run target-specific linting to verify both host code and bare-metal firmware code.
     ```bash
-    cargo clippy --workspace -- -D warnings
+    # Check Host & Simulator Crates
+    cargo clippy --workspace --exclude klipper-mcu-firmware --exclude mcu-drivers -- -D warnings
+    
+    # Check Embedded Library & Firmware Target
+    cargo clippy -p klipper-mcu-firmware -p mcu-drivers --target thumbv7em-none-eabihf --features embassy-rt -- -D warnings
     ```

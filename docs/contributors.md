@@ -1,6 +1,6 @@
 # Contributor Guide
 
-Thank you for your interest in contributing to the Klipper in Rust project! We welcome contributions of all kinds, from bug reports and documentation improvements to new features and code cleanups.
+Thank you for your interest in contributing to the `r_klipp` project! We welcome contributions of all kinds, from bug reports and documentation improvements to new features and code cleanups.
 
 This document outlines the process for contributing to the project to ensure a smooth and effective workflow for everyone.
 
@@ -27,8 +27,8 @@ There are many ways to contribute to the project:
 
 2.  **Clone Your Fork**: Clone your forked repository to your local machine.
     ```bash
-    git clone https://github.com/your-username/klipper-rust.git
-    cd klipper-rust
+    git clone https://github.com/your-username/r_klipp.git
+    cd r_klipp
     ```
 
 3.  **Create a Branch**: Create a new branch for your changes. Use a descriptive name that summarizes your work.
@@ -61,12 +61,14 @@ There are many ways to contribute to the project:
 ## Coding Style and Conventions
 
 *   **Formatting**: We use `rustfmt` to maintain a consistent code style. Please run `cargo fmt` before committing your changes.
-*   **Linting**: We use `clippy` to catch common mistakes and improve code quality. Run `cargo clippy -- -D warnings` to check for lints.
-*   **Safety**: Writing `unsafe` code is strongly discouraged. If it is absolutely necessary, it must be thoroughly documented and justified, explaining why it is safe.
+*   **Linting**: We use `clippy` to catch common mistakes and improve code quality. Because `r_klipp` has both host and embedded targets, use the following commands to check for lints:
+    *   For Host & Simulator Crates: `cargo clippy --workspace --exclude klipper-mcu-firmware --exclude mcu-drivers -- -D warnings`
+    *   For Embedded Library & Firmware Target: `cargo clippy -p klipper-mcu-firmware -p mcu-drivers --target thumbv7em-none-eabihf --features embassy-rt -- -D warnings`
+*   **Safety**: Writing `unsafe` code is strongly discouraged. If it is absolutely necessary (e.g., hardware register access), it must be thoroughly documented with a `# Safety` section and justified, explaining why it is safe.
 *   **Documentation**: All public functions, structs, and modules should have clear and concise documentation comments.
 
 ## Licensing
 
-By contributing to this project, you agree that your contributions will be licensed under the MIT License, as described in the [LICENSE](./LICENSE) file.
+By contributing to this project, you agree that your contributions will be licensed under the MIT License, as described in the [LICENSE](../LICENSE) file.
 
-Thank you for helping us build a better Klipper firmware!
+Thank you for helping us build a better firmware!
