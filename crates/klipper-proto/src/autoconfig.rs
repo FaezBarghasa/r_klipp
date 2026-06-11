@@ -1,4 +1,7 @@
 use serde::{Deserialize, Serialize};
+use alloc::string::String;
+use alloc::vec::Vec;
+use alloc::string::ToString;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(default)]

@@ -91,7 +91,7 @@ mod mock_time {
 
 /// Represents a specific safety-related fault.
 #[derive(Debug, PartialEq, Clone, Copy)]
-#[cfg_attr(feature = "defmt-logging", derive(defmt::Format))]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum SafetyError {
     /// Temperature rose faster than the configured maximum rate.
     ThermalRunaway { heater_id: usize, rate_of_change: f32 },

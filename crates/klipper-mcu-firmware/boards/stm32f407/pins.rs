@@ -1,7 +1,7 @@
 //! Pin mappings for the MKS SKIPR board.
 //! This is a starting point and may need to be adjusted based on your specific setup.
 
-use embassy_stm32::gpio::{AnyPin, Pin};
+use embassy_stm32::gpio::AnyPin;
 
 /// Struct to hold all the board pins.
 pub struct BoardPins {
@@ -10,8 +10,8 @@ pub struct BoardPins {
     pub stepper_x_dir: AnyPin,
     pub stepper_y_step: AnyPin,
     pub stepper_y_dir: AnyPin,
-    pub temp_extruder: AnyPin,
-    pub temp_bed: AnyPin,
+    pub temp_extruder: embassy_stm32::peripherals::PA0,
+    pub temp_bed: embassy_stm32::peripherals::PA1,
     pub heater_extruder: AnyPin,
     pub heater_bed: AnyPin,
     pub uart_tx: AnyPin,
@@ -30,8 +30,8 @@ impl BoardPins {
             stepper_x_dir: p.PB8.degrade(),
             stepper_y_step: p.PC5.degrade(),
             stepper_y_dir: p.PB2.degrade(),
-            temp_extruder: p.PA0.degrade(),
-            temp_bed: p.PA1.degrade(),
+            temp_extruder: p.PA0,
+            temp_bed: p.PA1,
             heater_extruder: p.PC8.degrade(),
             heater_bed: p.PC9.degrade(),
             uart_tx: p.PA9.degrade(),

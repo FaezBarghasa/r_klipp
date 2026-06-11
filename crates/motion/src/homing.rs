@@ -8,8 +8,8 @@ pub enum HomingError {
     VelocityExceedsLimit,
 }
 
-impl std::fmt::Display for HomingError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl core::fmt::Display for HomingError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::OvershootExceeded => write!(f, "Homing velocity exceeds overshoot safety limits. Deceleration distance too large."),
             Self::InvalidAcceleration => write!(f, "Kinematic limits specify zero or negative max acceleration, which is invalid."),
@@ -19,6 +19,7 @@ impl std::fmt::Display for HomingError {
     }
 }
 
+#[cfg(test)]
 impl std::error::Error for HomingError {}
 
 pub struct SafeHomingPlanner {

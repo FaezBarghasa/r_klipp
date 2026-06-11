@@ -32,8 +32,8 @@ impl TrajectoryPhase {
         let dt4 = dt3 * dt;
         let dt5 = dt4 * dt;
 
-        let snap = self.snap_start + self.crackle * dt;
-        let jerk = self.jerk_start + self.snap_start * dt + 0.5 * self.crackle * dt2;
+        let _snap = self.snap_start + self.crackle * dt;
+        let _jerk = self.jerk_start + self.snap_start * dt + 0.5 * self.crackle * dt2;
         let accel = self.accel_start + self.jerk_start * dt + 0.5 * self.snap_start * dt2 + (1.0 / 6.0) * self.crackle * dt3;
         
         let vel = self.vel_start + self.accel_start * dt + 0.5 * self.jerk_start * dt2 

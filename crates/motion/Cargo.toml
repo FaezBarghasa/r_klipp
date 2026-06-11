@@ -4,3 +4,11 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+mcu-drivers = { path = "../mcu-drivers" }
+heapless = "0.9"
+nalgebra = "0.35"
+smallvec = "1.11"
+rustfft = "6.1"
+
+[dev-dependencies]
+float-cmp = "0.10"

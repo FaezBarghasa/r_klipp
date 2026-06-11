@@ -1,5 +1,3 @@
-#![no_std]
-
 use heapless::spsc::Queue;
 
 /// Segment definition for the stepper motor queue.
@@ -32,6 +30,11 @@ impl<const N: usize> StepperController<N> {
     /// Pushes a new step segment into the queue without blocking.
     pub fn enqueue_segment(&mut self, segment: StepSegment) -> Result<(), &'static str> {
         self.queue.enqueue(segment).map_err(|_| "Queue is full")
+    }
+
+    /// Dequeues a segment from the queue.
+    pub fn dequeue_segment(&mut self) -> Option<StepSegment> {
+        self.queue.dequeue()
     }
 
     /// Executes the next step from the queue. Designed to be called inside a high-priority ISR.

@@ -9,7 +9,7 @@ use crate::gcode::McuCommand;
 use crate::state::{PrinterState, PrinterStatus};
 use anyhow::Result;
 use parking_lot::Mutex;
-use rand::RngExt;
+use rand::Rng;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::mpsc::Receiver;
@@ -102,13 +102,13 @@ pub async fn run_mock_mcu(mut mcu_rx: Receiver<McuCommand>, state: Arc<Mutex<Pri
     tokio::spawn(async move {
         loop {
             sleep(Duration::from_secs(2)).await;
-            let mut rng = rand::rng();
+            let mut rng = rand::thread_rng();
             let mut locked_state = temp_state.lock();
             if let Some(extruder_temp) = locked_state.temperatures.get_mut("extruder") {
-                extruder_temp.actual += rng.random_range(-0.5..0.5);
+                extruder_temp.actual += rng.gen_range(-0.5..0.5);
             }
             if let Some(bed_temp) = locked_state.temperatures.get_mut("heater_bed") {
-                bed_temp.actual += rng.random_range(-0.5..0.5);
+                bed_temp.actual += rng.gen_range(-0.5..0.5);
             }
         }
     });

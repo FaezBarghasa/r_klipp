@@ -68,7 +68,7 @@ async fn main(spawner: Spawner) {
     // The spawner is responsible for running these tasks in the background.
     spawner.spawn(proto_bridge::proto_task(usart1, board_pins.uart_rx, board_pins.uart_tx)).unwrap();
     spawner.spawn(stepper::stepper_task()).unwrap();
-    spawner.spawn(adc::adc_task(adc1, board_pins.temp_extruder)).unwrap();
+    spawner.spawn(adc::adc_task(adc1, board_pins.temp_extruder, state)).unwrap();
     spawner.spawn(heater::heater_task(0, pwm, Channel::Ch3, state, safety, 10)).unwrap();
     spawner.spawn(led_task(board_pins.led.into())).unwrap();
 
