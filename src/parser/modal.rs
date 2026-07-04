@@ -1,62 +1,34 @@
-//! Defines the modal state for G-code parsing.
-//! This corresponds to part of Task 2.2.
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub enum Plane { G17, G18, G19 }
 
-#![cfg_attr(not(test), no_std)]
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub enum Units { Millimeters, Inches }
 
-/// Represents the active G-code plane for arc moves.
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum ActivePlane {
-    XY, // G17
-    XZ, // G18
-    YZ, // G19
-}
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub enum Positioning { Absolute, Relative }
 
-/// Represents the unit system in use.
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum Units {
-    Inches, // G20
-    Millimeters, // G21
-}
-
-/// Represents the distance mode for axis movements.
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum DistanceMode {
-    Absolute, // G90
-    Relative, // G91
-}
-
-/// Represents the current coordinate system.
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum CoordinateSystem {
-    G54,
-    G55,
-    G56,
-    G57,
-    G58,
-    G59,
-}
-
-/// The `ModalState` struct holds the current state of the G-code interpreter.
-/// These values are modified by certain G-codes and persist until changed.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub struct ModalState {
-    pub plane: ActivePlane,
+    pub motion_mode: u16,
+    pub plane: Plane,
     pub units: Units,
-    pub distance_mode: DistanceMode,
-    pub coordinate_system: CoordinateSystem,
+    pub positioning: Positioning,
     pub feed_rate: f32,
     pub spindle_speed: f32,
+    pub tool: u16,
+    // ... other modal states
 }
 
 impl Default for ModalState {
     fn default() -> Self {
         Self {
-            plane: ActivePlane::XY,
+            motion_mode: 1, // G1
+            plane: Plane::G17, // XY plane
             units: Units::Millimeters,
-            distance_mode: DistanceMode::Absolute,
-            coordinate_system: CoordinateSystem::G54,
-            feed_rate: 0.0,
+            positioning: Positioning::Absolute,
+            feed_rate: 500.0,
             spindle_speed: 0.0,
+            tool: 0,
         }
     }
 }

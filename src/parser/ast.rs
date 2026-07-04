@@ -1,89 +1,57 @@
-//! Defines the Abstract Syntax Tree (AST) for G-code commands.
-//! This corresponds to part of Task 2.2.
-
-#![cfg_attr(not(test), no_std)]
-
+use crate::parser::modal::ModalState;
+use crate::parser::lexer::Token;
 use heapless::Vec;
-use super::modal::ModalState;
 
-/// Represents a single command in the G-code language, parsed into a structured format.
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum AstNode {
-    /// G0 or G1: A linear movement.
-    LinearMove {
-        x: Option<f32>,
-        y: Option<f32>,
-        z: Option<f32>,
-        a: Option<f32>,
-        b: Option<f32>,
-        c: Option<f32>,
-        e: Option<f32>,
-        is_rapid: bool, // True for G0, false for G1
-    },
-    /// G2 or G3: An arc movement.
-    ArcMove {
-        x: Option<f32>,
-        y: Option<f32>,
-        z: Option<f32>,
-        i: f32, // Arc center offset
-        j: f32, // Arc center offset
-        k: f32, // Arc center offset
-        is_clockwise: bool, // True for G2, false for G3
-    },
-    /// G4: A dwell or pause.
-    Dwell {
-        milliseconds: u32,
-    },
-    /// M3, M4, M5: Spindle control.
-    SpindleControl {
-        speed: Option<f32>,
-        is_clockwise: bool, // M3=true, M4=false
-        is_on: bool, // M5=false
-    },
-    /// M2 or M30: Program end.
-    ProgramEnd,
-    /// T command: Tool change.
-    ToolChange(u16),
-    /// A command that only modifies the modal state.
-    SetModalState(ModalState),
+    LinearMove { x: Option<f32>, y: Option<f32>, z: Option<f32>, e: Option<f32>, f: Option<f32> },
+    RapidMove { x: Option<f32>, y: Option<f32>, z: Option<f32>, e: Option<f32> },
+    ArcMove { x: Option<f32>, y: Option<f32>, i: Option<f32>, j: Option<f32>, f: Option<f32> },
+    Dwell { p: u32 },
+    ToolChange { t: u16 },
+    SetUnits(super::modal::Units),
+    SetPositioning(super::modal::Positioning),
+    // ... other AST nodes
 }
 
-/// Parses a vector of tokens into a single `AstNode`.
-/// This function is the core of the parser, applying the modal state to generate a complete command.
-pub fn build_ast_node<'a>(tokens: &Vec<super::lexer::Token<'a>, 64>, state: &mut ModalState) -> Result<Option<AstNode>, &'static str> {
-    // This is a placeholder implementation. A full implementation would be a state machine
-    // that iterates through tokens, updates the modal state, and constructs the appropriate AstNode.
-    // For now, we will just return Ok(None) to satisfy the compiler.
-    if tokens.is_empty() {
-        return Ok(None);
-    }
-
-    // A real implementation would be much more complex.
-    // It would need to handle multiple G-codes on one line, update the modal state,
-    // and then build the correct AstNode.
-
-    // For demonstration, let's handle a simple G1 move.
+pub fn build_ast<'a>(tokens: &Vec<Token<'a>, 64>, state: &mut ModalState) -> Result<Option<AstNode>, &'static str> {
     let mut g_code = None;
+    let mut m_code = None;
     let mut x = None;
     let mut y = None;
     let mut z = None;
+    let mut e = None;
+    let mut f = None;
+    let mut i = None;
+    let mut j = None;
+    let mut p = None;
+    let mut t = None;
 
-    for token in tokens {
+    for token in tokens.iter() {
         match *token {
-            super::lexer::Token::G(code) => g_code = Some(code),
-            super::lexer::Token::Axis('X', val) => x = Some(val),
-            super::lexer::Token::Axis('Y', val) => y = Some(val),
-            super::lexer::Token::Axis('Z', val) => z = Some(val),
-            super::lexer::Token::Feedrate(f) => state.feed_rate = f,
-            _ => {} // Ignore other tokens for this simple example
+            Token::G(code) => g_code = Some(code),
+            Token::M(code) => m_code = Some(code),
+            Token::Axis('X', val) => x = Some(val),
+            Token::Axis('Y', val) => y = Some(val),
+            Token::Axis('Z', val) => z = Some(val),
+            Token::Axis('E', val) => e = Some(val),
+            Token::Feedrate(val) => f = Some(val),
+            // ... handle other tokens
+            _ => {}
         }
     }
 
-    if let Some(1) = g_code {
-        return Ok(Some(AstNode::LinearMove {
-            x, y, z, a: None, b: None, c: None, e: None, is_rapid: false
-        }));
-    }
+    let g = g_code.unwrap_or(state.motion_mode);
 
-    Ok(None)
+    match g {
+        0 => Ok(Some(AstNode::RapidMove { x, y, z, e })),
+        1 => Ok(Some(AstNode::LinearMove { x, y, z, e, f })),
+        2 | 3 => Ok(Some(AstNode::ArcMove { x, y, i, j, f })),
+        4 => Ok(Some(AstNode::Dwell { p: p.unwrap_or(0) })),
+        20 => { state.units = super::modal::Units::Inches; Ok(Some(AstNode::SetUnits(super::modal::Units::Inches))) },
+        21 => { state.units = super::modal::Units::Millimeters; Ok(Some(AstNode::SetUnits(super::modal::Units::Millimeters))) },
+        90 => { state.positioning = super::modal::Positioning::Absolute; Ok(Some(AstNode::SetPositioning(super::modal::Positioning::Absolute))) },
+        91 => { state.positioning = super::modal::Positioning::Relative; Ok(Some(AstNode::SetPositioning(super::modal::Positioning::Relative))) },
+        _ => Ok(None),
+    }
 }
