@@ -13,6 +13,7 @@ pub mod proto_bridge;
 pub mod safety;
 pub mod stepper;
 pub mod transport;
+pub mod task_spawner;
 
 // Panic handler & logging
 use panic_probe as _;

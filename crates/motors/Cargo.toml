@@ -1,0 +1,10 @@
+[package]
+name = "motors"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+micromath = "0.1.0"
+hal = { path = "../hal" }
+comms = { path = "../comms" }
+embassy-time = { version = "0.1.0", features = ["defmt"] }

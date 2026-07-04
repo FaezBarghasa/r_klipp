@@ -1,0 +1,22 @@
+name: Build Matrix
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        chip:
+          - stm32f103c8
+          - stm32f407ve
+          - stm32g431kb
+          - stm32h743zi
+          - stm32u575zi
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: thumbv7m-none-eabi
+      - run: cargo build --release --features ${{ matrix.chip }} --manifest-path crates/klipper-mcu-firmware/Cargo.toml

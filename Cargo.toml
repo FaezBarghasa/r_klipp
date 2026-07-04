@@ -7,5 +7,16 @@ members = [
     "crates/mcu-drivers",
     "crates/safety",
     "crates/klipper-host",
-    "crates/klipper-mcu-firmware"
+    "crates/klipper-mcu-firmware",
+    "crates/hal",
+    "crates/comms",
+    "crates/actors",
+    "crates/parser",
+    "crates/kinematics",
+    "crates/motors",
+    "crates/sim",
+    "crates/automation",
+    "crates/tools",
+    "crates/io",
+    "crates/control"
 ]
