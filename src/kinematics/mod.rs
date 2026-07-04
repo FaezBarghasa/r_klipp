@@ -7,6 +7,11 @@ pub mod hessian;
 pub mod dls_ik;
 pub mod singularity;
 pub mod nullspace;
+pub mod five_axis_rtcp;
+pub mod five_axis_feedrate;
+pub mod wire_edm_3d;
+pub mod conveyor_tracking;
+pub mod singularity_consistent;
 
 #[derive(Debug)]
 pub enum KinematicsError {

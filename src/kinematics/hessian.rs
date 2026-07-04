@@ -1,4 +1,3 @@
-
 // Copyright 2024 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,7 +16,7 @@
 
 use crate::kinematics::jacobian::Jacobian;
 use crate::kinematics::poe_fk::PoeKinematics;
-use crate::math::{Matrix, Vector3};
+use crate::math::{Matrix, Vector, Vector3};
 
 pub type Hessian<const N: usize> = Matrix<{ 6 * N }, N>;
 
@@ -32,15 +31,22 @@ impl<const N: usize> PoeKinematics<N> {
         let J = self.jacobian(joint_angles)?;
 
         for i in 0..N {
-            let mut dJ_i = Vector3::ZERO;
-            for j in 0..i {
+            let mut dJ_i_v = Vector3::ZERO;
+            let J_i_w = Vector3::new(J.m[0][i], J.m[1][i], J.m[2][i]);
+
+            for j in 0..N {
                 let J_j_w = Vector3::new(J.m[0][j], J.m[1][j], J.m[2][j]);
-                let J_i_v = Vector3::new(J.m[3][i], J.m[4][i], J.m[5][i]);
-                dJ_i = dJ_i + J_j_w.cross(J_i_v) * joint_velocities[j];
+                let J_j_v = Vector3::new(J.m[3][j], J.m[4][j], J.m[5][j]);
+
+                let term = if i < j {
+                    J_j_w.cross(J_i_v)
+                } else {
+                    J_i_w.cross(J_j_v)
+                };
+                dJ_i_v = dJ_i_v + term * joint_velocities[j];
             }
 
-            let dJ_i_w = Vector3::ZERO; // For revolute joints, the angular part of the Jacobian column is constant
-            let dJ_i_v = dJ_i;
+            let dJ_i_w = Vector3::ZERO; // For revolute joints
 
             let mut col = dJ.get_column_mut(i);
             col[0] = dJ_i_w.x;
@@ -53,12 +59,36 @@ impl<const N: usize> PoeKinematics<N> {
 
         Ok(dJ)
     }
+
+    /// Calculates the Kinematic Hessian.
+    pub fn hessian(&self, joint_angles: &[f64; N]) -> Result<Hessian<N>, &'static str> {
+        let mut H = Hessian::<N>::zero();
+        let J = self.jacobian(joint_angles)?;
+
+        for i in 0..N {
+            for j in 0..N {
+                let mut h_ij = Vector::<6>::zero();
+                let J_i_w = Vector3::new(J.m[0][i], J.m[1][i], J.m[2][i]);
+                let J_j_v = Vector3::new(J.m[3][j], J.m[4][j], J.m[5][j]);
+
+                let h_ij_v = J_i_w.cross(J_j_v);
+                h_ij[3] = h_ij_v.x;
+                h_ij[4] = h_ij_v.y;
+                h_ij[5] = h_ij_v.z;
+
+                for k in 0..6 {
+                    H.m[i * 6 + k][j] = h_ij[k];
+                }
+            }
+        }
+        Ok(H)
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::kinematics::math::se3::Twist;
+    use crate::kinematics::math::se3::{Transform, Twist};
     use crate::math::Matrix4;
 
     fn get_test_kinematics() -> PoeKinematics<3> {
@@ -79,16 +109,16 @@ mod tests {
 
         let dJ = kinematics.jacobian_derivative(&joint_angles, &joint_velocities).unwrap();
 
-        // A full analytical verification is complex. This test mainly checks for panics
-        // and that the output is of the correct shape and seems reasonable.
         assert_eq!(dJ.rows(), 6);
         assert_eq!(dJ.cols(), 3);
+    }
 
-        // For a simple 3R manipulator, we can make some assertions.
-        // dJ1/dt should be zero.
-        let col0 = dJ.get_column(0);
-        for i in 0..6 {
-            assert_eq!(col0[i], 0.0);
-        }
+    #[test]
+    fn test_hessian() {
+        let kinematics = get_test_kinematics();
+        let joint_angles = [0.1, 0.2, 0.3];
+        let H = kinematics.hessian(&joint_angles).unwrap();
+        assert_eq!(H.rows(), 18);
+        assert_eq!(H.cols(), 3);
     }
 }

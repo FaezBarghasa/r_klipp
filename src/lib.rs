@@ -11,3 +11,5 @@ pub mod kinematics;
 pub mod motors;
 pub mod actors;
 pub mod math;
+pub mod interpolation;
+pub mod calibration;
