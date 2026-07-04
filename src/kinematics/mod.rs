@@ -1,5 +1,13 @@
 #![feature(const_generics)]
 
+pub mod math;
+pub mod poe_fk;
+pub mod jacobian;
+pub mod hessian;
+pub mod dls_ik;
+pub mod singularity;
+pub mod nullspace;
+
 #[derive(Debug)]
 pub enum KinematicsError {
     Unreachable,
