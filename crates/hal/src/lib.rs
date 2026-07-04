@@ -15,3 +15,11 @@ pub mod traits;
 pub mod capabilities;
 pub mod timer_abstraction;
 pub mod dma_abstraction;
+
+pub mod stm32;
+pub mod nxp;
+pub mod microchip;
+pub mod ti;
+pub mod emerging;
+pub mod infineon;
+pub mod renesas;

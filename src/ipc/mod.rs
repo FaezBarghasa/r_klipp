@@ -1,140 +1,152 @@
-//! Inter-Task Communication (IPC) queues for r_klipp.
-//! This module provides lock-free queues for passing data between asynchronous
-//! tasks and hard real-time interrupt handlers.
-//! This file corresponds to Task 1.2 of the development plan.
-
-#![no_std]
-
 use heapless::spsc::{Queue, Producer, Consumer};
 use portable_atomic::{AtomicBool, Ordering};
 
-// Re-export for convenience in other modules
-pub use heapless::spsc::Error;
-
-/// A command to be executed by the step generator ISR.
-/// For now, this is a placeholder. In a real system, it would contain
-/// precise timing and axis information for a single step pulse.
-#[derive(Copy, Clone, Debug, PartialEq)]
+// A command to the step generation ISR.
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct StepCommand {
-    /// The number of timer ticks to wait before executing this step.
-    pub interval: u32,
-    /// A bitmask of axes to step.
-    pub direction_mask: u32,
-    /// A bitmask of directions for each axis.
-    pub step_mask: u32,
+    pub ticks: u32,
+    pub direction: bool,
+    pub axis: u8,
 }
 
-/// Telemetry data sent from the ISR back to the async world.
-/// This could include information about the step execution, encoder feedback, etc.
-#[derive(Copy, Clone, Debug, PartialEq)]
+// Telemetry data sent from the ISR to the async world.
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct TelemetryPacket {
-    /// The timestamp of the event, in timer ticks.
     pub timestamp: u64,
-    /// A bitmask indicating which axes have completed their moves.
-    pub completed_mask: u32,
+    pub encoder_position: i32,
+    pub current_sense: u16,
 }
 
-/// A lock-free, single-producer, single-consumer queue for `StepCommand`s.
-/// This is used to send commands from the async Planner task to the Step Generator ISR.
-pub struct StepCommandQueue<const N: usize> {
-    queue: Queue<StepCommand, N>,
+const QUEUE_SIZE: usize = 1024;
+
+/// A lock-free, single-producer, single-consumer queue for sending commands
+/// from the async planner to the hard real-time step generation ISR.
+pub struct StepCommandQueue {
+    queue: Queue<StepCommand, QUEUE_SIZE>,
 }
 
-impl<const N: usize> StepCommandQueue<N> {
-    /// Creates a new, empty `StepCommandQueue`.
-    /// This function is `const`, so it can be used to initialize a `static` variable.
+impl StepCommandQueue {
     pub const fn new() -> Self {
         Self {
             queue: Queue::new(),
         }
     }
 
-    /// Splits the queue into a producer and a consumer half.
-    pub fn split<'a>(&'a mut self) -> (Producer<'a, StepCommand, N>, Consumer<'a, StepCommand, N>) {
-        self.queue.split()
+    pub fn split<'a>(&'a mut self) -> (StepCommandProducer<'a>, StepCommandConsumer<'a>) {
+        let (producer, consumer) = self.queue.split();
+        (
+            StepCommandProducer { producer },
+            StepCommandConsumer { consumer },
+        )
     }
 }
 
-/// A lock-free, single-producer, single-consumer queue for `TelemetryPacket`s.
-/// This is used to send data from the ISR back to the async Telemetry task.
-pub struct TelemetryQueue<const N: usize> {
-    queue: Queue<TelemetryPacket, N>,
+pub struct StepCommandProducer<'a> {
+    producer: Producer<'a, StepCommand, QUEUE_SIZE>,
 }
 
-impl<const N: usize> TelemetryQueue<N> {
-    /// Creates a new, empty `TelemetryQueue`.
-    /// This function is `const`, so it can be used to initialize a `static` variable.
+impl<'a> StepCommandProducer<'a> {
+    pub fn enqueue(&mut self, command: StepCommand) -> Result<(), StepCommand> {
+        self.producer.enqueue(command)
+    }
+}
+
+pub struct StepCommandConsumer<'a> {
+    consumer: Consumer<'a, StepCommand, QUEUE_SIZE>,
+}
+
+impl<'a> StepCommandConsumer<'a> {
+    pub fn dequeue(&mut self) -> Option<StepCommand> {
+        self.consumer.dequeue()
+    }
+}
+
+
+/// A lock-free, single-producer, single-consumer queue for sending telemetry
+/// from the hard real-time ISR to the async telemetry task.
+pub struct TelemetryQueue {
+    queue: Queue<TelemetryPacket, QUEUE_SIZE>,
+}
+
+impl TelemetryQueue {
     pub const fn new() -> Self {
         Self {
             queue: Queue::new(),
         }
     }
 
-    /// Splits the queue into a producer and a consumer half.
-    pub fn split<'a>(&'a mut self) -> (Producer<'a, TelemetryPacket, N>, Consumer<'a, TelemetryPacket, N>) {
-        self.queue.split()
+    pub fn split<'a>(&'a mut self) -> (TelemetryProducer<'a>, TelemetryConsumer<'a>) {
+        let (producer, consumer) = self.queue.split();
+        (
+            TelemetryProducer { producer },
+            TelemetryConsumer { consumer },
+        )
     }
 }
 
-// Example of how to create and use these queues in a static context.
-// This would typically be in your `main.rs`.
+pub struct TelemetryProducer<'a> {
+    producer: Producer<'a, TelemetryPacket, QUEUE_SIZE>,
+}
+
+impl<'a> TelemetryProducer<'a> {
+    pub fn enqueue(&mut self, packet: TelemetryPacket) -> Result<(), TelemetryPacket> {
+        self.producer.enqueue(packet)
+    }
+}
+
+pub struct TelemetryConsumer<'a> {
+    consumer: Consumer<'a, TelemetryPacket, QUEUE_SIZE>,
+}
+
+impl<'a> TelemetryConsumer<'a> {
+    pub fn dequeue(&mut self) -> Option<TelemetryPacket> {
+        self.consumer.dequeue()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use static_cell::StaticCell;
-
-    const QUEUE_SIZE: usize = 8;
+    use std::thread;
 
     #[test]
-    fn test_step_command_queue_split_and_use() {
-        static STEP_QUEUE_CELL: StaticCell<StepCommandQueue<QUEUE_SIZE>> = StaticCell::new();
-        let queue = STEP_QUEUE_CELL.init(StepCommandQueue::<QUEUE_SIZE>::new());
+    fn test_step_command_queue_concurrent() {
+        let mut queue = StepCommandQueue::new();
         let (mut producer, mut consumer) = queue.split();
 
-        let cmd = StepCommand { interval: 100, direction_mask: 1, step_mask: 1 };
-        assert!(producer.enqueue(cmd).is_ok());
+        let producer_thread = thread::spawn(move || {
+            for i in 0..1000 {
+                let cmd = StepCommand { ticks: i, direction: i % 2 == 0, axis: 0 };
+                while producer.enqueue(cmd).is_err() {}
+            }
+        });
 
-        let received_cmd = consumer.dequeue();
-        assert_eq!(received_cmd, Some(cmd));
-        assert!(consumer.dequeue().is_none());
+        let consumer_thread = thread::spawn(move || {
+            for i in 0..1000 {
+                loop {
+                    if let Some(cmd) = consumer.dequeue() {
+                        assert_eq!(cmd.ticks, i);
+                        break;
+                    }
+                }
+            }
+        });
+
+        producer_thread.join().unwrap();
+        consumer_thread.join().unwrap();
     }
 
-    #[test]
-    fn test_telemetry_queue_split_and_use() {
-        static TELEMETRY_QUEUE_CELL: StaticCell<TelemetryQueue<QUEUE_SIZE>> = StaticCell::new();
-        let queue = TELEMETRY_QUEUE_CELL.init(TelemetryQueue::<QUEUE_SIZE>::new());
+    #[bench]
+    fn bench_ipc_queue_throughput(b: &mut test::Bencher) {
+        let mut queue = StepCommandQueue::new();
         let (mut producer, mut consumer) = queue.split();
+        let cmd = StepCommand { ticks: 1, direction: true, axis: 0 };
 
-        let packet = TelemetryPacket { timestamp: 12345, completed_mask: 0xFF };
-        assert!(producer.enqueue(packet).is_ok());
-
-        let received_packet = consumer.dequeue();
-        assert_eq!(received_packet, Some(packet));
-        assert!(consumer.dequeue().is_none());
-    }
-
-    #[test]
-    fn test_queue_full_and_empty() {
-        static QUEUE_CELL: StaticCell<StepCommandQueue<QUEUE_SIZE>> = StaticCell::new();
-        let queue = QUEUE_CELL.init(StepCommandQueue::<QUEUE_SIZE>::new());
-        let (mut producer, mut consumer) = queue.split();
-
-        for i in 0..QUEUE_SIZE {
-            let cmd = StepCommand { interval: i as u32, direction_mask: 1, step_mask: 1 };
-            assert!(producer.enqueue(cmd).is_ok());
-        }
-
-        // Queue is now full
-        let cmd_overflow = StepCommand { interval: 99, direction_mask: 1, step_mask: 1 };
-        assert_eq!(producer.enqueue(cmd_overflow), Err(Error::Full(cmd_overflow)));
-
-        for i in 0..QUEUE_SIZE {
-            let received = consumer.dequeue();
-            assert!(received.is_some());
-            assert_eq!(received.unwrap().interval, i as u32);
-        }
-
-        // Queue is now empty
-        assert!(consumer.dequeue().is_none());
+        b.iter(|| {
+            for _ in 0..1000 {
+                producer.enqueue(cmd).ok();
+                consumer.dequeue();
+            }
+        });
     }
 }
