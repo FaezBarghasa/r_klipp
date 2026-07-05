@@ -1,22 +1,10 @@
 [workspace]
 resolver = "2"
 members = [
-    "crates/motion",
-    "crates/thermal",
-    "crates/klipper-proto",
-    "crates/mcu-drivers",
-    "crates/safety",
-    "crates/klipper-host",
-    "crates/klipper-mcu-firmware",
-    "crates/hal",
-    "crates/comms",
-    "crates/actors",
-    "crates/parser",
-    "crates/kinematics",
-    "crates/motors",
-    "crates/sim",
-    "crates/automation",
-    "crates/tools",
-    "crates/io",
-    "crates/control"
+    "crates/libs/r_klipp_api",
+    "crates/libs/r_klipp_motion",
+    "crates/libs/r_klipp_thermal",
+    "crates/libs/r_klipp_safety",
+    "crates/bin/r_klipp_host",
+    "crates/bin/r_klipp_firmware",
 ]
