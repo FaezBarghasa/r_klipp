@@ -1,30 +1,39 @@
 
 use dioxus::prelude::*;
-use dioxus_signals::Signal;
+use r_klipp_api::LinkHealth;
 
 #[component]
-pub fn Dashboard() -> Element {
-    let temp = use_signal(|| 25.0);
+pub fn Dashboard(cx: Scope) -> Element {
+    let link_health = use_signal(cx, || LinkHealth {
+        rtt_us: 0,
+        buffer_fill_percent: 100,
+        dropped_packets: 0,
+    });
 
-    // In a real application, you would establish a WebSocket connection here
-    // and update the `temp` signal with incoming data.
+    let (mode_text, mode_color) = {
+        let health = link_health.read();
+        if health.rtt_us < 2000 && health.buffer_fill_percent > 50 {
+            ("PREDICTIVE MODE (Tier 1)", "bg-green-500")
+        } else if health.rtt_us > 5000 || health.buffer_fill_percent < 30 {
+            ("BASIC MODE (Tier 2)", "bg-yellow-500")
+        } else {
+            ("LINK DEGRADED", "bg-red-500")
+        }
+    };
 
-    rsx! {
+    cx.render(rsx! {
         div {
-            h1 { "Dashboard" }
+            class: "p-4",
+            h1 { class: "text-2xl font-bold", "r_klipp Dashboard" },
             div {
-                "Temperature: {temp}°C"
+                class: "mt-4 p-2 rounded {mode_color} text-white",
+                "{mode_text}"
             }
-            svg {
-                width: "400",
-                height: "200",
-                rect {
-                    width: "400",
-                    height: "200",
-                    fill: "#f0f0f0",
-                }
-                // A simple line representing temperature history would go here
+            div {
+                class: "mt-4",
+                p { "RTT: {link_health.read().rtt_us} µs" },
+                p { "Buffer Fill: {link_health.read().buffer_fill_percent}%" }
             }
         }
-    }
+    })
 }

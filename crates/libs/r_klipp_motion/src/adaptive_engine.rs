@@ -1,95 +1,72 @@
-use r_klipp_api::{HostToMcu, LinkHealth, Waypoint, FixedPoint};
+use r_klipp_api::{LinkHealth, HostToMcu, Waypoint, FixedPoint};
 use heapless::Vec;
 
-pub struct AdaptiveMathEngine {
-    tier: Tier,
-    last_tier_change_time: u64,
-}
-
-#[derive(PartialEq, Debug)]
-pub enum Tier {
+pub enum MathTier {
     Tier1, // Predictive
     Tier2, // Basic
+}
+
+pub struct AdaptiveMathEngine {
+    current_tier: MathTier,
 }
 
 impl AdaptiveMathEngine {
     pub fn new() -> Self {
         Self {
-            tier: Tier::Tier1,
-            last_tier_change_time: 0,
+            current_tier: MathTier::Tier1,
         }
     }
 
-    pub fn update_link_health(&mut self, health: &LinkHealth, current_time: u64) {
-        let hysteresis_passed = current_time - self.last_tier_change_time > 5000; // 5 seconds
-
-        if hysteresis_passed {
-            if health.rtt_us > 5000 || health.buffer_fill_percent < 30 {
-                if self.tier == Tier::Tier1 {
-                    self.tier = Tier::Tier2;
-                    self.last_tier_change_time = current_time;
+    pub fn update_tier(&mut self, link_health: &LinkHealth) {
+        match self.current_tier {
+            MathTier::Tier1 => {
+                if link_health.rtt_us > 5000 || link_health.buffer_fill_percent < 30 {
+                    self.current_tier = MathTier::Tier2;
                 }
-            } else if health.rtt_us < 2000 && health.buffer_fill_percent > 50 {
-                if self.tier == Tier::Tier2 {
-                    self.tier = Tier::Tier1;
-                    self.last_tier_change_time = current_time;
+            }
+            MathTier::Tier2 => {
+                if link_health.rtt_us < 2000 && link_health.buffer_fill_percent > 50 {
+                    self.current_tier = MathTier::Tier1;
                 }
             }
         }
     }
 
     pub fn generate_trajectory(&self, waypoints: &Vec<Waypoint, 32>) -> HostToMcu {
-        match self.tier {
-            Tier::Tier1 => {
-                // In a real implementation, this would call the NURBS and MPCC generators
-                let mut nurbs_points = Vec::new();
-                nurbs_points.push(FixedPoint { x: 1, y: 2, z: 3 }).unwrap();
-                HostToMcu::PredictiveTrajectory {
-                    nurbs_points,
-                    mpcc_feedforward: [1.0, 2.0, 3.0],
-                }
-            }
-            Tier::Tier2 => {
-                HostToMcu::BasicTrajectory {
-                    waypoints: waypoints.clone(),
-                    max_jerk: 10.0,
-                }
-            }
+        match self.current_tier {
+            MathTier::Tier1 => HostToMcu::PredictiveTrajectory {
+                nurbs_points: Vec::new(), // Placeholder for NURBS points
+                mpcc_feedforward: [0.0; 3],
+            },
+            MathTier::Tier2 => HostToMcu::BasicTrajectory {
+                waypoints: waypoints.clone(),
+                max_jerk: 10.0,
+            },
         }
-    }
-
-    pub fn get_tier(&self) -> &Tier {
-        &self.tier
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use r_klipp_api::LinkHealth;
 
     #[test]
     fn test_adaptive_tier_switching() {
         let mut engine = AdaptiveMathEngine::new();
-        let mut current_time = 0;
 
-        // Start in Tier 1
-        assert_eq!(*engine.get_tier(), Tier::Tier1);
+        // Pristine -> Degraded
+        let bad_link = LinkHealth { rtt_us: 6000, buffer_fill_percent: 25, dropped_packets: 1 };
+        engine.update_tier(&bad_link);
+        assert!(matches!(engine.current_tier, MathTier::Tier2));
 
-        // Degraded link
-        let degraded_health = LinkHealth { rtt_us: 6000, buffer_fill_percent: 25, dropped_packets: 0 };
-        engine.update_link_health(&degraded_health, current_time);
-        assert_eq!(*engine.get_tier(), Tier::Tier2);
+        // Degraded -> Still Degraded (hysteresis)
+        let slightly_better_link = LinkHealth { rtt_us: 4000, buffer_fill_percent: 40, dropped_packets: 1 };
+        engine.update_tier(&slightly_better_link);
+        assert!(matches!(engine.current_tier, MathTier::Tier2));
 
-        // Link recovers, but hysteresis prevents immediate switch back
-        current_time += 1000;
-        let recovered_health = LinkHealth { rtt_us: 1500, buffer_fill_percent: 75, dropped_packets: 0 };
-        engine.update_link_health(&recovered_health, current_time);
-        assert_eq!(*engine.get_tier(), Tier::Tier2);
-
-        // Hysteresis time passes, link is still good, switch back to Tier 1
-        current_time += 5000;
-        engine.update_link_health(&recovered_health, current_time);
-        assert_eq!(*engine.get_tier(), Tier::Tier1);
+        // Degraded -> Pristine
+        let good_link = LinkHealth { rtt_us: 1500, buffer_fill_percent: 60, dropped_packets: 0 };
+        engine.update_tier(&good_link);
+        assert!(matches!(engine.current_tier, MathTier::Tier1));
     }
 }

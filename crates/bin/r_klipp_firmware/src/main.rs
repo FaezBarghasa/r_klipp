@@ -1,57 +1,64 @@
 #![no_std]
 #![no_main]
 
-use embassy_executor::InterruptExecutor;
+use embassy_executor::Spawner;
 use embassy_time::{Duration, Timer};
-use static_cell::StaticCell;
-use embassy_stm32::interrupt;
-use panic_halt as _;
+use r_klipp_api::{HostToMcu, McuToHost, LinkHealth};
+use r_klipp_api::hal::SerialLink; // Assuming a mock implementation for now
 
-static EXECUTOR_HIGH: StaticCell<InterruptExecutor> = StaticCell::new();
-static EXECUTOR_LOW: StaticCell<InterruptExecutor> = StaticCell::new();
+struct MockSerialLink;
 
-#[embassy_executor::task(pool_size = 1)]
-async fn step_generator() {
+#[async_trait::async_trait]
+impl SerialLink for MockSerialLink {
+    async fn send(&mut self, data: &[u8]) {
+        // Mock send
+    }
+    async fn recv(&mut self, buf: &mut [u8]) -> usize {
+        // Mock receive
+        0
+    }
+}
+
+#[embassy_executor::main]
+async fn main(spawner: Spawner) {
+    spawner.spawn(link_monitor(MockSerialLink)).unwrap();
+}
+
+#[embassy_executor::task]
+async fn link_monitor(mut serial: impl SerialLink + 'static) {
+    let mut last_sync_time = 0;
+    let mut rtt_us = 0;
+
     loop {
-        // Highest priority task
+        let mut buf = [0u8; 128];
+        if let Ok(len) = embassy_time::with_timeout(Duration::from_millis(1), serial.recv(&mut buf)).await {
+            if len > 0 {
+                if let Ok(msg) = postcard::from_bytes::<HostToMcu>(&buf[..len]) {
+                    if let HostToMcu::SyncClock(host_time) = msg {
+                        last_sync_time = embassy_time::Instant::now().as_micros() as u64;
+                        rtt_us = (last_sync_time - host_time) as u32;
+                    }
+                }
+            }
+        }
+
+        let link_health = LinkHealth {
+            rtt_us,
+            buffer_fill_percent: 50, // Mock value
+            dropped_packets: 0, // Mock value
+        };
+
+        let telemetry = McuToHost::Telemetry {
+            pos: [0.0; 6], // Mock
+            temps: [0.0; 4], // Mock
+            link_health,
+        };
+
+        let mut send_buf = [0u8; 128];
+        if let Ok(encoded) = postcard::to_slice(&telemetry, &mut send_buf) {
+            serial.send(encoded).await;
+        }
+
         Timer::after(Duration::from_millis(100)).await;
-    }
-}
-
-#[embassy_executor::task(pool_size = 1)]
-async fn protocol_handler() {
-    loop {
-        // Medium priority task
-        Timer::after(Duration::from_millis(500)).await;
-    }
-}
-
-#[embassy_executor::task(pool_size = 1)]
-async fn safety_monitor() {
-    loop {
-        // Lowest priority task
-        Timer::after(Duration::from_millis(1000)).await;
-    }
-}
-
-#[cortex_m_rt::entry]
-fn main() -> ! {
-    let p = embassy_stm32::init(Default::default());
-
-    let high_prio_irq = interrupt::take!(EXTI1);
-    let low_prio_irq = interrupt::take!(EXTI2);
-
-    let executor_high = EXECUTOR_HIGH.init(InterruptExecutor::new(high_prio_irq));
-    let executor_low = EXECUTOR_LOW.init(InterruptExecutor::new(low_prio_irq));
-
-    let spawner_high = executor_high.start();
-    let spawner_low = executor_low.start();
-
-    spawner_high.spawn(step_generator()).unwrap();
-    spawner_low.spawn(protocol_handler()).unwrap();
-    spawner_low.spawn(safety_monitor()).unwrap();
-
-    loop {
-        // IDLE
     }
 }

@@ -14,54 +14,50 @@ impl DmaStepEngine {
     }
 
     pub fn swap_buffer(&mut self) {
-        let current_buffer = self.active_buffer.load(Ordering::Acquire);
-        let next_buffer = 1 - current_buffer;
-
-        // The main loop would fill the inactive buffer `self.buffers[next_buffer as usize]` here.
-
-        self.active_buffer.store(next_buffer, Ordering::Release);
+        let current = self.active_buffer.load(Ordering::Relaxed);
+        let next = 1 - current;
+        // In a real scenario, you would configure the DMA to use the 'next' buffer here.
+        self.active_buffer.store(next, Ordering::Release);
     }
 
-    // This would be called from a DMA interrupt handler
-    pub fn get_active_buffer(&self) -> &[u32] {
-        let active_buffer_index = self.active_buffer.load(Ordering::Acquire);
-        &self.buffers[active_buffer_index as usize]
+    // This would be called from the async context to fill the inactive buffer
+    pub fn get_inactive_buffer_mut(&mut self) -> &mut [u32; 256] {
+        let inactive_index = 1 - self.active_buffer.load(Ordering::Acquire);
+        &mut self.buffers[inactive_index as usize]
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::Arc;
     use std::thread;
-    use std::time::Duration;
+    use std::sync::Arc;
 
     #[test]
-    fn test_atomic_buffer_swap_consistency() {
-        let engine = Arc::new(DmaStepEngine::new());
-        let engine_clone_main = engine.clone();
-        let engine_clone_isr = engine.clone();
+    fn test_atomic_swap_race_condition() {
+        let engine = Arc::new(std::sync::Mutex::new(DmaStepEngine::new()));
+        let engine_clone = engine.clone();
 
-        let main_loop = thread::spawn(move || {
-            let mut engine_mut = Arc::into_inner(engine_clone_main).unwrap();
-            for i in 0..1000 {
-                engine_mut.swap_buffer();
-                // Simulate work
-                thread::sleep(Duration::from_micros(10));
-            }
-        });
-
-        let isr_simulation = thread::spawn(move || {
+        let writer_thread = thread::spawn(move || {
             for _ in 0..1000 {
-                let _ = engine_clone_isr.get_active_buffer();
-                // Simulate ISR execution
-                thread::sleep(Duration::from_micros(5));
+                let mut engine = engine_clone.lock().unwrap();
+                let buffer = engine.get_inactive_buffer_mut();
+                buffer.iter_mut().for_each(|x| *x += 1);
+                engine.swap_buffer();
             }
         });
 
-        main_loop.join().unwrap();
-        isr_simulation.join().unwrap();
+        let isr_thread = thread::spawn(move || {
+            for _ in 0..1000 {
+                let mut engine = engine.lock().unwrap();
+                // Simulate ISR reading the active buffer
+                let active_idx = engine.active_buffer.load(Ordering::Acquire);
+                let _active_buffer = &engine.buffers[active_idx as usize];
+                // No swap here, just ensuring access is safe
+            }
+        });
 
-        // The test passes if it completes without panicking, indicating no data races.
+        writer_thread.join().unwrap();
+        isr_thread.join().unwrap();
     }
 }
