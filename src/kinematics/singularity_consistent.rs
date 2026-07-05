@@ -1,4 +1,3 @@
-
 // Copyright 2024 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,12 +18,12 @@ use crate::kinematics::math::se3::{Quaternion, Transform};
 use crate::kinematics::poe_fk::PoeKinematics;
 use crate::math::{Matrix, Vector, SVD};
 
-const SC_IK_MAX_ITERATIONS: usize = 10;
-const SC_IK_TOLERANCE: f64 = 1e-4;
-const SINGULARITY_THRESHOLD: f64 = 0.01;
+const SC_IK_MAX_ITERATIONS: usize = 15;
+const SC_IK_TOLERANCE: f64 = 1e-5;
+const SINGULARITY_THRESHOLD: f64 = 0.02;
+const TASK_PRIORITY_DAMPING: f64 = 0.1;
 
 impl<const N: usize> PoeKinematics<N> {
-    /// Solves the inverse kinematics using a singularity-consistent method.
     pub fn inverse_sc(
         &self,
         target_transform: &Transform,
@@ -42,23 +41,30 @@ impl<const N: usize> PoeKinematics<N> {
 
             let J = self.jacobian(&current_angles)?;
             let svd = SVD::new(&J);
-            let singular_values = svd.singular_values();
 
-            let mut J_inv = Matrix::<N, 6>::zero();
-            let mut lambda = 0.0;
+            let J_inv = svd.pseudo_inverse(SINGULARITY_THRESHOLD);
+            let delta_theta_main: Vector<N> = J_inv * error;
 
-            for i in 0..singular_values.len() {
-                if singular_values[i] < SINGULARITY_THRESHOLD {
-                    lambda = 1.0 - (singular_values[i] / SINGULARITY_THRESHOLD).powi(2);
-                }
-                let s_inv = singular_values[i] / (singular_values[i].powi(2) + lambda.powi(2));
-                J_inv = J_inv + svd.V.get_column(i).outer_product(&svd.U.get_column(i)) * s_inv;
+            // Null-space projection for secondary task (e.g., joint limit avoidance)
+            let I = Matrix::<N, N>::identity();
+            let null_space_projector = I - J_inv * J;
+
+            // Example secondary task: move away from joint limits
+            let mut grad_H = Vector::<N>::zero();
+            for i in 0..N {
+                // A simple quadratic cost function for joint limits
+                let mid_range = (self.joint_limits[i].0 + self.joint_limits[i].1) / 2.0;
+                grad_H[i] = current_angles[i] - mid_range;
             }
 
-            let delta_theta: Vector<N> = J_inv * error;
+            let delta_theta_null: Vector<N> = null_space_projector * (grad_H * -TASK_PRIORITY_DAMPING);
+
+            let delta_theta = delta_theta_main + delta_theta_null;
 
             for i in 0..N {
                 current_angles[i] += delta_theta[i];
+                // Clamp to joint limits
+                current_angles[i] = current_angles[i].clamp(self.joint_limits[i].0, self.joint_limits[i].1);
             }
         }
 
@@ -66,14 +72,20 @@ impl<const N: usize> PoeKinematics<N> {
     }
 
     fn calculate_error_sc(target: &Transform, current: &Transform) -> Vector<6> {
-        let error_transform = *target * current.inverse();
-        let p_error = error_transform.0.get_translation();
+        let p_error = target.0.get_translation() - current.0.get_translation();
 
         let q_target = Quaternion::from_matrix(&target.0.get_rotation());
         let q_current = Quaternion::from_matrix(&current.0.get_rotation());
 
-        let q_error = q_target.slerp(q_current, -1.0); // Simplified conjugate
-        let orientation_error = Vector::from_slice(&[q_error.x, q_error.y, q_error.z]) * 2.0;
+        // Shortest path quaternion error
+        let q_error = q_target * q_current.conjugate();
+        let angle = 2.0 * libm::acos(q_error.w);
+        let axis = if angle.abs() < 1e-6 {
+            Vector::from_slice(&[0.0, 0.0, 0.0])
+        } else {
+            Vector::from_slice(&[q_error.x, q_error.y, q_error.z]) / libm::sin(angle / 2.0)
+        };
+        let orientation_error = axis * angle;
 
         let mut error = Vector::<6>::zero();
         error[0] = orientation_error[0];
@@ -84,5 +96,62 @@ impl<const N: usize> PoeKinematics<N> {
         error[5] = p_error.z;
 
         error
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::kinematics::math::se3::Twist;
+    use crate::math::{Matrix4, Vector3};
+
+    fn get_ur5_kinematics() -> PoeKinematics<6> {
+        let screw_axes = [
+            Twist { angular: Vector3::new(0.0, 0.0, 1.0), linear: Vector3::new(0.0, 0.0, 0.0) },
+            Twist { angular: Vector3::new(0.0, 1.0, 0.0), linear: Vector3::new(0.0, 0.0, -0.089159) },
+            Twist { angular: Vector3::new(0.0, 1.0, 0.0), linear: Vector3::new(0.0, 0.0, -0.514159) },
+            Twist { angular: Vector3::new(0.0, 1.0, 0.0), linear: Vector3::new(0.0, 0.0, -0.906159) },
+            Twist { angular: Vector3::new(0.0, 0.0, -1.0), linear: Vector3::new(0.0, 0.0, 0.0) },
+            Twist { angular: Vector3::new(0.0, 1.0, 0.0), linear: Vector3::new(0.0, 0.0, -1.0) },
+        ];
+        let M = Transform(Matrix4::from_translation(&Vector3::new(0.0, -0.10915, 1.0)));
+        let joint_limits = [
+            (-3.14, 3.14),
+            (-3.14, 3.14),
+            (-3.14, 3.14),
+            (-3.14, 3.14),
+            (-3.14, 3.14),
+            (-3.14, 3.14),
+        ];
+        PoeKinematics { screw_axes, M, joint_limits }
+    }
+
+    #[test]
+    fn test_sc_ik_convergence() {
+        let kinematics = get_ur5_kinematics();
+        let target_angles = [0.1, -0.5, 0.2, 0.5, 1.0, 0.3];
+        let target_transform = kinematics.forward(&target_angles).unwrap();
+
+        let initial_angles = [0.0; 6];
+        let result_angles = kinematics.inverse_sc(&target_transform, &initial_angles).unwrap();
+
+        let result_transform = kinematics.forward(&result_angles).unwrap();
+        let error = (target_transform.0 - result_transform.0).norm();
+        assert!(error < 1e-4, "IK failed to converge to target");
+    }
+
+    #[test]
+    fn test_sc_ik_near_singularity() {
+        let kinematics = get_ur5_kinematics();
+        // Wrist singularity for UR5
+        let target_angles = [0.1, -0.5, 0.2, 0.5, 0.0, 0.3];
+        let target_transform = kinematics.forward(&target_angles).unwrap();
+
+        let initial_angles = [0.0; 6];
+        let result_angles = kinematics.inverse_sc(&target_transform, &initial_angles).unwrap();
+
+        let result_transform = kinematics.forward(&result_angles).unwrap();
+        let error = (target_transform.0 - result_transform.0).norm();
+        assert!(error < 1e-4, "IK failed to converge near singularity");
     }
 }

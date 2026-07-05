@@ -32,6 +32,16 @@
       <sourceFolder url="file://$MODULE_DIR$/crates/thermal/examples" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/crates/thermal/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/crates/thermal/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/actors/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/automation/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/comms/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/control/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/hal/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/io/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/kinematics/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/motors/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/parser/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/tools/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>
     <orderEntry type="inheritedJdk" />

@@ -13,30 +13,31 @@
 // limitations under the License.
 
 use crate::math::Matrix;
+use nalgebra::Scalar;
 
-pub trait MatrixBlock<T, const R: usize, const C: usize> {
-    fn set_block<const R2: usize, const C2: usize>(
-        &mut self,
-        row_start: usize,
-        col_start: usize,
-        block: &Matrix<T, R2, C2>,
-    );
-}
-
-impl<T, const R: usize, const C: usize> MatrixBlock<T, R, C> for Matrix<T, R, C>
+pub trait MatrixBlock<T, const R: usize, const C: usize>
 where
-    T: Copy + Default,
+    T: Scalar,
 {
     fn set_block<const R2: usize, const C2: usize>(
         &mut self,
         row_start: usize,
         col_start: usize,
-        block: &Matrix<T, R2, C2>,
+        block: &Matrix<R2, C2>,
+    );
+}
+
+impl<T, const R: usize, const C: usize> MatrixBlock<T, R, C> for Matrix<R, C>
+where
+    T: Scalar + Copy + Default,
+{
+    fn set_block<const R2: usize, const C2: usize>(
+        &mut self,
+        row_start: usize,
+        col_start: usize,
+        block: &Matrix<R2, C2>,
     ) {
-        for i in 0..R2 {
-            for j in 0..C2 {
-                self[(row_start + i, col_start + j)] = block[(i, j)];
-            }
-        }
+        self.view_mut((row_start, col_start), (R2, C2))
+            .copy_from(block);
     }
 }

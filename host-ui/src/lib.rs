@@ -12,6 +12,8 @@ use tokio::time::Duration;
 use tokio_tungstenite::{connect_async, tungstenite::Message};
 use url::Url;
 
+use host_server::bridge::HostToMcu; // Import HostToMcu from host-server
+
 const API_BASE_URL: &str = "http://127.0.0.1:7125/api";
 const WS_URL: &str = "ws://127.0.0.1:7125/websocket";
 
@@ -38,12 +40,7 @@ impl slint::Model for GCodeFile {
     }
 }
 
-#[tokio::main]
-async fn main() -> Result<()> {
-    env_logger::init();
-
-    info!("Starting rKlipperScreen UI.");
-
+pub async fn run_ui(mcu_cmd_sender: mpsc::Sender<HostToMcu>) -> Result<()> {
     let ui = AppWindow::new()?;
 
     let http_client = Client::new();
@@ -249,34 +246,24 @@ async fn main() -> Result<()> {
         });
     });
 
-    let http_client_clone = http_client.clone();
+    let mcu_cmd_sender_clone = mcu_cmd_sender.clone();
     let ui_handle_clone = ui_handle.clone();
     ui.on_send_gcode_command(move |command| {
-        let client = http_client_clone.clone();
+        let mut sender = mcu_cmd_sender_clone.clone();
         let ui_handle_clone = ui_handle_clone.clone();
         let command_str = command.to_string();
         tokio::spawn(async move {
-            info!("Sending G-code command: {}", command_str);
-            let body = serde_json::json!({
-                "method": "printer.gcode.script",
-                "params": { "script": command_str }
-            });
-            match client.post(format!("{}/rpc", API_BASE_URL)).json(&body).send().await {
-                Ok(resp) => {
-                    if resp.status().is_success() {
-                        info!("G-code command sent successfully.");
-                        slint::invoke_from_event_loop(move || {
-                            if let Some(ui) = ui_handle_clone.upgrade() {
-                                let mut console = ui.get_console_output().to_vec();
-                                console.push(format!("> {}", command_str).into());
-                                ui.set_console_output(Rc::new(slint::VecModel::from(console)));
-                            }
-                        }).unwrap();
-                    } else {
-                        error!("Failed to send G-code command: {:?}", resp.text().await);
+            info!("Sending G-code command to MCU: {}", command_str);
+            if let Err(e) = sender.send(HostToMcu::GCode(command_str.clone())).await {
+                error!("Failed to send G-code to MCU via channel: {}", e);
+            } else {
+                slint::invoke_from_event_loop(move || {
+                    if let Some(ui) = ui_handle_clone.upgrade() {
+                        let mut console = ui.get_console_output().to_vec();
+                        console.push(format!("> {}", command_str).into());
+                        ui.set_console_output(Rc::new(slint::VecModel::from(console)));
                     }
-                }
-                Err(e) => error!("HTTP request failed: {}", e),
+                }).unwrap();
             }
         });
     });

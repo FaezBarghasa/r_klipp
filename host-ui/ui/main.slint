@@ -1,1 +1,211 @@
-// This will be filled in later with slintcn imports
+import { StandardWindow, VerticalBox, HorizontalBox, Button, Text, LineEdit, Gauge, Switch, ListView, Rectangle, Grid, Spinner } from "std-widgets.slint";
+
+export component AppWindow inherits StandardWindow {
+    width: 800px;
+    height: 480px;
+    title: "rKlipperScreen";
+    background: #282c34; // Dark mode background
+
+    in property <float> nozzle_temp_actual: 0.0;
+    in property <float> nozzle_temp_target: 0.0;
+    in property <float> bed_temp_actual: 0.0;
+    in property <float> bed_temp_target: 0.0;
+    in property <float> print_progress: 0.0;
+    in property <string> current_print_file: "No file selected";
+    in property <[string]> console_output: ["Welcome to rKlipperScreen!"];
+    in property <[GCodeFile]> gcode_files: [];
+
+    callback set_nozzle_target(float);
+    callback set_bed_target(float);
+    callback start_print(string);
+    callback refresh_files();
+    callback send_gcode_command(string);
+
+    struct GCodeFile {
+        name: string,
+        size: string,
+        upload_date: string,
+    }
+
+    VerticalBox {
+        alignment: Center;
+        spacing: 10px;
+
+        // Header
+        HorizontalBox {
+            height: 50px;
+            alignment: Center;
+            spacing: 10px;
+            Text {
+                text: "rKlipperScreen";
+                font-size: 24px;
+                color: #61afef;
+            }
+        }
+
+        // Main Content Area
+        HorizontalBox {
+            flex: 1;
+            spacing: 10px;
+
+            // Left Panel (Dashboard/Controls)
+            VerticalBox {
+                width: 50%;
+                spacing: 10px;
+                padding: 10px;
+                background: #323842;
+                border-radius: 5px;
+
+                Text { text: "Dashboard"; font-size: 20px; color: #abb2bf; }
+
+                // Temperatures
+                HorizontalBox {
+                    spacing: 10px;
+                    VerticalBox {
+                        Text { text: "Nozzle"; color: #e06c75; }
+                        Gauge {
+                            value: nozzle_temp_actual;
+                            minimum: 0;
+                            maximum: 300;
+                            preferred-width: 100px;
+                            preferred-height: 100px;
+                            color: #e06c75;
+                            Text {
+                                text: @(nozzle_temp_actual as int) + "°C / " + @(nozzle_temp_target as int) + "°C";
+                                color: #ffffff;
+                                font-size: 16px;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+                            }
+                        }
+                        HorizontalBox {
+                            Button { text: "-5"; clicked => { set_nozzle_target(nozzle_temp_target - 5); } }
+                            Button { text: "+5"; clicked => { set_nozzle_target(nozzle_temp_target + 5); } }
+                        }
+                    }
+                    VerticalBox {
+                        Text { text: "Bed"; color: #98c379; }
+                        Gauge {
+                            value: bed_temp_actual;
+                            minimum: 0;
+                            maximum: 120;
+                            preferred-width: 100px;
+                            preferred-height: 100px;
+                            color: #98c379;
+                            Text {
+                                text: @(bed_temp_actual as int) + "°C / " + @(bed_temp_target as int) + "°C";
+                                color: #ffffff;
+                                font-size: 16px;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+                            }
+                        }
+                        HorizontalBox {
+                            Button { text: "-5"; clicked => { set_bed_target(bed_temp_target - 5); } }
+                            Button { text: "+5"; clicked => { set_bed_target(bed_temp_target + 5); } }
+                        }
+                    }
+                }
+
+                // Print Progress
+                VerticalBox {
+                    Text { text: "Print Progress: " + @(print_progress * 100.0 as int) + "%"; color: #abb2bf; }
+                    Rectangle {
+                        height: 10px;
+                        background: #4b5263;
+                        border-radius: 5px;
+                        Rectangle {
+                            width: print_progress * parent.width;
+                            height: parent.height;
+                            background: #61afef;
+                            border-radius: 5px;
+                        }
+                    }
+                    Text { text: "File: " + current_print_file; color: #abb2bf; font-size: 14px; }
+                }
+
+                // Manual Controls (Placeholder)
+                HorizontalBox {
+                    Button { text: "Home All"; clicked => { send_gcode_command("G28"); } }
+                    Button { text: "Move X+"; clicked => { send_gcode_command("G0 X10"); } }
+                }
+            }
+
+            // Right Panel (Files/Console)
+            VerticalBox {
+                width: 50%;
+                spacing: 10px;
+                padding: 10px;
+                background: #323842;
+                border-radius: 5px;
+
+                TabWidget {
+                    current-tab: 0;
+                    Tab {
+                        title: "Files";
+                        VerticalBox {
+                            spacing: 5px;
+                            HorizontalBox {
+                                Button { text: "Refresh"; clicked => { refresh_files(); } }
+                                Button { text: "Upload (TODO)"; enabled: false; }
+                            }
+                            ListView {
+                                model: gcode_files;
+                                height: 200px;
+                                delegate: HorizontalBox {
+                                    spacing: 5px;
+                                    Text { text: root.name; width: 60%; color: #ffffff; }
+                                    Text { text: root.size; width: 20%; color: #abb2bf; }
+                                    Text { text: root.upload_date; width: 20%; color: #abb2bf; }
+                                    Button {
+                                        text: "Print";
+                                        clicked => { start_print(root.name); }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    Tab {
+                        title: "Console";
+                        VerticalBox {
+                            spacing: 5px;
+                            ListView {
+                                model: console_output;
+                                height: 200px;
+                                delegate: Text { text: root.model-data; color: #abb2bf; font-size: 12px; }
+                            }
+                            HorizontalBox {
+                                LineEdit {
+                                    id: gcode_input;
+                                    placeholder-text: "Enter G-code command";
+                                    height: 30px;
+                                    width: 70%;
+                                    background: #4b5263;
+                                    color: #ffffff;
+                                }
+                                Button {
+                                    text: "Send";
+                                    clicked => {
+                                        send_gcode_command(gcode_input.text);
+                                        gcode_input.text = "";
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    Tab {
+                        title: "Settings";
+                        VerticalBox {
+                            Text { text: "Settings (TODO)"; color: #abb2bf; }
+                            Switch {
+                                text: "Dark Mode";
+                                checked: true; // Default to dark mode
+                                enabled: false; // For now
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

@@ -3,17 +3,23 @@ name = "host-ui"
 version = "0.1.0"
 edition = "2021"
 
+[lib]
+crate-type = ["cdylib", "rlib"] # Define as a library
+
 [dependencies]
 slint = "1.5"
 tokio = { version = "1", features = ["full"] }
+anyhow = "1"
+log = "0.4"
+env_logger = "0.11"
 reqwest = { version = "0.12", features = ["json"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-anyhow = "1"
-thiserror = "1"
-
-# slintcn will be added here as a path dependency
-# slintcn = { path = "../slintcn" }
+tokio-tungstenite = "0.21"
+futures-util = "0.3"
+url = "2"
+# Add dependencies needed for communication with host-server
+host-server = { path = "../host-server" } # Add host-server as a dependency
 
 [build-dependencies]
 slint-build = "1.5"

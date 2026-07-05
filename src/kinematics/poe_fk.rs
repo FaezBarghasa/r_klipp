@@ -1,4 +1,3 @@
-
 // Copyright 2024 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,6 +23,8 @@ pub struct PoeKinematics<const N: usize> {
     pub screw_axes: [Twist; N],
     /// Home configuration (end-effector transform when all joint angles are zero).
     pub M: Transform,
+    /// Joint limits (min, max) for each joint.
+    pub joint_limits: [(f64, f64); N],
 }
 
 impl<const N: usize> PoeKinematics<N> {
@@ -90,9 +91,19 @@ mod tests {
         M.set_translation(&Vector3::new(0.0, -0.109, 1.014));
         let M_transform = Transform(M);
 
+        let joint_limits = [
+            (-3.14, 3.14),
+            (-3.14, 3.14),
+            (-3.14, 3.14),
+            (-3.14, 3.14),
+            (-3.14, 3.14),
+            (-3.14, 3.14),
+        ];
+
         PoeKinematics {
             screw_axes,
             M: M_transform,
+            joint_limits,
         }
     }
 

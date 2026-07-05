@@ -14,7 +14,9 @@
 
 #![allow(non_snake_case)]
 
-use crate::math::{Matrix3, Matrix4, Point, Vector3};
+use crate::math::{
+    matrix_utils::MatrixBlock, Matrix, Matrix3, Matrix4, Point, Vector, Vector3,
+};
 use libm::{acos, cos, sin, sqrt};
 
 /// A 6x1 twist vector representing an element of se(3).
@@ -31,6 +33,49 @@ impl Twist {
         angular: Vector3::ZERO,
         linear: Vector3::ZERO,
     };
+
+    pub fn to_vector(&self) -> Vector<6> {
+        Vector::from_slice(&[
+            self.angular.x,
+            self.angular.y,
+            self.angular.z,
+            self.linear.x,
+            self.linear.y,
+            self.linear.z,
+        ])
+    }
+
+    /// Computes the Lie bracket [V1, V2] of two twists.
+    pub fn lie_bracket(&self, other: &Self) -> Self {
+        let angular = self.angular.cross(other.angular);
+        let linear = self.angular.cross(other.linear) + self.linear.cross(other.angular);
+        Self { angular, linear }
+    }
+}
+
+impl core::ops::Index<usize> for Twist {
+    type Output = f64;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        match index {
+            0 => &self.angular.x,
+            1 => &self.angular.y,
+            2 => &self.angular.z,
+            3 => &self.linear.x,
+            4 => &self.linear.y,
+            5 => &self.linear.z,
+            _ => panic!("Index out of bounds for Twist"),
+        }
+    }
+}
+
+impl From<Vector<6>> for Twist {
+    fn from(v: Vector<6>) -> Self {
+        Self {
+            angular: Vector3::new(v[0], v[1], v[2]),
+            linear: Vector3::new(v[3], v[4], v[5]),
+        }
+    }
 }
 
 /// Represents a 4x4 homogeneous transformation matrix, an element of SE(3).
@@ -59,6 +104,20 @@ impl Transform {
         inv.set_translation(&t_inv);
 
         Self(inv)
+    }
+
+    /// Computes the Adjoint representation of the transform.
+    pub fn adjoint(&self) -> Matrix<6, 6> {
+        let R = self.0.get_rotation();
+        let t = self.0.get_translation();
+        let p_skew = t.to_skew_symmetric();
+
+        let mut Ad_T = Matrix::<6, 6>::zero();
+        Ad_T.set_block(0, 0, &R);
+        Ad_T.set_block(3, 3, &R);
+        Ad_T.set_block(3, 0, &(p_skew * R));
+
+        Ad_T
     }
 
     /// Performs the exponential map from se(3) to SE(3).
@@ -138,6 +197,15 @@ impl Quaternion {
         }
     }
 
+    pub fn conjugate(&self) -> Self {
+        Self {
+            w: self.w,
+            x: -self.x,
+            y: -self.y,
+            z: -self.z,
+        }
+    }
+
     pub fn slerp(self, other: Self, t: f64) -> Self {
         let mut cos_theta = self.w * other.w + self.x * other.x + self.y * other.y + self.z * other.z;
         let mut other = other;
@@ -171,6 +239,19 @@ impl Quaternion {
             x: self.x * w1 + other.x * w2,
             y: self.y * w1 + other.y * w2,
             z: self.z * w1 + other.z * w2,
+        }
+    }
+}
+
+impl core::ops::Mul for Quaternion {
+    type Output = Self;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        Self {
+            w: self.w * rhs.w - self.x * rhs.x - self.y * rhs.y - self.z * rhs.z,
+            x: self.w * rhs.x + self.x * rhs.w + self.y * rhs.z - self.z * rhs.y,
+            y: self.w * rhs.y - self.x * rhs.z + self.y * rhs.w + self.z * rhs.x,
+            z: self.w * rhs.z + self.x * rhs.y - self.y * rhs.x + self.z * rhs.w,
         }
     }
 }
@@ -273,5 +354,32 @@ mod tests {
         let q_mid = q1.slerp(q2, 0.5);
         assert!((q_mid.w - 1.0/sqrt(2.0)).abs() < 1e-9);
         assert!((q_mid.x - 1.0/sqrt(2.0)).abs() < 1e-9);
+    }
+
+    #[test]
+    fn test_lie_bracket() {
+        let t1 = Twist { angular: Vector3::new(1.0, 0.0, 0.0), linear: Vector3::new(0.0, 1.0, 0.0) };
+        let t2 = Twist { angular: Vector3::new(0.0, 1.0, 0.0), linear: Vector3::new(1.0, 0.0, 0.0) };
+        let bracket = t1.lie_bracket(&t2);
+        assert_eq!(bracket.angular, Vector3::new(0.0, 0.0, 1.0));
+        assert_eq!(bracket.linear, Vector3::new(0.0, 0.0, -2.0));
+    }
+
+    #[test]
+    fn test_adjoint() {
+        let R = Matrix3::from_rows(
+            [0.0, -1.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [0.0, 0.0, 1.0],
+        );
+        let t = Vector3::new(1.0, 2.0, 3.0);
+        let mut mat = Matrix4::identity();
+        mat.set_rotation(&R);
+        mat.set_translation(&t);
+        let transform = Transform(mat);
+
+        let Ad_T = transform.adjoint();
+        assert_eq!(Ad_T.rows(), 6);
+        assert_eq!(Ad_T.cols(), 6);
     }
 }

@@ -1,30 +1,49 @@
-use micromath::F32Ext;
+// Copyright 2024 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+use libm::{cos, sin, sqrt};
 
 pub struct Goertzel {
-    q1: f32,
-    q2: f32,
+    s_prev: f32,
+    s_prev2: f32,
     coeff: f32,
 }
 
 impl Goertzel {
     pub fn new(target_freq: f32, sample_rate: f32) -> Self {
-        let k = (0.5 + (target_freq / sample_rate) * (sample_rate as u32) as f32) as u32;
-        let omega = (2.0 * core::f32::consts::PI * k as f32) / sample_rate;
+        let k = (0.5 + (target_freq / sample_rate) * 1024.0) as u32; // Assuming N=1024 for block size
+        let omega = (2.0 * core::f32::consts::PI * k as f32) / 1024.0;
         Self {
-            q1: 0.0,
-            q2: 0.0,
-            coeff: 2.0 * omega.cos(),
+            s_prev: 0.0,
+            s_prev2: 0.0,
+            coeff: 2.0 * cos(omega) as f32,
         }
     }
 
     pub fn process_sample(&mut self, sample: f32) {
-        let q0 = self.coeff * self.q1 - self.q2 + sample;
-        self.q2 = self.q1;
-        self.q1 = q0;
+        let s = sample + self.coeff * self.s_prev - self.s_prev2;
+        self.s_prev2 = self.s_prev;
+        self.s_prev = s;
     }
 
     pub fn get_magnitude_squared(&self) -> f32 {
-        self.q1 * self.q1 + self.q2 * self.q2 - self.q1 * self.q2 * self.coeff
+        self.s_prev * self.s_prev + self.s_prev2 * self.s_prev2
+            - self.coeff * self.s_prev * self.s_prev2
+    }
+
+    pub fn get_magnitude(&self) -> f32 {
+        sqrt(self.get_magnitude_squared())
     }
 }
 
@@ -37,19 +56,33 @@ mod tests {
         let sample_rate = 1000.0;
         let target_freq = 45.0;
         let mut goertzel = Goertzel::new(target_freq, sample_rate);
-        let mut noise_goertzel = Goertzel::new(100.0, sample_rate); // a different frequency
 
-        for i in 0..1000 {
+        for i in 0..1024 {
             let time = i as f32 / sample_rate;
-            let signal = (2.0 * core::f32::consts::PI * target_freq * time).sin();
-            goertzel.process_sample(signal);
-            noise_goertzel.process_sample(signal);
+            let sample = sin(2.0 * core::f32::consts::PI * target_freq * time);
+            goertzel.process_sample(sample);
         }
 
-        let mag_at_target = goertzel.get_magnitude_squared();
-        let mag_at_noise = noise_goertzel.get_magnitude_squared();
+        let magnitude = goertzel.get_magnitude();
+        // The magnitude should be high for the target frequency.
+        // The exact value depends on N and windowing, but it should be significant.
+        assert!(magnitude > 100.0);
+    }
 
-        assert!(mag_at_target > 1000.0, "Magnitude at target freq was {}", mag_at_target);
-        assert!(mag_at_noise < 1.0, "Magnitude at noise freq was {}", mag_at_noise);
+    #[test]
+    fn test_goertzel_rejects_other_frequency() {
+        let sample_rate = 1000.0;
+        let target_freq = 45.0;
+        let other_freq = 100.0;
+        let mut goertzel = Goertzel::new(target_freq, sample_rate);
+
+        for i in 0..1024 {
+            let time = i as f32 / sample_rate;
+            let sample = sin(2.0 * core::f32::consts::PI * other_freq * time);
+            goertzel.process_sample(sample);
+        }
+
+        let magnitude = goertzel.get_magnitude();
+        assert!(magnitude < 1.0);
     }
 }

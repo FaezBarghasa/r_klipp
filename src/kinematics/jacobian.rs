@@ -1,4 +1,3 @@
-
 // Copyright 2024 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,9 +16,25 @@
 
 use crate::kinematics::math::se3::{Transform, Twist};
 use crate::kinematics::poe_fk::PoeKinematics;
-use crate::math::{Matrix, Point, Vector3};
+use crate::math::{Matrix, Vector};
 
 pub type Jacobian<const N: usize> = Matrix<6, N>;
+
+impl<'a, const N: usize> Matrix<6, N> {
+    pub fn get_column(&self, j: usize) -> Vector<6> {
+        let mut v = Vector::<6>::zero();
+        for i in 0..6 {
+            v[i] = self.m[i][j];
+        }
+        v
+    }
+}
+
+impl Vector<6> {
+    pub fn to_twist(&self) -> Twist {
+        Twist::from(*self)
+    }
+}
 
 impl<const N: usize> PoeKinematics<N> {
     /// Calculates the analytical Jacobian for the given joint angles.
@@ -27,28 +42,11 @@ impl<const N: usize> PoeKinematics<N> {
         let mut J = Jacobian::<N>::zero();
         let mut T = Transform::identity();
 
-        // Pre-calculate transforms
-        let mut transforms = [Transform::identity(); N];
         for i in 0..N {
+            let S_i = self.screw_axes[i];
+            J.set_column(i, &(T.adjoint() * S_i.to_vector()));
             let exp_transform = Transform::exp(&self.screw_axes[i], joint_angles[i])?;
             T = T * exp_transform;
-            transforms[i] = T;
-        }
-        let T_final = T * self.M;
-        let p_tcp = T_final * Point::origin();
-
-        // Calculate Jacobian columns
-        let mut T_i = Transform::identity();
-        for i in 0..N {
-            let p_i = T_i * Point::origin();
-            let s_i = self.screw_axes[i];
-
-            let J_v = s_i.angular.cross(p_tcp - p_i) + s_i.linear;
-            let J_w = s_i.angular;
-
-            J.set_column(i, &[J_w.x, J_w.y, J_w.z, J_v.x, J_v.y, J_v.z]);
-
-            T_i = transforms[i];
         }
 
         Ok(J)
@@ -58,6 +56,7 @@ impl<const N: usize> PoeKinematics<N> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::kinematics::math::se3::Twist;
     use crate::math::{Matrix4, Vector3};
 
     fn get_test_kinematics() -> PoeKinematics<6> {
@@ -73,10 +72,19 @@ mod tests {
         let mut M = Matrix4::identity();
         M.set_translation(&Vector3::new(0.0, -0.109, 1.014));
         let M_transform = Transform(M);
+        let joint_limits = [
+            (-3.14, 3.14),
+            (-3.14, 3.14),
+            (-3.14, 3.14),
+            (-3.14, 3.14),
+            (-3.14, 3.14),
+            (-3.14, 3.14),
+        ];
 
         PoeKinematics {
             screw_axes,
             M: M_transform,
+            joint_limits,
         }
     }
 
@@ -86,24 +94,11 @@ mod tests {
         let joint_angles = [0.0; 6];
         let J = kinematics.jacobian(&joint_angles).unwrap();
 
-        // At the zero configuration, the Jacobian calculation is simpler.
-        // This test provides a basic sanity check.
-        let p_tcp = kinematics.M * Point::origin();
-
+        // At the zero configuration, the Jacobian is just the screw axes.
         for i in 0..6 {
-            let s_i = kinematics.screw_axes[i];
-            let p_i = Point::origin(); // All joints at origin in zero config for this robot
-
-            let J_v = s_i.angular.cross(p_tcp - p_i) + s_i.linear;
-            let J_w = s_i.angular;
-
+            let s_i = kinematics.screw_axes[i].to_vector();
             let col = J.get_column(i);
-            assert!((col[0] - J_w.x).abs() < 1e-9);
-            assert!((col[1] - J_w.y).abs() < 1e-9);
-            assert!((col[2] - J_w.z).abs() < 1e-9);
-            assert!((col[3] - J_v.x).abs() < 1e-9);
-            assert!((col[4] - J_v.y).abs() < 1e-9);
-            assert!((col[5] - J_v.z).abs() < 1e-9);
+            assert!((col - s_i).norm() < 1e-9);
         }
     }
 }
