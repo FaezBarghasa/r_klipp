@@ -1,5 +1,6 @@
 use nalgebra::{Vector3, Matrix3};
 use libm::{sqrtf, powf};
+use micromath::F32Ext;
 
 const E: f32 = 100.0; // End effector side length
 const F: f32 = 200.0; // Base side length
@@ -31,11 +32,11 @@ impl Delta {
 
             let w_sq = powf(RF, 2.0);
             let l_sq = powf(RE, 2.0);
-            let a = (x - RF).powi(2) + e1_y.powi(2) + z0.powi(2);
+            let a = (x - RF) * (x - RF) + e1_y * e1_y + z0 * z0;
             let b = 2.0 * z0 * (j1_y - e1_y);
-            let c = (j1_y - e1_y).powi(2) - w_sq + l_sq;
+            let c = (j1_y - e1_y) * (j1_y - e1_y) - w_sq + l_sq;
 
-            let discriminant = b.powi(2) - 4.0 * a * c;
+            let discriminant = b * b - 4.0 * a * c;
             if discriminant < 0.0 {
                 return Err("Target out of workspace");
             }

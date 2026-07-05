@@ -11,7 +11,7 @@ impl WireEdmKinematics {
 }
 
 impl Kinematics<4, 4> for WireEdmKinematics {
-    fn forward(&self, joints: &[f32; 4]) -> Result<[f32; 4], KinematicsError> {
+    fn forward(&self, _joints: &[f32; 4]) -> Result<[f32; 4], KinematicsError> {
         Err(KinematicsError::Unreachable)
     }
 

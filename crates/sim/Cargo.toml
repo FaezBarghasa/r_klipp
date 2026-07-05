@@ -8,6 +8,6 @@ tokio = { version = "1.28.2", features = ["full"] }
 bevy = "0.10.0"
 rapier3d = "0.17.0"
 hal = { path = "../hal" }
-atomic-float = "0.1.0"
+atomic_float = "0.1.0"
 crossbeam-channel = "0.5.8"
 parking_lot = "0.12.1"

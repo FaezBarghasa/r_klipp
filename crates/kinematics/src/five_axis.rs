@@ -16,7 +16,7 @@ impl FiveAxisKinematics {
 }
 
 impl Kinematics<5, 5> for FiveAxisKinematics {
-    fn forward(&self, joints: &[f32; 5]) -> Result<[f32; 5], KinematicsError> {
+    fn forward(&self, _joints: &[f32; 5]) -> Result<[f32; 5], KinematicsError> {
         // Forward kinematics for 5-axis is more complex, so we'll leave it for later.
         Err(KinematicsError::Unreachable)
     }

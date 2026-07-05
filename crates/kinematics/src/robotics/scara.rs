@@ -1,4 +1,5 @@
 use nalgebra::{Vector3, Matrix4};
+use micromath::F32Ext;
 
 pub struct Scara {
     link1: f32,
@@ -18,7 +19,7 @@ impl Scara {
         let (x, y, z) = (target_pos.x, target_pos.y, target_pos.z);
         let d3 = z;
 
-        let cos_theta2 = (x.powi(2) + y.powi(2) - self.link1.powi(2) - self.link2.powi(2)) / (2.0 * self.link1 * self.link2);
+        let cos_theta2 = (x * x + y * y - self.link1 * self.link1 - self.link2 * self.link2) / (2.0 * self.link1 * self.link2);
         if cos_theta2.abs() > 1.0 {
             return Err("Target out of reach");
         }
