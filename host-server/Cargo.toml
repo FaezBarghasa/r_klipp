@@ -26,3 +26,4 @@ uuid = { version = "1.8", features = ["v4", "serde"] } # For file uploads
 tokio-util = { version = "0.7", features = ["codec"] } # For framed reads/writes on serial
 bytes = "1"
 chrono = { version = "0.4", features = ["serde"] } # For timestamps in models
+host-ui = { path = "../host-ui" } # Add host-ui as a dependency
