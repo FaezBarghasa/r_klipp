@@ -1,5 +1,5 @@
 use nalgebra::{Vector3, Matrix4};
-use micromath::F32Ext;
+use libm::{cosf, sinf, acosf, atan2f, fabsf};
 
 pub struct Scara {
     link1: f32,
@@ -8,9 +8,9 @@ pub struct Scara {
 
 impl Scara {
     pub fn forward_kinematics(&self, joint_angles: &[f32; 4]) -> Vector3<f32> {
-        let (theta1, theta2, d3, theta4) = (joint_angles[0], joint_angles[1], joint_angles[2], joint_angles[3]);
-        let x = self.link1 * theta1.cos() + self.link2 * (theta1 + theta2).cos();
-        let y = self.link1 * theta1.sin() + self.link2 * (theta1 + theta2).sin();
+        let (theta1, theta2, d3, _theta4) = (joint_angles[0], joint_angles[1], joint_angles[2], joint_angles[3]);
+        let x = self.link1 * cosf(theta1) + self.link2 * cosf(theta1 + theta2);
+        let y = self.link1 * sinf(theta1) + self.link2 * sinf(theta1 + theta2);
         let z = d3;
         Vector3::new(x, y, z)
     }
@@ -20,14 +20,14 @@ impl Scara {
         let d3 = z;
 
         let cos_theta2 = (x * x + y * y - self.link1 * self.link1 - self.link2 * self.link2) / (2.0 * self.link1 * self.link2);
-        if cos_theta2.abs() > 1.0 {
+        if fabsf(cos_theta2) > 1.0 {
             return Err("Target out of reach");
         }
-        let theta2 = cos_theta2.acos(); // Elbow up solution
+        let theta2 = acosf(cos_theta2); // Elbow up solution
 
-        let k1 = self.link1 + self.link2 * theta2.cos();
-        let k2 = self.link2 * theta2.sin();
-        let theta1 = y.atan2(x) - k2.atan2(k1);
+        let k1 = self.link1 + self.link2 * cosf(theta2);
+        let k2 = self.link2 * sinf(theta2);
+        let theta1 = atan2f(y, x) - atan2f(k2, k1);
 
         // For a SCARA, the 4th joint is often independent orientation
         let theta4 = 0.0; // Assuming no specific orientation is required

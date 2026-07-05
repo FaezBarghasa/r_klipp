@@ -1,4 +1,5 @@
 use nalgebra::{Vector3, Matrix4};
+use libm::{cosf, sinf};
 
 // Denavit-Hartenberg parameters
 pub struct DhParameters {
@@ -18,10 +19,14 @@ impl SixAxis {
         for i in 0..6 {
             let dh = &self.dh_params[i];
             let theta = joint_angles[i] + dh.theta;
+            let c_t = cosf(theta);
+            let s_t = sinf(theta);
+            let c_a = cosf(dh.alpha);
+            let s_a = sinf(dh.alpha);
             let transform_mat = Matrix4::new(
-                theta.cos(), -theta.sin() * dh.alpha.cos(), theta.sin() * dh.alpha.sin(), dh.r * theta.cos(),
-                theta.sin(), theta.cos() * dh.alpha.cos(), -theta.cos() * dh.alpha.sin(), dh.r * theta.sin(),
-                0.0, dh.alpha.sin(), dh.alpha.cos(), dh.d,
+                c_t, -s_t * c_a, s_t * s_a, dh.r * c_t,
+                s_t, c_t * c_a, -c_t * s_a, dh.r * s_t,
+                0.0, s_a, c_a, dh.d,
                 0.0, 0.0, 0.0, 1.0,
             );
             transform *= transform_mat;

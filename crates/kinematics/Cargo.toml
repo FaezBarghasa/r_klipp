@@ -4,4 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-micromath = "0.1.0"
+micromath = "2.1.0"
+libm = "0.2"
+nalgebra = { version = "0.35", default-features = false, features = ["libm"] }
+heapless = "0.9.3"

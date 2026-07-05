@@ -21,7 +21,7 @@ impl<const N: usize> MessageBus<N> {
         }
     }
 
-    pub fnsplit(&mut self) -> (MessageProducer<N>, MessageConsumer<N>) {
+    pub fn split(&mut self) -> (MessageProducer<N>, MessageConsumer<N>) {
         let (producer, consumer) = self.queue.split();
         (
             MessageProducer { producer },

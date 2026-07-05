@@ -1770,7 +1770,7 @@ dependencies = [
  "embassy-sync 0.6.2",
  "embassy-time",
  "heapless 0.7.17",
- "micromath",
+ "micromath 0.1.0",
 ]
 
 [[package]]
@@ -2995,24 +2995,36 @@ name = "glam"
 version = "0.30.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "19fc433e8437a212d1b6f1e68c7824af3aed907da60afa994e7f542d18d12aa9"
+dependencies = [
+ "libm",
+]
 
 [[package]]
 name = "glam"
 version = "0.31.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "556f6b2ea90b8d15a74e0e7bb41671c9bdf38cd9f78c284d750b9ce58a2b5be7"
+dependencies = [
+ "libm",
+]
 
 [[package]]
 name = "glam"
 version = "0.32.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f70749695b063ecbf6b62949ccccde2e733ec3ecbbd71d467dca4e5c6c97cca0"
+dependencies = [
+ "libm",
+]
 
 [[package]]
 name = "glam"
 version = "0.33.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "898f5a568a84989b6c0f8caa50a93074b97dbdc58fc6d9543157bb4562758933"
+dependencies = [
+ "libm",
+]
 
 [[package]]
 name = "glob"
@@ -3703,7 +3715,10 @@ dependencies = [
 name = "kinematics"
 version = "0.1.0"
 dependencies = [
- "micromath",
+ "heapless 0.9.3",
+ "libm",
+ "micromath 2.1.0",
+ "nalgebra 0.35.0",
 ]
 
 [[package]]
@@ -4009,6 +4024,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "micromath"
+version = "2.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c3c8dda44ff03a2f238717214da50f65d5a53b45cd213a7370424ffdb6fae815"
+
+[[package]]
 name = "mime"
 version = "0.3.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4087,7 +4108,7 @@ dependencies = [
  "comms",
  "embassy-time",
  "hal",
- "micromath",
+ "micromath 0.1.0",
 ]
 
 [[package]]
@@ -4663,7 +4684,7 @@ dependencies = [
  "hal",
  "heapless 0.7.17",
  "lexical-core",
- "micromath",
+ "micromath 0.1.0",
  "nom",
 ]
 

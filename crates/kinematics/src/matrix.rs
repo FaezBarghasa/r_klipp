@@ -1,4 +1,5 @@
 use core::ops::Mul;
+use libm::{sinf, cosf};
 
 #[derive(Debug, Clone, Copy)]
 pub struct Matrix3x3 {
@@ -17,9 +18,16 @@ impl Matrix3x3 {
     }
 
     pub fn from_euler_angles(a: f32, b: f32, c: f32) -> Self {
-        let (sa, ca) = micromath::F32Ext::sin_cos(a.to_radians());
-        let (sb, cb) = micromath::F32Ext::sin_cos(b.to_radians());
-        let (sc, cc) = micromath::F32Ext::sin_cos(c.to_radians());
+        let a_rad = a * (core::f32::consts::PI / 180.0);
+        let b_rad = b * (core::f32::consts::PI / 180.0);
+        let c_rad = c * (core::f32::consts::PI / 180.0);
+
+        let sa = sinf(a_rad);
+        let ca = cosf(a_rad);
+        let sb = sinf(b_rad);
+        let cb = cosf(b_rad);
+        let sc = sinf(c_rad);
+        let cc = cosf(c_rad);
 
         let rz = Matrix3x3::new([
             [cc, -sc, 0.0],

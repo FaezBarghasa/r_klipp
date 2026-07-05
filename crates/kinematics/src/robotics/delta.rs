@@ -1,6 +1,5 @@
 use nalgebra::{Vector3, Matrix3};
-use libm::{sqrtf, powf};
-use micromath::F32Ext;
+use libm::{sqrtf, powf, cosf, sinf, atanf};
 
 const E: f32 = 100.0; // End effector side length
 const F: f32 = 200.0; // Base side length
@@ -23,9 +22,9 @@ impl Delta {
         let (x0, y0, z0) = (target_pos.x, target_pos.y, target_pos.z);
 
         for i in 0..3 {
-            let angle_rad = (i as f32 * 120.0).to_radians();
-            let x = x0 * angle_rad.cos() + y0 * angle_rad.sin();
-            let y = y0 * angle_rad.cos() - x0 * angle_rad.sin();
+            let angle_rad = (i as f32 * 120.0) * (core::f32::consts::PI / 180.0);
+            let x = x0 * cosf(angle_rad) + y0 * sinf(angle_rad);
+            let y = y0 * cosf(angle_rad) - x0 * sinf(angle_rad);
 
             let j1_y = -(F - E) / (2.0 * sqrtf(3.0));
             let e1_y = (F - E) / (2.0 * sqrtf(3.0)) + y;
@@ -42,7 +41,7 @@ impl Delta {
             }
 
             let t = (-b - sqrtf(discriminant)) / (2.0 * a);
-            joint_angles[i] = (2.0 * t).atan();
+            joint_angles[i] = 2.0 * atanf(t);
         }
 
         Ok(joint_angles)
