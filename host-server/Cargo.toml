@@ -1,0 +1,28 @@
+[package]
+name = "host-server"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+actix-web = "4"
+actix-cors = "0.6"
+actix-ws = "0.2"
+tokio = { version = "1", features = ["full"] }
+surrealdb = { version = "1.0.0-beta.12", features = ["kv-rocksdb", "derive"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+anyhow = "1"
+thiserror = "1"
+futures-util = "0.3"
+tokio-serial = "5.4"
+postcard = { version = "1.0", features = ["alloc"] }
+cobs = "0.2"
+lazy_static = "1.4"
+env_logger = "0.11"
+log = "0.4"
+async-trait = "0.1"
+mime = "0.3"
+uuid = { version = "1.8", features = ["v4", "serde"] } # For file uploads
+tokio-util = { version = "0.7", features = ["codec"] } # For framed reads/writes on serial
+bytes = "1"
+chrono = { version = "0.4", features = ["serde"] } # For timestamps in models
