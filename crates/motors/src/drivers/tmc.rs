@@ -1,48 +1,50 @@
-use hal::spi::SpiDevice;
+use embedded_hal_async::serial::{Read, Write};
+use r_klipp_api::FaultCode;
 
-pub struct Tmc2209<SPI>
+pub struct Tmc2209<UART>
 where
-    SPI: SpiDevice,
+    UART: Read + Write,
 {
-    spi: SPI,
+    uart: UART,
 }
 
-impl<SPI> Tmc2209<SPI>
+impl<UART> Tmc2209<UART>
 where
-    SPI: SpiDevice,
+    UART: Read + Write,
 {
-    pub fn new(spi: SPI) -> Self {
-        Self { spi }
+    pub fn new(uart: UART) -> Self {
+        Self { uart }
     }
 
     pub async fn read_register(&mut self, address: u8) -> Result<u32, ()> {
-        let mut read_buf = [0u8; 5];
-        let write_buf = [address & 0x7F, 0, 0, 0, 0];
-        self.spi.transfer(&mut read_buf, &write_buf).await.unwrap();
-        Ok(u32::from_be_bytes([read_buf[1], read_buf[2], read_buf[3], read_buf[4]]))
+        let write_buf = [0x05, 0x00, address];
+        self.uart.write(&write_buf).await.map_err(|_| ())?;
+
+        let mut read_buf = [0u8; 8];
+        self.uart.read(&mut read_buf).await.map_err(|_| ())?;
+
+        Ok(u32::from_be_bytes([read_buf[4], read_buf[5], read_buf[6], read_buf[7]]))
     }
 
     pub async fn write_register(&mut self, address: u8, value: u32) -> Result<(), ()> {
         let value_bytes = value.to_be_bytes();
-        let write_buf = [address | 0x80, value_bytes[0], value_bytes[1], value_bytes[2], value_bytes[3]];
-        self.spi.write(&write_buf).await.unwrap();
+        let write_buf = [0x05, 0x00, 0x80 | address, value_bytes[0], value_bytes[1], value_bytes[2], value_bytes[3]];
+        self.uart.write(&write_buf).await.map_err(|_| ())?;
         Ok(())
     }
 }
 
 #[embassy_executor::task]
-pub async fn tmc_poll_task<SPI>(mut driver: Tmc2209<SPI>)
+pub async fn tmc_poll_task<UART>(mut driver: Tmc2209<UART>, fault_queue: embassy_sync::channel::Sender<'static, FaultCode, 1>)
 where
-    SPI: SpiDevice + 'static,
+    UART: Read + Write + 'static,
 {
     loop {
-        // Poll status registers
-        // let gstat = driver.read_register(0x01).await.unwrap();
-        // if (gstat & 1) != 0 { // reset flag
-        // }
-        // if (gstat & 2) != 0 { // error flag
-        // }
-
+        if let Ok(sg_result) = driver.read_register(0x6F).await {
+            if sg_result == 0 {
+                fault_queue.send(FaultCode::StallGuard).await;
+            }
+        }
         embassy_time::Timer::after(embassy_time::Duration::from_millis(100)).await;
     }
 }

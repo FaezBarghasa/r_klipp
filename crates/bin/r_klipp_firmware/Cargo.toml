@@ -7,7 +7,7 @@ edition = "2021"
 r_klipp_api = { path = "../../libs/r_klipp_api" }
 r_klipp_motion = { path = "../../libs/r_klipp_motion" }
 r_klipp_safety = { path = "../../libs/r_klipp_safety" }
-embassy-executor = { version = "0.5.0", features = ["task-arena-size-32768", "arch-cortex-m", "executor-thread", "integrated-timers"] }
+embassy-executor = { version = "0.5.0", features = ["task-arena-size-32768", "arch-cortex-m", "executor-interrupt", "integrated-timers"] }
 embassy-stm32 = { version = "0.1.0", features = ["stm32h743vi", "memory-x", "defmt"] }
 embassy-time = { version = "0.3.0", features = ["defmt", "defmt-timestamp-uptime"] }
 defmt = "0.3.6"

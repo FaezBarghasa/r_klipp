@@ -34,23 +34,28 @@ mod tests {
     use super::*;
     use std::sync::Arc;
     use std::thread;
+    use std::time::Duration;
 
     #[test]
     fn test_atomic_buffer_swap_consistency() {
-        let engine = Arc::new(std::sync::Mutex::new(DmaStepEngine::new()));
-        let engine_clone = engine.clone();
+        let engine = Arc::new(DmaStepEngine::new());
+        let engine_clone_main = engine.clone();
+        let engine_clone_isr = engine.clone();
 
         let main_loop = thread::spawn(move || {
-            for _ in 0..1000 {
-                let mut engine = engine.lock().unwrap();
-                engine.swap_buffer();
+            let mut engine_mut = Arc::into_inner(engine_clone_main).unwrap();
+            for i in 0..1000 {
+                engine_mut.swap_buffer();
+                // Simulate work
+                thread::sleep(Duration::from_micros(10));
             }
         });
 
         let isr_simulation = thread::spawn(move || {
             for _ in 0..1000 {
-                let engine = engine_clone.lock().unwrap();
-                let _ = engine.get_active_buffer();
+                let _ = engine_clone_isr.get_active_buffer();
+                // Simulate ISR execution
+                thread::sleep(Duration::from_micros(5));
             }
         });
 

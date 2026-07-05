@@ -4,7 +4,12 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-micromath = "0.1.0"
-hal = { path = "../hal" }
-comms = { path = "../comms" }
-embassy-time = { version = "0.3.2", features = ["defmt"] }
+micromath = "2.1.0"
+r_klipp_api = { path = "../libs/r_klipp_api" }
+embassy-time = { version = "0.3.0", features = ["defmt", "defmt-timestamp-uptime"] }
+embassy-executor = { version = "0.5.0", features = ["task-arena-size-32768", "arch-cortex-m", "executor-interrupt", "integrated-timers"] }
+embedded-hal-async = "1.0.0"
+
+[features]
+default = []
+std = []
