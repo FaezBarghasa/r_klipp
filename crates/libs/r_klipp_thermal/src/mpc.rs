@@ -1,9 +1,8 @@
-use micromath::F32Ext;
 
-// Simple Kalman filter implementation
+// Kalman Filter implementation for temperature estimation
 pub struct KalmanFilter {
-    q: f32, // process noise covariance
-    r: f32, // measurement noise covariance
+    q: f32, // process noise
+    r: f32, // measurement noise
     x: f32, // value
     p: f32, // estimation error covariance
     k: f32, // kalman gain
@@ -23,31 +22,19 @@ impl KalmanFilter {
     }
 }
 
-// Simplified Model Predictive Control
-pub struct ThermalMpc {
-    kalman: KalmanFilter,
-    target_temp: f32,
-}
+// Simplified MPC for thermal control
+pub struct ThermalMpc;
 
 impl ThermalMpc {
     pub fn new() -> Self {
-        Self {
-            kalman: KalmanFilter::new(0.01, 0.1),
-            target_temp: 0.0,
-        }
+        Self
     }
 
-    pub fn set_target(&mut self, temp: f32) {
-        self.target_temp = temp;
-    }
-
-    pub fn update(&mut self, measurement: f32) -> u8 {
-        let estimated_temp = self.kalman.update(measurement);
-        let error = self.target_temp - estimated_temp;
-
-        // This is a very simplified MPC, a real one would have a more complex model
-        let pwm = (error * 10.0).max(0.0).min(255.0) as u8;
-        pwm
+    pub fn calculate_pwm(&self, current_temp: f32, target_temp: f32) -> f32 {
+        let error = target_temp - current_temp;
+        // A real MPC would have a model of the system and predict future states.
+        // This is a simplified proportional controller for now.
+        (error * 0.1).max(0.0).min(1.0)
     }
 }
 
@@ -57,13 +44,13 @@ mod tests {
 
     #[test]
     fn test_kalman_filter() {
-        let mut kalman = KalmanFilter::new(0.01, 0.1);
-        let true_value = 200.0;
-        let measurements = [199.5, 200.1, 200.3, 199.8, 200.0];
-        let mut estimated_value = 0.0;
+        let mut kf = KalmanFilter::new(0.01, 0.1);
+        let measurements = [25.1, 25.0, 24.9, 25.2, 24.8];
+        let mut estimated_temp = 0.0;
         for m in measurements {
-            estimated_value = kalman.update(m);
+            estimated_temp = kf.update(m);
         }
-        assert!((estimated_value - true_value).abs() < 0.1);
+        // Assert that the estimated temperature is close to the average
+        assert!((estimated_temp - 25.0).abs() < 0.1);
     }
 }
