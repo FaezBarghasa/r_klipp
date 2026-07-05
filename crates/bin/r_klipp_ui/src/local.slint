@@ -1,0 +1,18 @@
+import { VerticalBox, HorizontalBox } from "std-widgets.slint";
+
+export component MainWindow inherits Window {
+    in-out property <string> connection_status;
+    in-out property <string> status_color;
+
+    VerticalBox {
+        HorizontalBox {
+            Text { text: "r_klipp UI"; }
+            Rectangle {
+                background: status_color == "green" ? #00FF00 : (status_color == "yellow" ? #FFFF00 : #FF0000);
+                width: 20px;
+                height: 20px;
+            }
+        }
+        Text { text: connection_status; }
+    }
+}
