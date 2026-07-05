@@ -1,0 +1,9 @@
+[package]
+name = "r_klipp_motion"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+r_klipp_api = { path = "../r_klipp_api" }
+heapless = "0.7"
+micromath = "0.7"

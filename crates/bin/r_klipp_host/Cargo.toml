@@ -1,0 +1,35 @@
+[package]
+name = "r_klipp_host"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+r_klipp_api = { path = "../../libs/r_klipp_api" }
+r_klipp_motion = { path = "../../libs/r_klipp_motion" }
+r_klipp_thermal = { path = "../../libs/r_klipp_thermal" }
+r_klipp_safety = { path = "../../libs/r_klipp_safety" }
+tokio = { version = "1", features = ["full"] }
+axum = "0.6"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio-serial = "5.4"
+postcard = { version = "1.0", features = ["alloc"] }
+nalgebra = "0.32"
+rand = "0.8"
+gstreamer = "0.18"
+opencv = "0.65"
+libc = "0.2"
+log = "0.4"
+env_logger = "0.9"
+anyhow = "1.0"
+thiserror = "1.0"
+crc = "3.0"
+bytes = "1.4"
+futures = "0.3"
+tracing = "0.1"
+tracing-subscriber = "0.3"
+dioxus = "0.4"
+dioxus-fullstack = "0.4"
+slint = "0.3"
+three-d = "0.15"
+rapier3d = "0.17"

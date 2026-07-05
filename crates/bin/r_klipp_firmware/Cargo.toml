@@ -1,0 +1,26 @@
+[package]
+name = "r_klipp_firmware"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+r_klipp_api = { path = "../../libs/r_klipp_api" }
+r_klipp_motion = { path = "../../libs/r_klipp_motion" }
+r_klipp_safety = { path = "../../libs/r_klipp_safety" }
+embassy-executor = { version = "0.5.0", features = ["task-arena-size-32768", "arch-cortex-m", "executor-thread", "integrated-timers"] }
+embassy-stm32 = { version = "0.1.0", features = ["stm32h743vi", "memory-x", "defmt"] }
+embassy-time = { version = "0.3.0", features = ["defmt", "defmt-timestamp-uptime"] }
+defmt = "0.3.6"
+defmt-rtt = "0.4.0"
+cortex-m = { version = "0.7.7", features = ["inline-asm"] }
+cortex-m-rt = "0.7.3"
+panic-halt = "0.2.0"
+heapless = "0.8.0"
+postcard = { version = "1.0.8", default-features = false }
+serde = { version = "1.0.197", default-features = false, features = ["derive"] }
+libm = "0.2.8"
+micromath = "2.1.0"
+
+[dependencies.embassy-sync]
+version = "0.6.0"
+features = ["defmt"]
