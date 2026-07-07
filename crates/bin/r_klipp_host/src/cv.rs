@@ -1,57 +1,45 @@
-use tokio::sync::mpsc::{Receiver, Sender};
-use r_klipp_api::HostToMcu;
-use std::time::{SystemTime, UNIX_EPOCH};
 
-// FFI bindings for rknn_api
-#[repr(C)]
-pub struct RknnContext(u64);
+use libc::{c_void, c_int};
 
+// FFI for Rockchip NPU (rknn)
 #[link(name = "rknnrt")]
 extern "C" {
-    fn rknn_init(
-        context: *mut RknnContext,
-        model_path: *const std::os::raw::c_char,
-        flag: u32,
-        config: *mut std::ffi::c_void,
-    ) -> i32;
-    // Define other rknn functions here...
+    // Simplified FFI definitions
+    fn rknn_init(ctx: *mut *mut c_void, model: *const u8, size: u32, flag: u32) -> c_int;
+    fn rknn_run(ctx: *mut c_void, inputs: *const c_void, n_inputs: u32) -> c_int;
+    fn rknn_destroy(ctx: *mut c_void) -> c_int;
 }
 
-pub struct CvActor {
-    raw_frame_rx: Receiver<Vec<u8>>,
-    host_cmd_tx: Sender<HostToMcu>,
-    rknn_context: RknnContext,
+pub struct FaultDetector {
+    rknn_ctx: *mut c_void,
 }
 
-impl CvActor {
-    pub fn new(
-        raw_frame_rx: Receiver<Vec<u8>>,
-        host_cmd_tx: Sender<HostToMcu>,
-    ) -> Result<Self, anyhow::Error> {
-        let mut rknn_context = RknnContext(0);
-        let model_path = std::ffi::CString::new("/path/to/yolov8.rknn").unwrap();
-        let ret = unsafe { rknn_init(&mut rknn_context, model_path.as_ptr(), 0, std::ptr::null_mut()) };
-        if ret < 0 {
-            return Err(anyhow::anyhow!("rknn_init failed with {}", ret));
+impl FaultDetector {
+    pub fn new(model_path: &str) -> Self {
+        // Load model and initialize RKNN
+        let model = std::fs::read(model_path).unwrap();
+        let mut ctx = std::ptr::null_mut();
+        unsafe {
+            rknn_init(&mut ctx, model.as_ptr(), model.len() as u32, 0);
         }
-
-        Ok(Self {
-            raw_frame_rx,
-            host_cmd_tx,
-            rknn_context,
-        })
+        Self { rknn_ctx: ctx }
     }
 
-    pub async fn run(&mut self) {
-        while let Some(frame) = self.raw_frame_rx.recv().await {
-            // Preprocess frame, run inference, postprocess
-            let fault_detected = true; // Placeholder
+    pub fn detect_fault(&self, frame: &[u8]) -> bool {
+        // Run inference
+        // This is a simplified placeholder
+        false
+    }
+}
 
-            if fault_detected {
-                let timestamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros() as u64;
-                // The actual E-Stop command would be more specific
-                let _ = self.host_cmd_tx.send(HostToMcu::EmergencyStop).await;
-            }
+impl Drop for FaultDetector {
+    fn drop(&mut self) {
+        unsafe {
+            rknn_destroy(self.rknn_ctx);
         }
     }
 }
+
+// Latency-compensated E-Stop would be handled in the main loop of the host,
+// where it has access to both the CV results and the MCU communication actor.
+// It would send a special E-Stop message with a timestamp.
