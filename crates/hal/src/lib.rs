@@ -15,5 +15,8 @@ pub mod traits;
 pub mod capabilities;
 pub mod timer_abstraction;
 pub mod dma_abstraction;
+pub mod universal;
+
+pub use universal::{StepperAxis, DigitalOutput, AnalogInput, PwmOutput, CommunicationBus, HalError};
 
 pub mod stm32;

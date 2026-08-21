@@ -1,0 +1,13 @@
+# Universal r_klipp Configuration Profile: Pick & Place (PnP / PIP) Target
+machine_type = "pnp"
+name = "DualHead_SMT_PnP"
+max_velocity = 900.0
+max_accel = 20000.0
+
+[pnp]
+head_1_z_pin = "PE4"
+head_2_z_pin = "PE5"
+vacuum_valve_pin = "PA6"
+camera_trigger_pin = "PB0"
+can_feeder_bus = "can0"
+stall_current_threshold_mA = 1400

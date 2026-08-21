@@ -1,5 +1,3 @@
-#![no_std]
-use libm;
 use crate::tuner_trait::{AutoTuner, TunerState};
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -71,17 +69,23 @@ impl AutoTuner for UpRelayAutotuner {
 
             if measurement > upper_bound {
                 self.output_state = false;
-                if self.peak_count > 0 && self.peak_times[self.peak_count as usize - 1] < self.last_crossing_time {
-                    self.peaks[self.peak_count as usize] = measurement;
-                    self.peak_times[self.peak_count as usize] = time;
-                    self.peak_count += 1;
+                if self.peak_count == 0 || self.peaks[(self.peak_count - 1) as usize] < self.setpoint {
+                    if (self.peak_count as usize) < self.peaks.len() {
+                        self.peaks[self.peak_count as usize] = measurement;
+                        self.peak_times[self.peak_count as usize] = time;
+                        self.peak_count += 1;
+                        self.last_crossing_time = time;
+                    }
                 }
             } else if measurement < lower_bound {
                 self.output_state = true;
-                if self.peak_count > 0 && self.peak_times[self.peak_count as usize - 1] > self.last_crossing_time {
-                    self.peaks[self.peak_count as usize] = measurement;
-                    self.peak_times[self.peak_count as usize] = time;
-                    self.peak_count += 1;
+                if self.peak_count == 0 || self.peaks[(self.peak_count - 1) as usize] > self.setpoint {
+                    if (self.peak_count as usize) < self.peaks.len() {
+                        self.peaks[self.peak_count as usize] = measurement;
+                        self.peak_times[self.peak_count as usize] = time;
+                        self.peak_count += 1;
+                        self.last_crossing_time = time;
+                    }
                 }
             }
 
@@ -141,7 +145,7 @@ impl UpRelayAutotuner {
     }
 
     fn ziegler_nichols(&self, amplitude: f32, period: f32) -> (f32, f32, f32) {
-        let ku = 4.0 * self.output / (libm::acos(-1.0) * amplitude);
+        let ku = 4.0 * self.output / (core::f32::consts::PI * amplitude);
         let tu = period;
 
         let kp = 0.6 * ku;

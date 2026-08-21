@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 nom = { version = "7.1.3", default-features = false }
-heapless = "0.7.16"
+heapless = "0.8.0"
 micromath = "0.1.0"
 hal = { path = "../hal" }
 comms = { path = "../comms" }
@@ -14,3 +14,4 @@ lexical-core = { version = "0.8.5", default-features = false }
 
 [dev-dependencies]
 approx = "0.5.1"
+proptest = "1.4"

@@ -1,3 +1,4 @@
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Frame {
     pub id: u32,
     pub data: [u8; 8],

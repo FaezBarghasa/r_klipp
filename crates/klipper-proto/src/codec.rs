@@ -17,7 +17,7 @@ use crc::{Crc, CRC_16_IBM_3740};
 use heapless::spsc::Queue;
 
 /// Fixed‑size packet according to the protocol layout.
-#[repr(C, packed)]
+#[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct StepPacket {
     pub timestamp_us: u32,
@@ -105,7 +105,9 @@ mod tests {
         assert!(enc.encode(1_250, 1, 0).is_ok());
         let p1 = enc.try_dequeue().expect("first packet");
         let p2 = enc.try_dequeue().expect("second packet");
-        assert_eq!(p1.interval_us, 0);
-        assert_eq!(p2.interval_us, 250);
+        let int1 = p1.interval_us;
+        let int2 = p2.interval_us;
+        assert_eq!(int1, 0);
+        assert_eq!(int2, 250);
     }
 }

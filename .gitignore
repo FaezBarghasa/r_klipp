@@ -8,3 +8,4 @@
 /crates/sim/target/
 /crates/thermal/target/
 /target/
+graphify-out/

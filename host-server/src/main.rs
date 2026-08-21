@@ -6,6 +6,7 @@ use tokio::sync::{broadcast, mpsc, RwLock};
 mod api;
 mod bridge;
 mod db;
+pub mod openpnp;
 
 fn main() -> Result<()> {
     env_logger::init();

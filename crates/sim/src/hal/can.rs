@@ -26,13 +26,3 @@ impl Can for VirtualCan {
     }
 }
 
-// Need to implement Clone for Frame
-impl Clone for Frame {
-    fn clone(&self) -> Self {
-        Self {
-            id: self.id,
-            data: self.data,
-            len: self.len,
-        }
-    }
-}

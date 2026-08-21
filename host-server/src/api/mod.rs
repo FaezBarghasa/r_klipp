@@ -1,29 +1,66 @@
-use actix_web::{web, App, HttpServer, Responder, HttpResponse};
+//! Moonraker-compatible HTTP & WebSocket API endpoints for Fluidd/Mainsail.
+
+use actix_web::{web, App, HttpServer, HttpResponse, Responder};
 use actix_cors::Cors;
 use actix_ws::{Message, ProtocolError};
 use futures_util::{StreamExt, SinkExt};
 use tokio::sync::{broadcast, mpsc, RwLock};
 use std::{sync::Arc, time::Duration};
 use anyhow::Result;
+use serde::{Deserialize, Serialize};
 use serde_json::json;
-use uuid::Uuid;
-use tokio::fs;
-use tokio_util::codec::{BytesCodec, FramedRead};
-use mime::Mime;
 use log::{info, error};
 
 use crate::db::{Database, HostError};
 use crate::db::models::{GCodeFile, GCodeMetadata, PrintHistory, PrintStatus};
-use crate::bridge::HostToMcu; // Assuming this will be defined in bridge module
+use crate::bridge::HostToMcu;
 
-// Placeholder for machine state
-#[derive(Debug, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ToolheadState {
+    pub position: [f64; 4], // X, Y, Z, E
+    pub max_velocity: f64,
+    pub max_accel: f64,
+    pub homed_axes: String,
+}
+
+impl Default for ToolheadState {
+    fn default() -> Self {
+        Self {
+            position: [0.0, 0.0, 0.0, 0.0],
+            max_velocity: 300.0,
+            max_accel: 3000.0,
+            homed_axes: "xyz".to_string(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MachineState {
     pub nozzle_temp: f32,
+    pub nozzle_target: f32,
     pub bed_temp: f32,
+    pub bed_target: f32,
+    pub toolhead: ToolheadState,
     pub current_print_file: Option<String>,
     pub print_progress: f32,
-    // Add other relevant machine state fields
+    pub state_message: String,
+    pub is_printing: bool,
+}
+
+impl Default for MachineState {
+    fn default() -> Self {
+        Self {
+            nozzle_temp: 22.0,
+            nozzle_target: 0.0,
+            bed_temp: 22.0,
+            bed_target: 0.0,
+            toolhead: ToolheadState::default(),
+            current_print_file: None,
+            print_progress: 0.0,
+            state_message: "Printer is ready".to_string(),
+            is_printing: false,
+        }
+    }
 }
 
 pub struct AppState {
@@ -33,246 +70,161 @@ pub struct AppState {
     pub machine_state: Arc<RwLock<MachineState>>,
 }
 
-async fn websocket_route(
+// ------------------------------------------------------------------------------------------------
+// Moonraker Core API Endpoints
+// ------------------------------------------------------------------------------------------------
+
+/// GET /printer/info -> Basic printer status
+pub async fn get_printer_info(state: web::Data<AppState>) -> HttpResponse {
+    let machine_state = state.machine_state.read().await;
+    HttpResponse::Ok().json(json!({
+        "result": {
+            "state": if machine_state.is_printing { "printing" } else { "ready" },
+            "state_message": machine_state.state_message,
+            "hostname": "r-klipp-host",
+            "klipper_path": "/home/jrad/r_klipp",
+            "python_path": "/usr/bin/python3",
+            "log_file": "/tmp/r_klipp.log",
+            "config_file": "/home/jrad/printer.cfg",
+            "software_version": "0.1.0-rklipp"
+        }
+    }))
+}
+
+/// Query parameters for /printer/objects/query
+#[derive(Deserialize)]
+pub struct ObjectQueryParams {
+    pub objects: Option<String>,
+}
+
+/// GET /printer/objects/query -> Query hardware objects state (heaters, toolhead, print_stats)
+pub async fn query_printer_objects(
+    state: web::Data<AppState>,
+    _query: web::Query<ObjectQueryParams>,
+) -> HttpResponse {
+    let ms = state.machine_state.read().await;
+    HttpResponse::Ok().json(json!({
+        "result": {
+            "status": {
+                "webhooks": {
+                    "state": if ms.is_printing { "printing" } else { "ready" },
+                    "state_message": ms.state_message
+                },
+                "extruder": {
+                    "temperature": ms.nozzle_temp,
+                    "target": ms.nozzle_target,
+                    "power": 0.0,
+                    "can_extrude": true
+                },
+                "heater_bed": {
+                    "temperature": ms.bed_temp,
+                    "target": ms.bed_target,
+                    "power": 0.0
+                },
+                "toolhead": {
+                    "position": ms.toolhead.position,
+                    "max_velocity": ms.toolhead.max_velocity,
+                    "max_accel": ms.toolhead.max_accel,
+                    "homed_axes": ms.toolhead.homed_axes
+                },
+                "print_stats": {
+                    "filename": ms.current_print_file,
+                    "progress": ms.print_progress,
+                    "state": if ms.is_printing { "printing" } else { "standby" }
+                }
+            }
+        }
+    }))
+}
+
+#[derive(Deserialize)]
+pub struct GcodeScriptReq {
+    pub script: String,
+}
+
+/// POST /printer/gcode/script -> Execute arbitrary G-Code script
+pub async fn post_gcode_script(
+    req: web::Json<GcodeScriptReq>,
+    state: web::Data<AppState>,
+) -> HttpResponse {
+    let script = req.script.trim();
+    info!("Executing G-Code script: {}", script);
+
+    for line in script.lines() {
+        let line = line.trim();
+        if !line.is_empty() && !line.starts_with(';') {
+            let _ = state.mcu_cmd_sender.send(HostToMcu::GCode(line.to_string())).await;
+        }
+    }
+
+    HttpResponse::Ok().json(json!({ "result": "ok" }))
+}
+
+/// GET /server/info -> Moonraker Server Info
+pub async fn get_server_info() -> HttpResponse {
+    HttpResponse::Ok().json(json!({
+        "result": {
+            "klippy_state": "ready",
+            "klippy_connected": true,
+            "api_version": [0, 1, 0],
+            "api_version_string": "0.1.0-rklipp",
+            "hostname": "r-klipp-host",
+            "plugins": ["database", "file_manager", "gcode"]
+        }
+    }))
+}
+
+/// GET /server/files/list -> List stored G-Code files
+pub async fn get_server_files_list(state: web::Data<AppState>) -> HttpResponse {
+    match state.db.get_gcode_files().await {
+        Ok(files) => HttpResponse::Ok().json(json!({ "result": files })),
+        Err(e) => HttpResponse::InternalServerError().json(json!({ "error": e.to_string() })),
+    }
+}
+
+// ------------------------------------------------------------------------------------------------
+// WebSocket Stream
+// ------------------------------------------------------------------------------------------------
+
+pub async fn websocket_route(
     req: actix_web::HttpRequest,
     stream: web::Payload,
     state: web::Data<AppState>,
 ) -> Result<HttpResponse, ProtocolError> {
     let (response, mut session, mut msg_stream) = actix_ws::handle(&req, stream)?;
-
     let mut rx = state.telemetry_broadcaster.subscribe();
-    let mcu_cmd_sender = state.mcu_cmd_sender.clone();
 
     actix_web::rt::spawn(async move {
-        let mut interval = tokio::time::interval(Duration::from_secs(10)); // Ping interval
+        let mut interval = tokio::time::interval(Duration::from_secs(5));
 
         loop {
             tokio::select! {
                 msg = msg_stream.next() => {
                     match msg {
                         Some(Ok(Message::Ping(bytes))) => {
-                            if session.pong(&bytes).await.is_err() {
-                                break;
-                            }
+                            if session.pong(&bytes).await.is_err() { break; }
                         }
                         Some(Ok(Message::Text(text))) => {
-                            info!("Received WebSocket message: {}", text);
-                            // Handle incoming messages from client if needed
-                            // e.g., JSON-RPC commands over WebSocket
+                            info!("WebSocket client message: {}", text);
                         }
-                        Some(Ok(Message::Close(_))) => {
-                            break;
-                        }
-                        _ => break, // Connection error or other message types
+                        Some(Ok(Message::Close(_))) => break,
+                        _ => break,
                     }
                 }
                 telemetry = rx.recv() => {
-                    match telemetry {
-                        Ok(data) => {
-                            if session.text(data.to_string()).await.is_err() {
-                                break;
-                            }
-                        }
-                        Err(broadcast::error::RecvError::Lagged(_)) => {
-                            error!("WebSocket client lagged, dropping messages.");
-                            // Optionally send a warning to the client or close connection
-                        }
-                        Err(_) => break, // Broadcaster closed
+                    if let Ok(data) = telemetry {
+                        if session.text(data.to_string()).await.is_err() { break; }
                     }
                 }
                 _ = interval.tick() => {
-                    if session.ping(b"").await.is_err() {
-                        break;
-                    }
+                    if session.ping(b"").await.is_err() { break; }
                 }
             }
         }
-        info!("WebSocket session ended.");
     });
 
     Ok(response)
 }
-
-async fn get_printer_info(state: web::Data<AppState>) -> Result<HttpResponse, HostError> {
-    let machine_state = state.machine_state.read().await;
-    Ok(HttpResponse::Ok().json(json!({
-        "result": {
-            "heater_bed": { "temperature": machine_state.bed_temp },
-            "extruder": { "temperature": machine_state.nozzle_temp },
-            "print_stats": {
-                "filename": machine_state.current_print_file,
-                "progress": machine_state.print_progress,
-                "state": "printing" // Placeholder
-            },
-            // Add more printer info from machine_state
-        }
-    })))
-}
-
-async fn get_server_info() -> Result<HttpResponse, HostError> {
-    Ok(HttpResponse::Ok().json(json!({
-        "result": {
-            "klippy_state": "ready", // Placeholder
-            "api_version": "0.1.0",
-            "api_version_string": "r_klipp host-server 0.1.0",
-            "hostname": "r-klipp-host",
-        }
-    })))
-}
-
-async fn handle_rpc(
-    body: web::Json<serde_json::Value>,
-    state: web::Data<AppState>,
-) -> Result<HttpResponse, HostError> {
-    let method = body["method"].as_str().unwrap_or_default();
-    let id = body["id"].clone();
-
-    match method {
-        "printer.info" => get_printer_info(state).await,
-        "server.info" => get_server_info().await,
-        // Add more RPC methods as needed
-        _ => Ok(HttpResponse::BadRequest().json(json!({
-            "id": id,
-            "error": {
-                "code": -32601,
-                "message": format!("Method not found: {}", method)
-            }
-        }))),
-    }
-}
-
-async fn get_files(state: web::Data<AppState>) -> Result<HttpResponse, HostError> {
-    let files = state.db.get_gcode_files().await?;
-    Ok(HttpResponse::Ok().json(json!({ "files": files })))
-}
-
-async fn upload_file(
-    mut payload: web::Payload,
-    state: web::Data<AppState>,
-) -> Result<HttpResponse, HostError> {
-    let upload_dir = "./uploads"; // Define your upload directory
-    fs::create_dir_all(upload_dir).await.map_err(|e| HostError::Other(e.to_string()))?;
-
-    let mut filename = String::new();
-    let mut file_content = Vec::new();
-    let mut boundary = String::new();
-
-    // This is a simplified multipart parser. A real implementation would use a dedicated crate.
-    while let Some(item) = payload.next().await {
-        let mut field = item.map_err(|e| HostError::Other(e.to_string()))?;
-        if boundary.is_empty() {
-            // Attempt to extract boundary from Content-Type header if available
-            // For simplicity, we'll assume a basic boundary for now or expect it in the first chunk
-            // A proper solution would parse the Content-Type header from the request.
-            // For now, let's just assume the first line is the boundary.
-            let s = String::from_utf8_lossy(&field);
-            if let Some(line) = s.lines().next() {
-                if line.starts_with("--") {
-                    boundary = line.to_string();
-                }
-            }
-        }
-
-        // Simplified logic to extract filename and content
-        // In a real app, use `actix-multipart` or similar
-        let s = String::from_utf8_lossy(&field);
-        if s.contains("filename=\"") {
-            if let Some(start) = s.find("filename=\"") {
-                let rest = &s[start + "filename=\"".len()..];
-                if let Some(end) = rest.find("\"") {
-                    filename = rest[..end].to_string();
-                }
-            }
-        }
-        file_content.extend_from_slice(&field);
-    }
-
-    if filename.is_empty() {
-        return Err(HostError::Other("No filename found in multipart data".to_string()));
-    }
-
-    let file_path = format!("{}/{}", upload_dir, filename);
-    fs::write(&file_path, &file_content).await.map_err(|e| HostError::Other(e.to_string()))?;
-
-    let metadata = GCodeMetadata::default(); // Placeholder for actual parsing
-    let gcode_file = GCodeFile {
-        id: None,
-        path: file_path.clone(),
-        size: file_content.len() as u64,
-        upload_date: Utc::now(),
-        metadata,
-    };
-
-    state.db.save_gcode_metadata(gcode_file).await?;
-
-    Ok(HttpResponse::Ok().json(json!({ "message": "File uploaded successfully", "path": file_path })))
-}
-
-async fn start_print(
-    path: web::Path<String>,
-    state: web::Data<AppState>,
-) -> Result<HttpResponse, HostError> {
-    let file_path = path.into_inner();
-    info!("Attempting to start print for file: {}", file_path);
-
-    let file = fs::File::open(&file_path).await.map_err(|e| HostError::Other(format!("Failed to open file: {}", e)))?;
-    let reader = FramedRead::new(file, BytesCodec::new());
-
-    let mut lines = reader.map(|r| r.map(|b| String::from_utf8_lossy(&b).to_string()));
-
-    // Simulate sending G-code lines to MCU
-    let mut mcu_cmd_sender = state.mcu_cmd_sender.clone();
-    let machine_state = state.machine_state.clone();
-
-    tokio::spawn(async move {
-        let mut line_num = 0;
-        while let Some(line) = lines.next().await {
-            match line {
-                Ok(gcode_line) => {
-                    info!("Sending G-code line {}: {}", line_num, gcode_line.trim());
-                    // In a real scenario, you'd parse and send specific commands
-                    if let Err(e) = mcu_cmd_sender.send(HostToMcu::GCode(gcode_line.trim().to_string())).await {
-                        error!("Failed to send G-code to MCU: {}", e);
-                        break;
-                    }
-                    line_num += 1;
-                    // Update print progress (simplified)
-                    let mut state_guard = machine_state.write().await;
-                    state_guard.print_progress = (line_num as f32 / 1000.0).min(1.0); // Assuming 1000 lines for simplicity
-                    tokio::time::sleep(Duration::from_millis(50)).await; // Simulate print speed
-                }
-                Err(e) => {
-                    error!("Error reading G-code file: {}", e);
-                    break;
-                }
-            }
-        }
-        info!("Finished streaming G-code for print.");
-        let mut state_guard = machine_state.write().await;
-        state_guard.print_progress = 1.0;
-        state_guard.current_print_file = None;
-
-        // Save print history
-        let db = state.db.clone(); // Clone Arc for async block
-        let history = PrintHistory {
-            id: None,
-            start_time: Utc::now(), // Should be actual start time
-            end_time: Some(Utc::now()),
-            status: PrintStatus::Completed,
-            telemetry_summary: Default::default(),
-        };
-        if let Err(e) = db.save_print_history(history).await {
-            error!("Failed to save print history: {:?}", e);
-        }
-    });
-
-    let mut state_guard = state.machine_state.write().await;
-    state_guard.current_print_file = Some(file_path.clone());
-    state_guard.print_progress = 0.0;
-
-    Ok(HttpResponse::Ok().json(json!({ "message": format!("Print started for {}", file_path) })))
-}
-
 
 pub async fn run_api_server(
     db: Arc<Database>,
@@ -280,7 +232,7 @@ pub async fn run_api_server(
     mcu_cmd_sender: mpsc::Sender<HostToMcu>,
     machine_state: Arc<RwLock<MachineState>>,
 ) -> Result<()> {
-    info!("Starting Actix-Web server on 0.0.0.0:7125");
+    info!("Starting Moonraker-Compatible Actix-Web server on 0.0.0.0:7125");
 
     let app_state = web::Data::new(AppState {
         db,
@@ -291,7 +243,7 @@ pub async fn run_api_server(
 
     HttpServer::new(move || {
         let cors = Cors::default()
-            .allow_any_origin() // For development, allow any origin
+            .allow_any_origin()
             .allow_any_method()
             .allow_any_header()
             .max_age(3600);
@@ -300,10 +252,11 @@ pub async fn run_api_server(
             .wrap(cors)
             .app_data(app_state.clone())
             .service(web::resource("/websocket").to(websocket_route))
-            .route("/api/rpc", web::post().to(handle_rpc))
-            .route("/api/files", web::get().to(get_files))
-            .route("/api/files/upload", web::post().to(upload_file))
-            .route("/api/print/start/{file_path}", web::post().to(start_print))
+            .route("/printer/info", web::get().to(get_printer_info))
+            .route("/printer/objects/query", web::get().to(query_printer_objects))
+            .route("/printer/gcode/script", web::post().to(post_gcode_script))
+            .route("/server/info", web::get().to(get_server_info))
+            .route("/server/files/list", web::get().to(get_server_files_list))
     })
     .bind("0.0.0.0:7125")?
     .run()

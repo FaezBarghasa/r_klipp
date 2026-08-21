@@ -1,0 +1,20 @@
+# Universal r_klipp Configuration Profile: 3D Printer Target
+machine_type = "3d_printer"
+name = "CoreXY_FDM_Printer"
+max_velocity = 350.0
+max_accel = 7000.0
+max_jerk = 50000.0
+
+[extruder]
+step_pin = "PE2"
+dir_pin = "PE3"
+enable_pin = "PD4"
+heater_pin = "PA2"
+sensor_pin = "PA0"
+max_temp = 315.0
+pressure_advance = 0.035
+
+[heater_bed]
+heater_pin = "PA1"
+sensor_pin = "PA3"
+max_temp = 120.0

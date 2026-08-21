@@ -6,3 +6,6 @@ pub mod spi;
 pub mod uart;
 pub mod can;
 pub mod dma;
+pub mod mock;
+
+pub use mock::{MockHal, MockHalState, MockStepEvent};

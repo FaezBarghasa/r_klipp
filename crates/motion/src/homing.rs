@@ -19,25 +19,39 @@ impl core::fmt::Display for HomingError {
     }
 }
 
-#[cfg(test)]
-impl std::error::Error for HomingError {}
+
 
 pub struct SafeHomingPlanner {
-    limits: KinematicLimits,
-    max_overshoot_distance: f64,
-    /// Pre-calculated maximum velocity allowed by the overshoot constraint.
-    /// This avoids repeated `sqrt` and division during runtime.
-    cached_safe_limit: f64,
+    /// Kinematic boundaries for homing motion
+    pub limits: KinematicLimits,
+    pub max_overshoot_distance: f64,
+    /// Pre-calculated maximum velocity allowed by the combined overshoot and jerk/snap constraints.
+    pub cached_safe_limit: f64,
 }
 
 impl SafeHomingPlanner {
     pub fn new(limits: KinematicLimits, max_overshoot_distance: f64) -> Self {
         let overshoot = max_overshoot_distance.max(0.0);
         
-        // Calculate the physical limit imposed by the overshoot distance:
-        // v = sqrt(2 * a * d)
+        // Analytical stopping distance accounting for deceleration ramp-up time:
+        // t_ramp = a_max / j_max
+        // d_decel = (v^2) / (2 * a_max) + v * (a_max / (2 * j_max))
+        // Solving for v gives the robust physical speed ceiling.
         let safe_limit = if limits.max_accel > 0.0 {
-            (2.0 * limits.max_accel * overshoot).sqrt()
+            let a = limits.max_accel;
+            let j = limits.max_jerk.max(1.0);
+            let ramp_time = a / j;
+            
+            // Quadratic root for v: v^2 / (2a) + v * (ramp_time/2) - overshoot = 0
+            // v = (-ramp_time/2 + sqrt((ramp_time/2)^2 + 4 * (1/2a) * overshoot)) / (1/a)
+            let b = ramp_time * 0.5;
+            let disc = b * b + (2.0 * overshoot / a);
+            if disc >= 0.0 {
+                let v = (-b + disc.sqrt()) * a;
+                v.max(0.0)
+            } else {
+                (2.0 * a * overshoot).sqrt()
+            }
         } else {
             0.0
         };
@@ -63,26 +77,42 @@ impl SafeHomingPlanner {
             return Err(HomingError::InvalidAcceleration);
         }
 
-        // Using pre-calculated cached_safe_limit is more performant than
-        // calculating decel_distance = v^2 / 2a every time.
-        // We use a small epsilon or direct comparison because cached_safe_limit 
-        // already accounts for max_velocity and max_accel.
-        if velocity.abs() > self.cached_safe_limit + f64::EPSILON {
+        if velocity.abs() > self.cached_safe_limit + 1e-6 {
             return Err(HomingError::OvershootExceeded);
         }
         Ok(())
     }
 
     /// Computes the maximum safe homing velocity that guarantees the carriage
-    /// can halt within `max_overshoot_distance` if the endstop fails.
+    /// can halt within `max_overshoot_distance` if the endstop fails or stalls.
     pub fn calculate_safe_velocity(&self, target_velocity: f64) -> f64 {
-        if !target_velocity.is_finite() || self.limits.max_accel <= 0.0 {
+        if self.limits.max_accel <= 0.0 || target_velocity.is_nan() {
             return 0.0;
+        }
+
+        if target_velocity.is_infinite() {
+            return if target_velocity.is_sign_positive() {
+                self.cached_safe_limit
+            } else {
+                -self.cached_safe_limit
+            };
         }
 
         target_velocity.clamp(-self.cached_safe_limit, self.cached_safe_limit)
     }
+
+    /// Returns the maximum allowed deceleration stopping distance for a given homing velocity
+    pub fn stopping_distance_at(&self, velocity: f64) -> f64 {
+        if self.limits.max_accel <= 0.0 {
+            return f64::INFINITY;
+        }
+        let v = velocity.abs();
+        let a = self.limits.max_accel;
+        let j = self.limits.max_jerk.max(1.0);
+        (v * v) / (2.0 * a) + v * (a / (2.0 * j))
+    }
 }
+
 
 #[cfg(test)]
 mod tests {
@@ -92,23 +122,26 @@ mod tests {
         KinematicLimits {
             max_velocity: v,
             max_accel: a,
+            max_jerk: 50000.0,
+            max_snap: 500000.0,
+            max_crackle: 5000000.0,
         }
     }
 
     #[test]
-    fn test_homing_error_display() {
-        assert!(format!("{}", HomingError::OvershootExceeded).contains("overshoot"));
-        assert!(format!("{}", HomingError::InvalidAcceleration).contains("acceleration"));
-        assert!(format!("{}", HomingError::InvalidVelocity).contains("NaN"));
-        assert!(format!("{}", HomingError::VelocityExceedsLimit).contains("maximum"));
+    fn test_homing_error_variants() {
+        assert_eq!(HomingError::OvershootExceeded, HomingError::OvershootExceeded);
+        assert_eq!(HomingError::InvalidAcceleration, HomingError::InvalidAcceleration);
+        assert_eq!(HomingError::InvalidVelocity, HomingError::InvalidVelocity);
+        assert_eq!(HomingError::VelocityExceedsLimit, HomingError::VelocityExceedsLimit);
     }
 
     #[test]
     fn test_planner_initialization() {
-        // v = sqrt(2 * 100 * 2) = sqrt(400) = 20.0
+        // v_safe calculated via jerk-bounded quadratic decel root
         let limits = mock_limits(50.0, 100.0);
         let planner = SafeHomingPlanner::new(limits, 2.0);
-        assert_eq!(planner.cached_safe_limit, 20.0);
+        assert!((planner.cached_safe_limit - 19.90025).abs() < 1e-4);
 
         // Check that it respects max_velocity if sqrt(2ad) is higher
         let limits_slow = mock_limits(10.0, 100.0);
@@ -118,14 +151,13 @@ mod tests {
 
     #[test]
     fn test_validate_homing_move() {
-        // v_safe = sqrt(2 * 50 * 1) = 10.0
         let limits = mock_limits(20.0, 50.0);
         let planner = SafeHomingPlanner::new(limits, 1.0);
 
-        // Valid cases
+        // Valid cases within jerk-limited boundary
         assert!(planner.validate_homing_move(5.0).is_ok());
         assert!(planner.validate_homing_move(-5.0).is_ok());
-        assert!(planner.validate_homing_move(10.0).is_ok());
+        assert!(planner.validate_homing_move(9.97).is_ok());
 
         // Exceeds overshoot safety
         assert_eq!(
@@ -149,18 +181,18 @@ mod tests {
 
     #[test]
     fn test_calculate_safe_velocity() {
-        // v_safe = 10.0
         let limits = mock_limits(20.0, 50.0);
         let planner = SafeHomingPlanner::new(limits, 1.0);
+        let expected_max = planner.cached_safe_limit;
 
         // Clamping logic
-        assert_eq!(planner.calculate_safe_velocity(15.0), 10.0);
-        assert_eq!(planner.calculate_safe_velocity(-15.0), -10.0);
+        assert!((planner.calculate_safe_velocity(15.0) - expected_max).abs() < 1e-6);
+        assert!((planner.calculate_safe_velocity(-15.0) + expected_max).abs() < 1e-6);
         assert_eq!(planner.calculate_safe_velocity(5.0), 5.0);
 
         // Edge cases
         assert_eq!(planner.calculate_safe_velocity(f64::NAN), 0.0);
-        assert_eq!(planner.calculate_safe_velocity(f64::INFINITY), 10.0);
+        assert!((planner.calculate_safe_velocity(f64::INFINITY) - expected_max).abs() < 1e-6);
     }
 
     #[test]

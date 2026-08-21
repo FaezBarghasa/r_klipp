@@ -1,0 +1,14 @@
+# Universal r_klipp Configuration Profile: 5-Axis CNC Mill Target
+machine_type = "cnc"
+name = "5Axis_Milling_Center"
+max_velocity = 200.0
+max_accel = 3000.0
+
+[cnc]
+spindle_pwm_pin = "PA8"
+spindle_modbus_port = "/dev/ttyUSB0"
+max_spindle_rpm = 24000
+coolant_flood_pin = "PC9"
+touch_probe_pin = "PC13"
+enclosure_door_interlock_pin = "PD2"
+has_5axis_rtcp = true

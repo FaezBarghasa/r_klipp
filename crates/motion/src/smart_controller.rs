@@ -1,11 +1,9 @@
-#![no_std]
-use libm;
 use crate::tuner_trait::{AutoTuner, TunerState, TuningDomain};
 use crate::upgraded_tuner::UpRelayAutotuner;
 use crate::motion_tuner::MotionStepTuner;
 
 /// The operational mode of the Smart Controller.
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ControlMode {
     /// Normal closed-loop PID control.
     Run,

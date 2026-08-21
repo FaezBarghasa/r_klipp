@@ -12,7 +12,11 @@ use tokio::time::Duration;
 use tokio_tungstenite::{connect_async, tungstenite::Message};
 use url::Url;
 
-use host_server::bridge::HostToMcu; // Import HostToMcu from host-server
+// --- Commands sent from UI to MCU ---
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum HostToMcu {
+    GCode(String),
+}
 
 const API_BASE_URL: &str = "http://127.0.0.1:7125/api";
 const WS_URL: &str = "ws://127.0.0.1:7125/websocket";

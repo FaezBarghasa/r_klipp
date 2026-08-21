@@ -1,60 +1,57 @@
 //! Tests for the motion planner's determinism and correctness.
 
-use motion::planner::MotionPlanner;
-use mcu_drivers::stepper::StepSegment;
-use heapless::spsc::Queue;
+use motion::trapezoidal::{TrapezoidalConstraints, TrapezoidalProfile};
+use motion::lookahead::LookaheadQueue;
+use motion::planner::{plan_segment, MotionConstraints};
+use nalgebra::Vector3;
 
 #[test]
-fn test_planner_generates_correct_trapezoid_move() {
-    let mut planner = MotionPlanner::new([80.0; 8]);
-    static mut STEP_QUEUE: Queue<StepSegment, 1024> = Queue::new();
-    let (mut producer, mut consumer) = unsafe { STEP_QUEUE.split() };
+fn test_planner_generates_deterministic_trapezoid_move() {
+    let cons = TrapezoidalConstraints {
+        v_max: 100.0,
+        a_max: 1000.0,
+        v_entry: 0.0,
+        v_exit: 0.0,
+    };
 
-    let mut target = [0; 8];
-    target[0] = 800; // 10mm at 80 steps/mm
-    target[1] = 800;
+    let p1 = TrapezoidalProfile::plan(50.0, cons).unwrap();
+    let p2 = TrapezoidalProfile::plan(50.0, cons).unwrap();
 
-    // Plan a 10mm x 10mm diagonal move
-    // Velocity: 800 steps/sec, Accel: 1000 steps/sec^2
-    planner.plan_move(target, 14.142136, 17.67767, 100000.0, 0.05).unwrap();
-    planner.finalize().unwrap();
+    assert_eq!(p1, p2);
+    assert_eq!(p1.v_cruise, 100.0);
 
-    // Generate the steps into the queue
-    let steps_generated = planner.generate_steps(&mut producer).unwrap();
+    let ticks1 = p1.compute_step_intervals(80.0, 1_000_000.0);
+    let ticks2 = p2.compute_step_intervals(80.0, 1_000_000.0);
+    assert_eq!(ticks1, ticks2);
+}
 
-    // Dominant axis is diagonal, total steps is sqrt(800^2 + 800^2) ~ 1131, but planner
-    // uses the max of cartesian axes, so total_steps = 800.
-    assert_eq!(steps_generated, 800);
-    assert_eq!(consumer.len(), 800);
+#[test]
+fn test_scurve_determinism() {
+    let start = Vector3::new(0.0, 0.0, 0.0);
+    let end = Vector3::new(100.0, 50.0, 0.0);
+    let cons = MotionConstraints {
+        vmax: 200.0,
+        amax: 2000.0,
+        jmax: 20000.0,
+    };
 
-    // --- Verify the "Golden" Trace of the first few steps ---
-    // These values depend on CLOCK_FREQ and the accel calculations.
-    // They serve as a regression test to ensure the output is deterministic.
+    let s1 = plan_segment(start, end, cons).unwrap();
+    let s2 = plan_segment(start, end, cons).unwrap();
+    assert_eq!(s1, s2);
+}
 
-    // 1. First step should have both motors on, and a long initial interval.
-    let s1 = consumer.dequeue().unwrap();
-    println!("s1: enable_mask={:08b}, direction={}, interval_ticks={}", s1.enable_mask, s1.direction, s1.interval_ticks);
-    assert_eq!(s1.enable_mask, 0b0000_0011); // X and Y
-    assert_eq!(s1.direction, true); // Both forward
-    assert!(s1.interval_ticks > 20000); // Should be slow initially
+#[test]
+fn test_lookahead_queue_determinism() {
+    let mut q1: LookaheadQueue<16> = LookaheadQueue::new(0.05);
+    let mut q2: LookaheadQueue<16> = LookaheadQueue::new(0.05);
 
-    // 2. Second step interval should be shorter (accelerating)
-    let s2 = consumer.dequeue().unwrap();
-    println!("s2: enable_mask={:08b}, direction={}, interval_ticks={}", s2.enable_mask, s2.direction, s2.interval_ticks);
-    assert!(s2.interval_ticks < s1.interval_ticks);
+    q1.push_move([0.0, 0.0, 0.0], [50.0, 0.0, 0.0], 80.0, 1000.0).unwrap();
+    q1.push_move([50.0, 0.0, 0.0], [50.0, 50.0, 0.0], 80.0, 1000.0).unwrap();
 
-    // 3. Drain the queue and find the cruise phase
-    let mut min_interval = s1.interval_ticks;
-    for _ in 2..steps_generated {
-        let s = consumer.dequeue().unwrap();
-        if s.interval_ticks < min_interval {
-            min_interval = s.interval_ticks;
-        }
-    }
+    q2.push_move([0.0, 0.0, 0.0], [50.0, 0.0, 0.0], 80.0, 1000.0).unwrap();
+    q2.push_move([50.0, 0.0, 0.0], [50.0, 50.0, 0.0], 80.0, 1000.0).unwrap();
 
-    // The minimum interval should correspond to the cruise velocity
-    // Expected: CLOCK_FREQ / velocity = 100_000_000 / 800 = 125_000
-    // This will not be exact due to the nature of the iterative calculation, but should be close.
-    assert!((min_interval as i32 - 125_000).abs() < 500);
-
+    let m1 = q1.pop_move().unwrap();
+    let m2 = q2.pop_move().unwrap();
+    assert_eq!(m1, m2);
 }

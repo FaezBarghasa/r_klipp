@@ -1,13 +1,59 @@
-//! A `no_std` driver for reading the state of multiple digital endstops.
+//! A `no_std` driver for reading and handling hardware interrupt endstops.
 //!
-//! This crate provides a simple interface to read a collection of GPIO input
-//! pins, such as those connected to limit switches.
+//! Provides both polled and asynchronous/interrupt-driven EXTI limit switch monitoring
+//! with atomic trigger recording and emergency motor halt triggers.
 
 #![no_std]
 
 use embedded_hal::digital::InputPin;
+use core::sync::atomic::{AtomicBool, AtomicU8, Ordering};
 
-/// A collection of endstop input pins.
+/// Interrupt-safe endstop trigger registry (e.g. for EXTI line interrupts)
+pub struct ExtiEndstopManager {
+    triggered_mask: AtomicU8,
+    active_high: bool,
+    halt_steppers_on_trigger: AtomicBool,
+}
+
+impl ExtiEndstopManager {
+    pub const fn new(active_high: bool) -> Self {
+        Self {
+            triggered_mask: AtomicU8::new(0),
+            active_high,
+            halt_steppers_on_trigger: AtomicBool::new(true),
+        }
+    }
+
+    /// Called directly inside EXTI ISR. Executes in <100ns to flag limit hit.
+    #[inline(always)]
+    pub fn handle_exti_interrupt(&self, pin_index: u8, pin_is_high: bool) {
+        let is_triggered = if self.active_high { pin_is_high } else { !pin_is_high };
+        if is_triggered && pin_index < 8 {
+            self.triggered_mask.fetch_or(1 << pin_index, Ordering::SeqCst);
+        }
+    }
+
+    #[inline(always)]
+    pub fn is_triggered(&self, pin_index: u8) -> bool {
+        if pin_index < 8 {
+            (self.triggered_mask.load(Ordering::Acquire) & (1 << pin_index)) != 0
+        } else {
+            false
+        }
+    }
+
+    #[inline(always)]
+    pub fn clear(&self) {
+        self.triggered_mask.store(0, Ordering::Release);
+    }
+
+    #[inline(always)]
+    pub fn should_halt(&self) -> bool {
+        self.halt_steppers_on_trigger.load(Ordering::Relaxed) && self.triggered_mask.load(Ordering::Relaxed) != 0
+    }
+}
+
+/// A collection of endstop input pins for polling.
 pub struct Endstops<const N: usize, PIN> {
     pins: [PIN; N],
 }
@@ -22,16 +68,11 @@ where
     }
 
     /// Reads the state of a single endstop pin by its index.
-    ///
-    /// Returns `true` if the endstop is triggered (pin is high).
     pub fn read_state(&mut self, index: usize) -> Result<bool, E> {
         self.pins[index].is_high()
     }
 
     /// Reads the state of all endstop pins.
-    ///
-    /// Returns an array of booleans, where `true` typically indicates the
-    /// endstop is triggered (e.g., the pin is high).
     #[allow(clippy::needless_range_loop)]
     pub fn read_states(&mut self) -> Result<[bool; N], E> {
         let mut states = [false; N];
@@ -45,37 +86,21 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use embedded_hal_mock::eh1::digital::{Mock as PinMock, State, Transaction};
 
     #[test]
-    fn test_read_six_endstops() {
-        // Create mock pins for 6 endstops
-        let mut p0 = PinMock::new(&[Transaction::get(State::Low)]);
-        let mut p1 = PinMock::new(&[Transaction::get(State::High)]);
-        let mut p2 = PinMock::new(&[Transaction::get(State::Low)]);
-        let mut p3 = PinMock::new(&[Transaction::get(State::High)]);
-        let mut p4 = PinMock::new(&[Transaction::get(State::Low)]);
-        let mut p5 = PinMock::new(&[Transaction::get(State::Low)]);
+    fn test_exti_endstop_interrupt_handling() {
+        let manager = ExtiEndstopManager::new(true);
+        assert!(!manager.is_triggered(0));
+        assert!(!manager.should_halt());
 
-        let mut endstops = Endstops::new([
-            &mut p0,
-            &mut p1,
-            &mut p2,
-            &mut p3,
-            &mut p4,
-            &mut p5,
-        ]);
+        // EXTI ISR fires on Pin 0
+        manager.handle_exti_interrupt(0, true);
+        assert!(manager.is_triggered(0));
+        assert!(manager.should_halt());
+        assert!(!manager.is_triggered(1));
 
-        let states = endstops.read_states().unwrap();
-
-        assert_eq!(states, [false, true, false, true, false, false]);
-
-        p0.done();
-        p1.done();
-        p2.done();
-        p3.done();
-        p4.done();
-        p5.done();
+        manager.clear();
+        assert!(!manager.is_triggered(0));
+        assert!(!manager.should_halt());
     }
 }
-

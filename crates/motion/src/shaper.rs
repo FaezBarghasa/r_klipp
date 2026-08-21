@@ -34,7 +34,7 @@ impl ZVConfig {
         if self.damping_ratio <= 0.0 || self.resonance_hz <= 0.0 {
             return 0.0;
         }
-        (-self.damping_ratio * std::f64::consts::PI
+        (-self.damping_ratio * core::f64::consts::PI
             / (1.0 - self.damping_ratio * self.damping_ratio).sqrt())
             .exp()
     }

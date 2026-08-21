@@ -2,31 +2,23 @@ use crate::traits::StepTimer;
 use crate::dma_abstraction::DmaTransfer;
 use embedded_hal::digital::ErrorType;
 
-pub struct Stm32StepTimer {
-    // Add fields for timer and DMA
-}
-
-impl ErrorType for Stm32StepTimer {
-    type Error = ();
-}
+pub struct Stm32StepTimer;
 
 impl StepTimer for Stm32StepTimer {
-    type Error = ();
-    fn set_period(&mut self, ticks: u32) -> Result<(), Self::Error> {
-        // Implementation for setting timer period
+    type Error = core::convert::Infallible;
+    fn set_frequency(&mut self, _freq_hz: u32) -> Result<(), Self::Error> {
         Ok(())
     }
 
-    fn enable_dma(&mut self) -> Result<(), Self::Error> {
-        // Implementation for enabling DMA
+    fn start(&mut self) -> Result<(), Self::Error> {
         Ok(())
     }
 
-    fn get_counter(&self) -> Result<u32, Self::Error> {
-        // Implementation for getting timer counter
-        Ok(0)
+    fn stop(&mut self) -> Result<(), Self::Error> {
+        Ok(())
     }
 }
+
 
 pub struct Stm32DmaTransfer {
     // Add fields for DMA channel

@@ -1,63 +1,58 @@
-use hal::uart::Uart;
-use heapless::VecDeque;
-use crate::lexer::{lexer, Token};
-use crate::ast::{parse_line, AstNode};
-use crate::dialect::{MachineDialect, MachineCommand};
-use crate::modal::ModalState;
+//! G-Code streaming and buffer handling for no_std environments.
 
-pub struct GcodeStreamer<UART, DIALECT>
-where
-    UART: Uart,
-    DIALECT: MachineDialect,
-{
-    uart: UART,
-    dialect: DIALECT,
-    lookahead_buffer: VecDeque<MachineCommand, 1024>,
-    modal_state: ModalState,
+use crate::lexer::{tokenize_line, Token};
+use crate::ast::{parse_tokens, AstNode};
+use crate::modal::ModalState;
+use heapless::Vec;
+
+pub struct GcodeLineParser {
+    pub modal_state: ModalState,
 }
 
-impl<UART, DIALECT> GcodeStreamer<UART, DIALECT>
-where
-    UART: Uart,
-    DIALECT: MachineDialect,
-{
-    pub fn new(uart: UART, dialect: DIALECT) -> Self {
+impl GcodeLineParser {
+    pub fn new() -> Self {
         Self {
-            uart,
-            dialect,
-            lookahead_buffer: VecDeque::new(),
             modal_state: ModalState::default(),
         }
     }
 
-    pub async fn run(&mut self) {
-        let mut buffer = [0u8; 256];
-        loop {
-            if self.lookahead_buffer.is_full() {
-                embassy_time::Timer::after(embassy_time::Duration::from_millis(10)).await;
-                continue;
-            }
+    /// Parses a single line string into an `AstNode` without heap allocation.
+    pub fn parse_line<'a>(&mut self, line: &'a str) -> Result<Option<AstNode<'a>>, ()> {
+        let tokens: Vec<Token<'a>, 32> = tokenize_line(line)?;
+        parse_tokens(&tokens, &mut self.modal_state)
+    }
+}
 
-            let bytes_read = self.uart.read(&mut buffer).await.unwrap();
-            if bytes_read > 0 {
-                let mut input = &buffer[..bytes_read];
-                while !input.is_empty() {
-                    match lexer(input) {
-                        Ok((remaining, tokens)) => {
-                            if let Ok(Some(ast_node)) = parse_line(&tokens, &mut self.modal_state) {
-                                if let Ok(machine_command) = self.dialect.interpret(&ast_node, &mut self.modal_state) {
-                                    self.lookahead_buffer.push_back(machine_command).unwrap();
-                                }
-                            }
-                            input = remaining;
-                        }
-                        Err(_) => {
-                            // Handle lexer error
-                            break;
-                        }
-                    }
-                }
+impl Default for GcodeLineParser {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_gcode_lines() {
+        let mut parser = GcodeLineParser::new();
+
+        let node1 = parser.parse_line("G28").unwrap().unwrap();
+        assert_eq!(node1, AstNode::Home { x: true, y: true, z: true });
+
+        let node2 = parser.parse_line("G1 X100 Y50 E2 F1200").unwrap().unwrap();
+        match node2 {
+            AstNode::LinearMove { x, y, z, e, feedrate } => {
+                assert_eq!(x, Some(100.0));
+                assert_eq!(y, Some(50.0));
+                assert_eq!(z, None);
+                assert_eq!(e, Some(2.0));
+                assert_eq!(feedrate, Some(1200.0));
             }
+            _ => panic!("Expected linear move"),
         }
+
+        let node3 = parser.parse_line("M104 S215").unwrap().unwrap();
+        assert_eq!(node3, AstNode::SetHotendTemp { temp: 215.0, wait: false });
     }
 }

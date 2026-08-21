@@ -1,0 +1,6 @@
+[alias]
+lint = "clippy --workspace --exclude klipper-mcu-firmware --exclude r_klipp_firmware -- -D warnings"
+lint-mcu = "clippy -p klipper-mcu-firmware -p mcu-drivers --target thumbv7em-none-eabihf --features embassy-rt -- -D warnings"
+fmt-check = "fmt --all -- --check"
+deny-check = "deny check"
+test-core = "test -p parser -p motion -p thermal -p safety -p kinematics -p comms -p klipper-proto -p sim -p compat-layer"

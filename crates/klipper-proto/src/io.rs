@@ -1,77 +1,25 @@
-//! Async and sync helpers for framed I/O.
-//!
-//! This module provides a convenient `KlipperFramed` wrapper that combines an
-//! async I/O transport (like a TCP stream or serial port) with a `KlipperCodec`
-//! to create a `Stream` and `Sink` of `Message` objects.
-//!
-//! This module is only available with the `std` feature.
+//! Packet byte buffer utilities for Host-MCU transport.
 
-#![cfg(feature = "std")]
+use heapless::Vec;
 
-use crate::codec::KlipperCodec;
-use crate::commands::Message;
-use crate::Error;
-use futures::{Sink, Stream};
-use std::pin::Pin;
-use std::task::{Context, Poll};
-use tokio::io::{AsyncRead, AsyncWrite};
-use tokio_util::codec::Framed;
-
-/// A framed transport for Klipper messages.
-///
-/// This wraps an underlying `AsyncRead + AsyncWrite` stream and handles the
-/// encoding and decoding of Klipper message frames.
-pub struct KlipperFramed<T> {
-    inner: Framed<T, KlipperCodec>,
+pub struct PacketBuffer<const N: usize> {
+    pub buffer: Vec<u8, N>,
 }
 
-impl<T> KlipperFramed<T>
-where
-    T: AsyncRead + AsyncWrite + Unpin,
-{
-    /// Creates a new `KlipperFramed` transport.
-    ///
-    /// # Arguments
-    ///
-    /// * `io` - The underlying I/O stream.
-    pub fn new(io: T) -> Self {
-        Self {
-            inner: Framed::new(io, KlipperCodec::new()),
-        }
+impl<const N: usize> PacketBuffer<N> {
+    pub fn new() -> Self {
+        Self { buffer: Vec::new() }
+    }
+
+    pub fn write_bytes(&mut self, data: &[u8]) -> Result<(), ()> {
+        self.buffer.extend_from_slice(data).map_err(|_| ())
+    }
+
+    pub fn clear(&mut self) {
+        self.buffer.clear();
+    }
+
+    pub fn as_slice(&self) -> &[u8] {
+        self.buffer.as_slice()
     }
 }
-
-impl<T> Stream for KlipperFramed<T>
-where
-    T: AsyncRead + Unpin,
-{
-    type Item = Result<Message, Error>;
-
-    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Result<Message, Error>>> {
-        Pin::new(&mut self.inner).poll_next(cx)
-    }
-}
-
-impl<T> Sink<Message> for KlipperFramed<T>
-where
-    T: AsyncWrite + Unpin,
-{
-    type Error = Error;
-
-    fn poll_ready(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Error>> {
-        Pin::new(&mut self.inner).poll_ready(cx)
-    }
-
-    fn start_send(mut self: Pin<&mut Self>, item: Message) -> Result<(), Error> {
-        Pin::new(&mut self.inner).start_send(item)
-    }
-
-    fn poll_flush(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Error>> {
-        Pin::new(&mut self.inner).poll_flush(cx)
-    }
-
-    fn poll_close(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Error>> {
-        Pin::new(&mut self.inner).poll_close(cx)
-    }
-}
-

@@ -1,14 +1,11 @@
 use crate::traits::AdcDma;
-use crate::traits::AdcChannel;
-use embedded_hal::adc::Error as AdcError;
 
-pub struct Stm32AdcDma {
-    // Add fields for ADC and DMA
-}
+pub struct Stm32AdcDma;
 
 impl AdcDma for Stm32AdcDma {
-    async fn read_continuous(&mut self, channels: &[AdcChannel], buffer: &mut [u16]) -> Result<(), AdcError> {
-        // Implementation for continuous ADC reading with DMA
+    type Error = core::convert::Infallible;
+    fn start_streaming(&mut self, _buffer: &mut [u16]) -> Result<(), Self::Error> {
         Ok(())
     }
 }
+

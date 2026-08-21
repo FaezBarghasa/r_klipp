@@ -1,8 +1,27 @@
+pub struct SteinhartHart {
+    pub series_resistance: f64,
+    pub adc_max: f64,
+    pub a: f64,
+    pub b: f64,
+    pub c: f64,
+}
+
+impl SteinhartHart {
+    pub fn adc_to_temperature(&self, adc_val: f64) -> f64 {
+        // Voltage divider: R_t = R_series / (adc_max / adc_val - 1.0)
+        let r_t = self.series_resistance / (self.adc_max / adc_val - 1.0);
+        let ln_r = libm::log(r_t);
+        let inv_t = self.a + self.b * ln_r + self.c * ln_r * ln_r * ln_r;
+        1.0 / inv_t
+    }
+}
+
 pub struct SteinhartHartConfig {
     pub reference_resistance_ohms: f32,
     pub beta: Option<f32>, // Beta parameter for simpler calibration
     pub c_coeffs: Option<[f32; 3]>, // A, B, C coefficients for Steinhart-Hart
 }
+
 
 pub struct Thermistor {
     config: SteinhartHartConfig,
@@ -48,12 +67,12 @@ impl Thermistor {
         if let Some(beta) = self.config.beta {
             // Beta parameter equation
             let inv_t_0 = 1.0 / (25.0 + 273.15); // Reference temperature (T0) in Kelvin (25 C)
-            let inv_t = inv_t_0 + (1.0 / beta) * (r_t / r_0).ln();
+            let inv_t = inv_t_0 + (1.0 / beta) * libm::logf(r_t / r_0);
             (1.0 / inv_t) - 273.15 // Convert back to Celsius
         } else if let Some(c_coeffs) = self.config.c_coeffs {
             // Steinhart-Hart equation: 1/T = A + B*ln(R) + C*(ln(R))^3
-            let ln_r = r_t.ln();
-            let inv_t = c_coeffs[0] + c_coeffs[1] * ln_r + c_coeffs[2] * ln_r.powi(3);
+            let ln_r = libm::logf(r_t);
+            let inv_t = c_coeffs[0] + c_coeffs[1] * ln_r + c_coeffs[2] * ln_r * ln_r * ln_r;
             (1.0 / inv_t) - 273.15 // Convert back to Celsius
         } else {
             // Fallback or error if no calibration method is provided

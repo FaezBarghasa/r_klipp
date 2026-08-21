@@ -1,27 +1,13 @@
 //! Dynamic mapping of command names to IDs and versioning helpers.
-//!
-//! Klipper does not use fixed IDs for its commands. Instead, the host and MCU
-//! negotiate a mapping of command names (strings) to message IDs (bytes)
-//! upon connection. This module provides a `CommandRegistry` to manage this
-//! mapping.
 
-#[cfg(all(feature = "alloc", not(feature = "std")))]
-use alloc::{collections::BTreeMap, string::String};
-#[cfg(feature = "std")]
-use std::collections::HashMap;
+use alloc::collections::BTreeMap;
+use alloc::string::String;
 
 /// Manages the mapping between command names (e.g., "get_config") and their
 /// dynamically assigned message IDs.
 #[derive(Debug, Default)]
 pub struct CommandRegistry {
-    #[cfg(feature = "std")]
-    name_to_id: HashMap<String, u8>,
-    #[cfg(feature = "std")]
-    id_to_name: HashMap<u8, String>,
-
-    #[cfg(all(feature = "alloc", not(feature = "std")))]
     name_to_id: BTreeMap<String, u8>,
-    #[cfg(all(feature = "alloc", not(feature = "std")))]
     id_to_name: BTreeMap<u8, String>,
 }
 
@@ -32,11 +18,6 @@ impl CommandRegistry {
     }
 
     /// Adds a command and its ID to the registry.
-    ///
-    /// # Arguments
-    ///
-    /// * `name` - The string name of the command.
-    /// * `id` - The numeric ID assigned to the command.
     pub fn add(&mut self, name: &str, id: u8) {
         let name_string = String::from(name);
         self.name_to_id.insert(name_string.clone(), id);
@@ -53,4 +34,3 @@ impl CommandRegistry {
         self.id_to_name.get(&id).map(|s| s.as_str())
     }
 }
-

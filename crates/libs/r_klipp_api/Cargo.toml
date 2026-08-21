@@ -4,11 +4,15 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-postcard = { version = "1.0.8", features = ["use-std"] }
-serde = { version = "1.0.197", features = ["derive"] }
-heapless = "0.8.0"
+postcard = { version = "1.0.8", default-features = false }
+serde = { version = "1.0", default-features = false, features = ["derive"] }
+heapless = { version = "0.8.0", default-features = false, features = ["serde"] }
 embedded-hal-async = "1.0.0"
-fixed = { version = "1.23.1", features = ["serde"] }
+fixed = { version = "1.23.1", default-features = false, features = ["serde"] }
+
+[features]
+default = ["std"]
+std = ["postcard/use-std", "serde/std"]
 
 [dev-dependencies]
 criterion = "0.5.1"

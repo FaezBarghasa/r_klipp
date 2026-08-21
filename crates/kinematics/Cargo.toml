@@ -6,8 +6,5 @@ edition = "2021"
 [dependencies]
 micromath = "2.1.0"
 libm = "0.2"
-nalgebra = { version = "0.35", default-features = false, features = ["libm"] }
+nalgebra = { version = "0.33", default-features = false, features = ["libm"] }
 heapless = "0.9.3"
-eframe = "0.20"
-egui = "0.20"
-wgpu = "0.12"

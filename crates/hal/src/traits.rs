@@ -1,14 +1,47 @@
-#![cfg_attr(feature = "async", feature(async_fn_in_trait))]
-
 use embedded_hal::digital::ErrorType;
-use embedded_hal::spi::Error as SpiError;
-use embedded_hal::adc::Error as AdcError;
-use embedded_hal::can::Frame as CanFrame;
-use embedded_hal::can::Error as CanError;
+
+/// Step timer trait for hardware timers generating stepper pulses
+pub trait StepTimer {
+    type Error;
+    fn set_frequency(&mut self, freq_hz: u32) -> Result<(), Self::Error>;
+    fn start(&mut self) -> Result<(), Self::Error>;
+    fn stop(&mut self) -> Result<(), Self::Error>;
+}
+
+/// PWM output trait
+pub trait PwmOutput {
+    type Error;
+    fn set_duty(&mut self, duty: u16) -> Result<(), Self::Error>;
+    fn enable(&mut self) -> Result<(), Self::Error>;
+    fn disable(&mut self) -> Result<(), Self::Error>;
+}
+
+/// Quadrature encoder interface
+pub trait QuadratureEncoder {
+    type Error;
+    fn read_count(&self) -> i32;
+    fn reset_count(&mut self);
+}
+
+/// ADC Channel trait
+pub trait AdcChannel {
+    type Error;
+    fn read_sample(&mut self) -> Result<u16, Self::Error>;
+}
+
+/// ADC DMA Stream trait
+pub trait AdcDma {
+    type Error;
+    fn start_streaming(&mut self, buffer: &mut [u16]) -> Result<(), Self::Error>;
+}
+
+/// High speed SPI bus for TMC drivers
+pub trait HighSpeedSpi {
+    type Error;
+    fn transfer(&mut self, write: &[u8], read: &mut [u8]) -> Result<(), Self::Error>;
+}
 
 /// Abstracts CPU-level interrupt masking for creating critical sections.
-/// This allows for compatibility with both bare-metal (cortex_m::interrupt::free)
-/// and simulated environments (std::sync::Mutex).
 pub trait InterruptMasker {
     /// Disables all interrupts and returns a token that will re-enable them
     /// when it goes out of scope.
@@ -35,13 +68,13 @@ pub trait Pwm {
 
 /// An asynchronous ADC channel.
 pub trait Adc<WORD> {
-    type Error: AdcError;
+    type Error;
     async fn read(&mut self) -> Result<WORD, Self::Error>;
 }
 
 /// An asynchronous SPI bus.
 pub trait Spi {
-    type Error: SpiError;
+    type Error;
     async fn transfer(&mut self, tx: &[u8], rx: &mut [u8]) -> Result<(), Self::Error>;
     async fn write(&mut self, tx: &[u8]) -> Result<(), Self::Error>;
 }
@@ -71,8 +104,9 @@ pub trait Dma {
 
 /// An asynchronous CAN bus interface.
 pub trait Can {
-    type Frame: CanFrame;
-    type Error: CanError;
+    type Frame;
+    type Error;
     async fn transmit(&mut self, frame: &Self::Frame) -> Result<(), Self::Error>;
     async fn receive(&mut self) -> Result<Self::Frame, Self::Error>;
 }
+

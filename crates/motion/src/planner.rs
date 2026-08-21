@@ -40,6 +40,67 @@ pub struct SCurveSegment {
     pub phase_durations: [f64; 7],
 }
 
+impl SCurveSegment {
+    pub fn total_duration(&self) -> f64 {
+        self.phase_durations.iter().sum()
+    }
+
+    pub fn acceleration_at(&self, mut t: f64) -> f64 {
+        t = t.clamp(0.0, self.total_duration());
+        let [t1, t2, t3, t4, t5, t6, t7] = self.phase_durations;
+
+        if t <= t1 {
+            self.j_max * t
+        } else if t <= t1 + t2 {
+            self.a_target
+        } else if t <= t1 + t2 + t3 {
+            let dt = t - (t1 + t2);
+            self.a_target - self.j_max * dt
+        } else if t <= t1 + t2 + t3 + t4 {
+            0.0
+        } else if t <= t1 + t2 + t3 + t4 + t5 {
+            let dt = t - (t1 + t2 + t3 + t4);
+            -self.j_max * dt
+        } else if t <= t1 + t2 + t3 + t4 + t5 + t6 {
+            -self.a_target
+        } else {
+            let dt = t - (t1 + t2 + t3 + t4 + t5 + t6);
+            -self.a_target + self.j_max * dt
+        }
+    }
+
+    pub fn velocity_at(&self, t: f64) -> f64 {
+        // Integrate acceleration numerically with Simpson's rule over small slices
+        let n = 20;
+        let dt = t / (n as f64);
+        let mut v = 0.0;
+        for i in 0..n {
+            let t_mid = (i as f64 + 0.5) * dt;
+            v += self.acceleration_at(t_mid) * dt;
+        }
+        v.clamp(0.0, self.v_cruise)
+    }
+
+    pub fn position_at(&self, t: f64) -> Vector3<f64> {
+        let total_dist = (self.end - self.start).norm();
+        if total_dist < 1e-9 || self.total_duration() < 1e-9 {
+            return self.start;
+        }
+
+        // Integrate velocity numerically
+        let n = 20;
+        let dt = t / (n as f64);
+        let mut s = 0.0;
+        for i in 0..n {
+            let t_mid = (i as f64 + 0.5) * dt;
+            s += self.velocity_at(t_mid) * dt;
+        }
+
+        let fraction = (s / total_dist).clamp(0.0, 1.0);
+        self.start + (self.end - self.start) * fraction
+    }
+}
+
 /// Errors that can arise while planning a segment.
 #[derive(Debug, Clone, PartialEq)]
 pub enum MotionError {
@@ -82,17 +143,12 @@ pub fn plan_segment(
     // s_jerk = (1/6) * jmax * t_jerk³.
     let s_jerk = (constraints.jmax * t_jerk.powi(3)) / 6.0;
 
-    // Distance needed for the full accel‑decel block (phases 1‑3 and 5‑7).
-    let s_accel_decel = 2.0 * (s_jerk + 0.5 * constraints.amax * (constraints.amax / constraints.jmax));
+    // Distance needed for one ramp: s_ramp = amax^2 / jmax
+    let s_accel_decel = (constraints.amax.powi(2) / constraints.jmax) * 2.0;
 
     // Determine if a cruise phase is possible.
     if distance > s_accel_decel {
-        // Cruise is possible.
-        // Cruise velocity limited by vmax.
-        let v_cruise = constraints.vmax.min(
-            (constraints.amax.powi(2) / constraints.jmax) + (constraints.jmax * distance).sqrt(),
-        );
-        // Adjust peak acceleration if needed to meet the distance exactly.
+        let v_cruise = constraints.vmax;
         let a_target = constraints.amax;
         // Compute cruise duration.
         let s_cruise = distance - s_accel_decel;
@@ -136,7 +192,7 @@ pub fn plan_segment(
             return Err(MotionError::NumericalError);
         }
         // Corresponding peak velocity.
-        let v_peak = a_peak * a_peak / constraints.jmax;
+        let v_peak = (a_peak * a_peak / constraints.jmax).min(constraints.vmax);
         // Phase durations.
         let t1 = a_peak / constraints.jmax;
         let t2 = t1; // constant accel period disappears in pure triangular profile

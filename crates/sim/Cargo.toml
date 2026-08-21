@@ -4,10 +4,27 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-tokio = { version = "1.28.2", features = ["full"] }
-bevy = "0.10.0"
-rapier3d = "0.17.0"
+tokio = { version = "1", features = ["full"] }
 hal = { path = "../hal" }
-atomic_float = "0.1.0"
-crossbeam-channel = "0.5.8"
-parking_lot = "0.12.1"
+motion = { path = "../motion" }
+parser = { path = "../parser" }
+kinematics = { path = "../kinematics" }
+thermal = { path = "../thermal" }
+safety = { path = "../safety" }
+klipper-proto = { path = "../klipper-proto" }
+r_klipp_api = { path = "../libs/r_klipp_api" }
+heapless = "0.8"
+nalgebra = "0.33"
+parking_lot = "0.12"
+atomic_float = "0.1"
+crossbeam-channel = "0.5"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+anyhow = "1.0"
+tracing = "0.1"
+rand = "0.8"
+async-trait = "0.1"
+
+[dev-dependencies]
+tempfile = "3.8"
+tracing-subscriber = "0.3"

@@ -1,4 +1,4 @@
-use embassy_executor::Spawner;
+use embassy_executor::{Spawner, SpawnToken};
 
 #[derive(Clone, Copy)]
 pub struct TaskSpawner {
@@ -10,11 +10,8 @@ impl TaskSpawner {
         Self { spawner }
     }
 
-    pub fn spawn<F>(&self, future: F)
-    where
-        F: core::future::Future + Send + 'static,
-        F::Output: Send + 'static,
-    {
-        self.spawner.spawn(future).unwrap();
+    pub fn spawn<S>(&self, token: SpawnToken<S>) {
+        self.spawner.spawn(token).unwrap();
     }
 }
+
