@@ -84,7 +84,7 @@ impl Database {
     }
 
     pub async fn save_gcode_metadata(&self, meta: GCodeFile) -> Result<(), HostError> {
-        let _created: GCodeFile = self
+        let _created: Vec<GCodeFile> = self
             .db
             .create("gcode_file")
             .content(meta)
@@ -107,7 +107,7 @@ impl Database {
     }
 
     pub async fn save_print_history(&self, history: PrintHistory) -> Result<(), HostError> {
-        let _created: PrintHistory = self
+        let _created: Vec<PrintHistory> = self
             .db
             .create("print_history")
             .content(history)
@@ -116,7 +116,7 @@ impl Database {
     }
 
     pub async fn save_machine_config(&self, config: MachineConfig) -> Result<(), HostError> {
-        let _created: MachineConfig = self
+        let _created: Vec<MachineConfig> = self
             .db
             .create("machine_config")
             .content(config)

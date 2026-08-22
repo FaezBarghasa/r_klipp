@@ -190,7 +190,7 @@ pub async fn websocket_route(
     req: actix_web::HttpRequest,
     stream: web::Payload,
     state: web::Data<AppState>,
-) -> Result<HttpResponse, ProtocolError> {
+) -> Result<HttpResponse, actix_web::Error> {
     let (response, mut session, mut msg_stream) = actix_ws::handle(&req, stream)?;
     let mut rx = state.telemetry_broadcaster.subscribe();
 

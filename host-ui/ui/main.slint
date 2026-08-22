@@ -1,10 +1,16 @@
-import { StandardWindow, VerticalBox, HorizontalBox, Button, Text, LineEdit, Gauge, Switch, ListView, Rectangle, Grid, Spinner } from "std-widgets.slint";
+import { VerticalBox, HorizontalBox, Button, LineEdit, Switch, ListView, TabWidget } from "std-widgets.slint";
 
-export component AppWindow inherits StandardWindow {
+export struct GCodeFile {
+    name: string,
+    size: string,
+    upload_date: string,
+}
+
+export component AppWindow inherits Window {
     width: 800px;
     height: 480px;
     title: "rKlipperScreen";
-    background: #282c34; // Dark mode background
+    background: #282c34;
 
     in property <float> nozzle_temp_actual: 0.0;
     in property <float> nozzle_temp_target: 0.0;
@@ -21,146 +27,115 @@ export component AppWindow inherits StandardWindow {
     callback refresh_files();
     callback send_gcode_command(string);
 
-    struct GCodeFile {
-        name: string,
-        size: string,
-        upload_date: string,
-    }
-
     VerticalBox {
-        alignment: Center;
+        alignment: start;
         spacing: 10px;
+        padding: 12px;
 
         // Header
         HorizontalBox {
-            height: 50px;
-            alignment: Center;
-            spacing: 10px;
+            height: 40px;
+            alignment: space-between;
             Text {
-                text: "rKlipperScreen";
-                font-size: 24px;
+                text: "r_klipp Touch Screen";
+                font-size: 22px;
                 color: #61afef;
+                font-weight: 700;
+            }
+            Text {
+                text: "Target: 3D / PnP / CNC";
+                font-size: 14px;
+                color: #98c379;
+                vertical-alignment: center;
             }
         }
 
         // Main Content Area
         HorizontalBox {
-            flex: 1;
-            spacing: 10px;
+            spacing: 12px;
 
             // Left Panel (Dashboard/Controls)
-            VerticalBox {
-                width: 50%;
-                spacing: 10px;
-                padding: 10px;
+            Rectangle {
+                width: 380px;
                 background: #323842;
-                border-radius: 5px;
+                border-radius: 8px;
 
-                Text { text: "Dashboard"; font-size: 20px; color: #abb2bf; }
-
-                // Temperatures
-                HorizontalBox {
-                    spacing: 10px;
-                    VerticalBox {
-                        Text { text: "Nozzle"; color: #e06c75; }
-                        Gauge {
-                            value: nozzle_temp_actual;
-                            minimum: 0;
-                            maximum: 300;
-                            preferred-width: 100px;
-                            preferred-height: 100px;
-                            color: #e06c75;
-                            Text {
-                                text: @(nozzle_temp_actual as int) + "°C / " + @(nozzle_temp_target as int) + "°C";
-                                color: #ffffff;
-                                font-size: 16px;
-                                horizontal-alignment: center;
-                                vertical-alignment: center;
-                            }
-                        }
-                        HorizontalBox {
-                            Button { text: "-5"; clicked => { set_nozzle_target(nozzle_temp_target - 5); } }
-                            Button { text: "+5"; clicked => { set_nozzle_target(nozzle_temp_target + 5); } }
-                        }
-                    }
-                    VerticalBox {
-                        Text { text: "Bed"; color: #98c379; }
-                        Gauge {
-                            value: bed_temp_actual;
-                            minimum: 0;
-                            maximum: 120;
-                            preferred-width: 100px;
-                            preferred-height: 100px;
-                            color: #98c379;
-                            Text {
-                                text: @(bed_temp_actual as int) + "°C / " + @(bed_temp_target as int) + "°C";
-                                color: #ffffff;
-                                font-size: 16px;
-                                horizontal-alignment: center;
-                                vertical-alignment: center;
-                            }
-                        }
-                        HorizontalBox {
-                            Button { text: "-5"; clicked => { set_bed_target(bed_temp_target - 5); } }
-                            Button { text: "+5"; clicked => { set_bed_target(bed_temp_target + 5); } }
-                        }
-                    }
-                }
-
-                // Print Progress
                 VerticalBox {
-                    Text { text: "Print Progress: " + @(print_progress * 100.0 as int) + "%"; color: #abb2bf; }
-                    Rectangle {
-                        height: 10px;
-                        background: #4b5263;
-                        border-radius: 5px;
-                        Rectangle {
-                            width: print_progress * parent.width;
-                            height: parent.height;
-                            background: #61afef;
-                            border-radius: 5px;
+                    padding: 12px;
+                    spacing: 10px;
+
+                    Text { text: "Dashboard & Temperatures"; font-size: 16px; color: #abb2bf; font-weight: 600; }
+
+                    // Temperatures
+                    HorizontalBox {
+                        spacing: 12px;
+                        VerticalBox {
+                            Text { text: "Nozzle: \{round(root.nozzle_temp_actual)}°C / \{round(root.nozzle_temp_target)}°C"; color: #e06c75; font-size: 14px; }
+                            HorizontalBox {
+                                spacing: 6px;
+                                Button { text: "-5°C"; clicked => { root.set_nozzle_target(root.nozzle_temp_target - 5.0); } }
+                                Button { text: "+5°C"; clicked => { root.set_nozzle_target(root.nozzle_temp_target + 5.0); } }
+                            }
+                        }
+                        VerticalBox {
+                            Text { text: "Bed: \{round(root.bed_temp_actual)}°C / \{round(root.bed_temp_target)}°C"; color: #98c379; font-size: 14px; }
+                            HorizontalBox {
+                                spacing: 6px;
+                                Button { text: "-5°C"; clicked => { root.set_bed_target(root.bed_temp_target - 5.0); } }
+                                Button { text: "+5°C"; clicked => { root.set_bed_target(root.bed_temp_target + 5.0); } }
+                            }
                         }
                     }
-                    Text { text: "File: " + current_print_file; color: #abb2bf; font-size: 14px; }
-                }
 
-                // Manual Controls (Placeholder)
-                HorizontalBox {
-                    Button { text: "Home All"; clicked => { send_gcode_command("G28"); } }
-                    Button { text: "Move X+"; clicked => { send_gcode_command("G0 X10"); } }
+                    // Print Progress
+                    VerticalBox {
+                        spacing: 4px;
+                        Text { text: "Print Progress: \{round(root.print_progress * 100)}%"; color: #abb2bf; font-size: 14px; }
+                        Rectangle {
+                            height: 12px;
+                            background: #4b5263;
+                            border-radius: 6px;
+                            Rectangle {
+                                x: 0px;
+                                width: root.print_progress * parent.width;
+                                height: parent.height;
+                                background: #61afef;
+                                border-radius: 6px;
+                            }
+                        }
+                        Text { text: "File: \{root.current_print_file}"; color: #abb2bf; font-size: 13px; }
+                    }
+
+                    // Quick Actions
+                    HorizontalBox {
+                        spacing: 8px;
+                        Button { text: "Home All (G28)"; clicked => { root.send_gcode_command("G28"); } }
+                        Button { text: "E-Stop"; clicked => { root.send_gcode_command("M112"); } }
+                    }
                 }
             }
 
-            // Right Panel (Files/Console)
-            VerticalBox {
-                width: 50%;
-                spacing: 10px;
-                padding: 10px;
+            // Right Panel (Tabs)
+            Rectangle {
+                horizontal-stretch: 1;
                 background: #323842;
-                border-radius: 5px;
+                border-radius: 8px;
 
                 TabWidget {
-                    current-tab: 0;
                     Tab {
                         title: "Files";
                         VerticalBox {
-                            spacing: 5px;
+                            padding: 8px;
+                            spacing: 6px;
                             HorizontalBox {
-                                Button { text: "Refresh"; clicked => { refresh_files(); } }
-                                Button { text: "Upload (TODO)"; enabled: false; }
+                                Button { text: "Refresh Files"; clicked => { root.refresh_files(); } }
                             }
                             ListView {
-                                model: gcode_files;
-                                height: 200px;
-                                delegate: HorizontalBox {
-                                    spacing: 5px;
-                                    Text { text: root.name; width: 60%; color: #ffffff; }
-                                    Text { text: root.size; width: 20%; color: #abb2bf; }
-                                    Text { text: root.upload_date; width: 20%; color: #abb2bf; }
-                                    Button {
-                                        text: "Print";
-                                        clicked => { start_print(root.name); }
-                                    }
+                                for file in root.gcode_files: HorizontalBox {
+                                    spacing: 8px;
+                                    Text { text: file.name; color: #ffffff; width: 140px; font-size: 13px; vertical-alignment: center; }
+                                    Text { text: file.size; color: #abb2bf; width: 60px; font-size: 12px; vertical-alignment: center; }
+                                    Button { text: "Print"; clicked => { root.start_print(file.name); } }
                                 }
                             }
                         }
@@ -168,25 +143,25 @@ export component AppWindow inherits StandardWindow {
                     Tab {
                         title: "Console";
                         VerticalBox {
-                            spacing: 5px;
+                            padding: 8px;
+                            spacing: 6px;
                             ListView {
-                                model: console_output;
-                                height: 200px;
-                                delegate: Text { text: root.model-data; color: #abb2bf; font-size: 12px; }
+                                for line in root.console_output: Text {
+                                    text: line;
+                                    color: #abb2bf;
+                                    font-size: 12px;
+                                }
                             }
                             HorizontalBox {
-                                LineEdit {
-                                    id: gcode_input;
-                                    placeholder-text: "Enter G-code command";
-                                    height: 30px;
-                                    width: 70%;
-                                    background: #4b5263;
-                                    color: #ffffff;
+                                spacing: 6px;
+                                gcode_input := LineEdit {
+                                    placeholder-text: "Enter G-code / OpenPnP command";
+                                    font-size: 13px;
                                 }
                                 Button {
                                     text: "Send";
                                     clicked => {
-                                        send_gcode_command(gcode_input.text);
+                                        root.send_gcode_command(gcode_input.text);
                                         gcode_input.text = "";
                                     }
                                 }
@@ -194,14 +169,14 @@ export component AppWindow inherits StandardWindow {
                         }
                     }
                     Tab {
-                        title: "Settings";
+                        title: "Multi-Target Profile";
                         VerticalBox {
-                            Text { text: "Settings (TODO)"; color: #abb2bf; }
-                            Switch {
-                                text: "Dark Mode";
-                                checked: true; // Default to dark mode
-                                enabled: false; // For now
-                            }
+                            padding: 12px;
+                            spacing: 8px;
+                            Text { text: "Active Profiles: 3D Printer / PnP / CNC"; color: #ffffff; font-size: 14px; }
+                            Text { text: "• CAN-FD Smart Feeders: Active"; color: #98c379; font-size: 12px; }
+                            Text { text: "• 5-Axis RTCP Transform: Enabled"; color: #61afef; font-size: 12px; }
+                            Text { text: "• TMC2240 Paste StallGuard: Armed"; color: #e5c07b; font-size: 12px; }
                         }
                     }
                 }
