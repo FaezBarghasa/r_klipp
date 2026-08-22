@@ -1,31 +1,25 @@
-# Klipper in Rust: Simulator Crate
+# `r_klipp_sim`: Deterministic Simulator & Trajectory Visualizer
 
-## Overview
+`r_klipp_sim` is a host-side simulation environment providing virtual microcontrollers (`FakeMcu`), mock hardware abstraction layers, and SVG/CSV trajectory visualization pipelines for offline motion testing.
 
-The `sim` crate provides a simulator for the Klipper in Rust MCU firmware. It allows the firmware logic to be compiled and run as a native application on a host machine (e.g., a PC).
+---
 
-This is an invaluable tool for development, debugging, and testing, as it provides a much faster and more convenient development cycle than testing on physical hardware.
+## 💻 Features & Capabilities
 
-## Features
+### 1. `FakeMcu` & Protocol Emulator
+- Emulates the full serial handshake, DPLL clock synchronizer, and command dispatch loop of a physical MCU on Linux, macOS, and Windows.
 
-*   **Hardware Abstraction**: Provides a simulated `Hardware Abstraction Layer (HAL)` that mimics the behavior of the real MCU peripherals. For example, it provides a simulated UART that can be connected to a pseudo-terminal, and simulated GPIOs that can be toggled and monitored.
-*   **Host Integration**: The simulator can be connected to host-side test scripts or a simulated Klipper host, allowing for end-to-end testing of the entire software stack.
-*   **Logging and Debugging**: When running in the simulator, logs can be printed directly to the console, and standard debugging tools like `gdb` or `lldb` can be used.
-*   **No Hardware Required**: Allows for the development and testing of large parts of the firmware without needing access to a physical 3D printer or MCU board.
+### 2. End-to-End Simulation Pipeline
+- Feeds streaming G-Code blocks through the lexer, kinematics engine, lookahead queue, and step generator, recording step intervals and dynamic states with clock-tick fidelity.
 
-## Usage
+### 3. Trajectory Export & Visualization (`export.rs`)
+- **CSV Data (`target/sim_trajectory.csv`)**: High-resolution kinematic data including time $t$, coordinates $(X,Y,Z,E)$, velocity $v(t)$, acceleration $a(t)$, and jerk $j(t)$.
+- **Vector SVG (`target/sim_toolpath.svg`)**: Visualizes the geometric toolpath with color-coded speed gradients for cornering inspection.
 
-To run the simulator, simply execute `cargo run` from within this crate's directory.
+---
 
+## 🧪 Running the Simulator
 ```bash
-cd crates/sim
-cargo run
+# Run simulator pipeline and export visualizations
+cargo test -p sim test_gcode_pipeline_with_export -- --nocapture
 ```
-
-The simulator will start and listen for a connection from a host application.
-
-## How it Works
-
-The simulator works by using conditional compilation (`#[cfg(...)]`) to replace the real hardware drivers with simulated versions when the `sim` feature is enabled.
-
-The main application logic in `klipper-mcu-firmware` is written against the generic `embedded-hal` traits, so it can be compiled with either the real HAL for the target MCU or the simulated HAL provided by this crate. This allows the same high-level application code to run in both environments.

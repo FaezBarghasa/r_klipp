@@ -1,38 +1,56 @@
-# Contributing to r_klipp
+# Contributing to `r_klipp`
 
-Thank you for your interest in contributing to `r_klipp`! `r_klipp` is a next-generation, high-performance, deterministic motion control firmware and host ecosystem built in Rust.
+Thank you for your interest in contributing to **`r_klipp`**! We welcome contributions from firmware engineers, motion control researchers, embedded Rustaceans, and machine operators across 3D printing, Pick & Place (PnP), and CNC domains.
 
-## Principles & Code Standards
+---
 
-1. **Zero-Allocation in Core Crates**: The core crates (`parser`, `motion`, `thermal`, `safety`, `kinematics`, `comms`, `klipper-proto`, `hal`, `mcu-drivers`) must maintain `#![no_std]` compatibility and must never allocate on the heap in real-time execution loops. Use `heapless`, stack buffers, or pre-allocated structures.
-2. **Deterministic Step Generation**: All motion calculations and step pulse intervals must be jitter-free. The CPU feeds DMA buffers; timing is governed strictly by hardware timers.
-3. **Fail-Safe Safety First**: Watchdog supervisors and thermal runaway checks are mandatory. Any violation must immediately cut power to all heaters and disable steppers.
-4. **Clean Dependencies**: Never add heavy host-side dependencies or GUI/audio libraries into embedded or simulator core crates.
+## 🏛️ Core Architectural Principles
 
-## Development Workflow
+1. **`no_std` Zero-Allocation Core**:
+   - The core crates (`hal`, `parser`, `motion`, `thermal`, `safety`, `kinematics`, `comms`, `klipper-proto`, `mcu-drivers`) must compile with `#![no_std]` and `#![forbid(unsafe_code)]` wherever possible.
+   - Never perform dynamic heap allocations (`alloc`, `Box`, `Vec`) inside high-frequency planning or interrupt loops. Utilize `heapless`, fixed-size buffers, or pre-allocated rings.
+2. **Deterministic Step Generation**:
+   - Step pulse trains and trajectory planning must produce bit-identical, jitter-free timing across target platforms.
+3. **Fail-Safe Safety Boundaries**:
+   - Hardware watchdogs, touch probe supervisors, and thermal runaway guards must never be disabled or bypassed.
+4. **Clean Crate Isolation**:
+   - Keep host-only frameworks (Actix, SurrealDB, Slint) strictly inside `host-server` and `host-ui`.
 
-### 1. Formatting and Linting
-Before submitting a PR, ensure all formatting, clippy lints, and cargo deny checks pass:
+---
+
+## 🛠️ Developer Checklist Before Submitting a PR
+
+### 1. Code Formatting & Linting
+Ensure all code conforms to workspace style and strict warnings:
 ```bash
+# Check code formatting
 cargo fmt --all -- --check
-cargo clippy --workspace --exclude klipper-mcu-firmware --exclude r_klipp_firmware -- -D warnings
-cargo deny check
+
+# Run strict Clippy linter across host and core crates
+cargo lint
+
+# Run Clippy on embedded ARM targets
+cargo lint-mcu
 ```
 
-### 2. Running Core Tests
-Run all unit and integration tests across the workspace:
+### 2. Run the Full Test Suite
+All unit, integration, and property tests must pass:
 ```bash
-cargo test -p parser -p motion -p thermal -p safety -p kinematics -p comms -p klipper-proto -p sim -p compat-layer
+cargo test -p parser -p motion -p kinematics -p thermal -p safety -p sim -p klipper-proto -p compat-layer -p r_klipp_api -p host-ui -p host-server
 ```
 
-### 3. Property-Based Testing
-Verify motion and parser invariants under random workloads:
+### 3. Property-Based & Determinism Tests
 ```bash
-cargo test --test proptest_motion
-cargo test --test proptest_parser
+cargo test --test proptest_motion -- --nocapture
+cargo test --test proptest_parser -- --nocapture
+cargo test --test determinism_test -- --nocapture
 ```
 
-## Pull Request Guidelines
-- Ensure all CI checks pass.
-- Include unit tests or property-based tests for new math or parsing logic.
-- Keep commits atomic and clearly described.
+---
+
+## 📬 Pull Request Process
+
+1. Fork the repository and create a feature branch (`feature/your-feature-name` or `fix/issue-description`).
+2. Include comprehensive unit tests and documentation comments for all public traits and structs.
+3. Update relevant documentation in `docs/` and crate `README.md` if public API or configuration schemas change.
+4. Ensure all CI workflows pass before requesting review.

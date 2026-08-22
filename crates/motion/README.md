@@ -1,30 +1,46 @@
-# Klipper in Rust: Motion Control Crate
+# `r_klipp_motion`: High-Order Trajectory Planning & Multi-Domain Motion Control
 
-## Overview
+`r_klipp_motion` is a `no_std`, real-time motion planning engine providing jerk-limited trajectory generation, continuous corner blending, extruder pressure advance, synchronized discrete I/O, spindle regulation, and tool compensation.
 
-The `motion` crate is responsible for all motion-related tasks in the Klipper in Rust firmware. This includes planning and executing movements, generating step pulses, and managing the kinematics of the printer.
+---
 
-This is a `no_std` library, designed for high-performance, real-time execution in an embedded environment.
+## 🚀 Advanced Capabilities
 
-## Features
+### 1. High-Order Trajectory Generation ($G^4$ 31-Phase Profile)
+- Provides continuous jerk ($j(t)$), snap ($s(t)$), and crackle ($c(t)$) bounds.
+- Eliminates mechanical resonance, chassis vibration, and belt ringing at high printing/milling speeds.
 
-*   **Trapezoidal Motion Planning**: Implements a trapezoidal velocity profile generator, which is the standard for 3D printer motion control.
-*   **Step Pulse Generation**: Contains a highly optimized step generation algorithm that can produce precise and jitter-free pulse trains for the stepper motors.
-*   **Kinematics Support**: Includes a pluggable kinematics system, allowing it to support different printer geometries, such as:
-    *   Cartesian (the most common type)
-    *   CoreXY
-    *   Delta
-*   **Motion Queue**: Manages a queue of motion blocks received from the Klipper host, ensuring that the motion system never starves for data.
-*   **Lookahead**: Implements a lookahead mechanism to smooth out the motion at the corners of segments, allowing for higher printing speeds.
+### 2. Pythagorean-Hodograph (PH) Corner Blending
+- Solves $C^4$ continuous Bezier polynomial bridge curves between linear segments using Newton-Raphson parameter solvers.
+- Maintains high cornering velocities without violating centripetal acceleration limits.
 
-## Design
+### 3. Extruder Modeling & Pressure Advance (`extruder.rs`)
+- Implements linear pressure advance compensation:
+  $$E_{\text{comp}}(t) = k_{\text{pa}} \cdot v(t)$$
+- Volumetric multiplier scaling and non-linear flow rate corrections.
 
-The motion control system is designed to be highly deterministic and performant.
+### 4. Position-Synchronized Discrete I/O (`sync_io.rs`)
+- Microsecond-accurate digital I/O event scheduler.
+- Directly triggers bottom-vision cameras, lighting strobes, and vacuum pick/place solenoids at exact spatial coordinates during motion.
 
-*   **Interrupt-Driven**: The core step generation loop is designed to be run from a high-priority hardware timer interrupt. This ensures that step pulses are generated with precise timing, even when the main application is busy with other tasks.
-*   **Fixed-Point Arithmetic**: The motion planning calculations use fixed-point arithmetic to avoid the overhead and non-determinism of floating-point operations in a real-time context.
-*   **Low Latency**: The entire motion pipeline, from receiving a command to generating the first step pulse, is optimized for low latency.
+### 5. Closed-Loop Spindle & Constant Surface Speed (`spindle.rs`)
+- VFD PWM and Modbus RS485 spindle speed regulation.
+- Implements G96 Constant Surface Speed (CSS): dynamically adjusts spindle RPM based on real-time workpiece diameter $D$:
+  $$\text{RPM} = \frac{V_c}{\pi \cdot D}$$
 
-## Usage
+### 6. Dynamic Tool Length & Wear Compensation (`tool_compensation.rs`)
+- Supports CNC `G43` and `G44` tool offsets.
+- Applies per-tool length offsets and radius wear compensations dynamically.
 
-The `motion` crate is used by the main `klipper-mcu-firmware` crate. The main application feeds motion commands into the motion planner, which then drives the stepper motors via the `mcu-drivers` crate.
+### 7. StallGuard Surveillance (`stall_guard.rs`)
+- Real-time TMC2209/TMC2240 motor load measurement.
+- Detects syringe dispenser stalls and physical obstructions with moving-average noise filtering.
+
+---
+
+## 🧪 Testing & Verification
+```bash
+cargo test -p motion
+cargo test --test proptest_motion
+cargo test --test determinism_test
+```
