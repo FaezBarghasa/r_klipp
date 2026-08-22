@@ -1,83 +1,62 @@
-# Hardware Setup Guide
+# Hardware Setup & Flashing Guide
 
-This guide provides instructions for setting up the necessary hardware to run the Klipper in Rust firmware on a supported MCU board.
+This guide provides instructions for wiring, flashing, and debugging `r_klipp` firmware on supported microcontroller boards.
 
-## Supported Hardware
+---
 
-*   **MCU Boards**:
-    *   MKS SKIPR (STM32F407VET6) - *Primary target*
-    *   (Add other boards as they become supported)
-*   **Debug Probes**:
-    *   ST-Link v2 / v3
-    *   J-Link EDU / Base / Plus
-    *   Any other probe supported by `probe-rs`.
+## 🔌 1. Supported Microcontroller Boards
 
-## Required Connections
+| Board | Microcontroller | Architecture | Typical Interfaces |
+| :--- | :--- | :--- | :--- |
+| **MKS SKIPR** | STM32F407VET6 | ARM Cortex-M4F @ 168 MHz | USB-C, CAN-FD, SPI Steppers, TS35 Display |
+| **BTT Octopus / Pro** | STM32F446 / STM32H723 | ARM Cortex-M4/M7 | USB-C, Dual CAN-FD, 8x Stepper Drivers |
+| **Raspberry Pi Pico / Pico 2** | RP2040 / RP2350 | Dual ARM Cortex-M0+/M33 | USB Micro/Type-C, PIO Steppers, I2C/SPI |
+| **Toolhead / Feeder Boards** | STM32F072 / RP2040 | ARM Cortex-M0+ | CAN-FD Transceiver, TMC2209/2240 |
 
-To flash and debug the firmware, you will need to connect a debug probe to your MCU board. This is typically done via the Serial Wire Debug (SWD) interface.
+---
 
-### SWD Port Pinout
+## 🛠️ 2. Hardware Debug Probe Connection (SWD)
 
-The SWD port usually has the following pins:
+To flash and debug firmware with zero-latency logging, connect a hardware debug probe (ST-Link v2/v3, J-Link, or CMSIS-DAP / Raspberry Pi Debug Probe) via Serial Wire Debug (SWD):
 
-| Pin   | Description         |
-|-------|---------------------|
-| `SWDIO` | Serial Wire Data I/O  |
-| `SWCLK` | Serial Wire Clock     |
-| `GND`   | Ground              |
-| `VCC`   | Power (optional)    |
+### SWD Pinout Table
+| Pin | Description | Board Header Pin |
+| :--- | :--- | :--- |
+| **`SWDIO`** | Serial Wire Data I/O | SWDIO / PA13 |
+| **`SWCLK`** | Serial Wire Clock | SWCLK / PA14 |
+| **`GND`** | Ground Reference | GND |
+| **`VCC`** | Target Voltage Sense (3.3V) | 3.3V (Sense only) |
 
-### Example: Connecting to an MKS SKIPR
+> [!IMPORTANT]
+> Always power the mainboard using its dedicated 12V/24V power supply or USB power before initiating flashing with a probe.
 
-1.  **Locate the SWD Header**: On the MKS SKIPR board, the SWD header is labeled `SWD`.
-2.  **Connect the Probe**:
-    *   Connect the `SWDIO` pin from your probe to the `SWDIO` pin on the board.
-    *   Connect the `SWCLK` pin from your probe to the `SWCLK` pin on the board.
-    *   Connect the `GND` pin from your probe to a `GND` pin on the board.
-    *   **Important**: It is recommended to power the board from its own power supply, not from the debug probe, unless you are certain the probe can provide sufficient current.
+---
 
-![MKS SKIPR SWD Connection](https://i.imgur.com/your-connection-diagram.png) <!-- Placeholder for connection diagram -->
+## ⚡ 3. Compilation & Flashing Procedures
 
-## Flashing Procedure
+### 3.1 Flashing via `probe-rs` (Recommended)
+`probe-rs` provides automated detection, flashing, and RTT terminal logging:
 
-Once the hardware is connected, you can proceed with flashing the firmware.
+```bash
+# Build and flash directly to STM32F407
+probe-rs run --chip STM32F407VETx target/thumbv7em-none-eabihf/release/klipper-mcu-firmware
+```
 
-### Using `cargo-embed`
+### 3.2 Flashing via DFU (USB Bootloader)
+1. Hold the board's `BOOT0` button and press `RESET` to enter STM32 DFU mode.
+2. Convert the firmware ELF to binary:
+   ```bash
+   cargo objcopy -p klipper-mcu-firmware --release --target thumbv7em-none-eabihf -- -O binary target/firmware.bin
+   ```
+3. Flash using `dfu-util`:
+   ```bash
+   dfu-util -a 0 -s 0x08000000:leave -D target/firmware.bin
+   ```
 
-This is the recommended method for both flashing and debugging.
-
-1.  **Connect the Board**: Connect the debug probe to your computer via USB.
-2.  **Run the Command**: Execute the `cargo embed` command with the appropriate feature flag for your board.
-    ```bash
-    cargo embed --release -p klipper-mcu-firmware --features mks_skipr
-    ```
-3.  **Verify**: The tool should automatically detect your probe and the target MCU, flash the firmware, and open a logging terminal.
-
-### Manual Flashing (e.g., for SD Card Update)
-
-Some boards support updating the firmware via an SD card. This requires converting the compiled ELF file to a binary format.
-
-1.  **Build the Firmware**:
-    ```bash
-    cargo build --release -p klipper-mcu-firmware --features mks_skipr
-    ```
-2.  **Convert to Binary**: Use `arm-none-eabi-objcopy` to create a `.bin` file.
-    ```bash
-    arm-none-eabi-objcopy -O binary target/thumbv7em-none-eabihf/release/klipper-mcu-firmware firmware.bin
-    ```
-3.  **Copy to SD Card**: Copy the `firmware.bin` file to the root of your SD card.
-4.  **Install**: Insert the SD card into the MCU board and power it on. The bootloader should automatically flash the new firmware.
-
-## Troubleshooting
-
-*   **Probe Not Detected**:
-    *   Ensure the probe is properly connected to your computer.
-    *   Check that you have the necessary USB drivers installed (e.g., for ST-Link).
-    *   Run `probe-rs-cli info` to see if `probe-rs` can find your probe.
-*   **Flashing Fails**:
-    *   Verify the SWD connections are correct and secure.
-    *   Make sure the MCU is powered on.
-    *   Try holding the `BOOT` button on the board while powering it on to put it into DFU (Device Firmware Update) mode, then try flashing again.
-*   **Logs Not Appearing**:
-    *   Confirm that the firmware was built with `defmt` logging enabled.
-    *   Ensure your `Embed.toml` is configured correctly for RTT (Real-Time Transfer).
+### 3.3 Flashing via SD Card Bootloader (MKS SKIPR)
+1. Build the release binary:
+   ```bash
+   cargo build --release -p klipper-mcu-firmware --target thumbv7em-none-eabihf --features embassy-rt
+   ```
+2. Copy binary to FAT32 SD card renamed as `mks_skipr.bin`.
+3. Insert SD card into the board's SD slot and power cycle. The on-board bootloader flashes the image in ~10 seconds.
