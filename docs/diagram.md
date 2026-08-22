@@ -1,175 +1,134 @@
-# System Architecture Diagrams
+# System Architecture Diagrams & Execution Models
 
-This document contains Mermaid diagrams illustrating the structure, data flows, execution pipelines, and concurrency models of the `r_klipp` system.
+This document provides visual architectural workflows, data flows, execution pipelines, and concurrency models across the `r_klipp` ecosystem.
 
 ---
 
-## 1. System Topology & Data Flow
-
-This diagram shows the complete path from high-level G-Code command execution down to bare-metal motor stepping and thermal feedback loops.
+## 1. Universal Multi-Target System Architecture
 
 ```mermaid
 graph TD
-    %% Host components
-    subgraph Host ["Klipper Host (std)"]
-        Parser["G-Code Parser"]
-        MacroEngine["Host Macro Engine (Rhai VM)"]
-        Planner["Kinematic Planner (PH & G4)"]
-        HIL["HIL & Input Shaper Calibrator"]
-        SerDeHost["Postcard Serializer/Deserializer"]
+    subgraph Host Application Layer
+        UI[Slint 1.x Touch Interface]
+        OpenPnPClient[OpenPnP Studio]
+        MoonrakerWeb[Fluidd / Mainsail]
     end
 
-    %% Communication
-    SerLink{{"Serial Transport (UART/USB)"}}
-
-    %% MCU components
-    subgraph MCU ["Microcontroller Firmware (no_std, RTIC 2 & Embassy)"]
-        SerDeMCU["Postcard Parser (Rx/Tx)"]
-        Dispatcher["Command Dispatcher"]
-        ClockSync["Clock Sync (DPLL)"]
-        StepQueue["SPSC Step Queue (StepSegment)"]
-        DmaStepper["DmaStepEngine (Double-Buffer)"]
-        ThermalMPC["MpcThermalEngine (Kalman MPC)"]
-        Safety["SafetyMonitor (Watchdog)"]
+    subgraph Host Server (Actix-Web & Tokio Runtime)
+        RestWS[REST & WebSocket Engine]
+        OpenPnPBridge[OpenPnP G-Code Bridge]
+        DB[(SurrealDB Time-Series & Config)]
+        SerialBridge[Serial & CAN-FD Driver]
     end
 
-    %% Physical Hardware
-    subgraph Hardware ["Physical Printer Hardware"]
-        Motors["Stepper Motors (X, Y, Z, E)"]
-        Heaters["PWM Heaters (Hotend, Bed)"]
-        Thermistors["ADC Sensors (Thermistors)"]
-        Accel["SPI Accelerometer"]
+    subgraph Motion & Kinematics Engine (no_std Core)
+        Planner[G4 31-Phase Trajectory Generator & PH Blending]
+        
+        KinematicsSelector{Kinematics Engine}
+        KinematicsSelector -->|3D Printer| CoreXY[CoreXY / Cartesian / Delta]
+        KinematicsSelector -->|Pick & Place| DualPnP[Dual-Head PnP Kinematics]
+        KinematicsSelector -->|5-Axis CNC| RTCP[5-Axis Table-Table RTCP]
+        
+        Extruder[Pressure Advance & Flow Compensation]
+        SyncIO[Microsecond Discrete I/O Scheduler]
+        Spindle[Spindle VFD & CSS G96 Controller]
     end
 
-    %% Connections
-    Parser -->|Raw Commands| MacroEngine
-    MacroEngine -->|Executed G-Code| Planner
-    Planner -->|Planned Trajectories| SerDeHost
-    HIL -->|Vibration Shaping| Planner
+    subgraph Distributed MCU Firmware (STM32 / RP2040)
+        DPLL[DPLL Sub-Microsecond Clock Sync]
+        StepQueue[Lock-Free SPSC Step Queue]
+        DmaStepper[DMA Stepping Engine]
+        SafetySupervisor[IWDG & Probe Interlock Supervisor]
+    end
+
+    UI <-->|WebSocket| RestWS
+    OpenPnPClient <-->|TCP Socket| OpenPnPBridge
+    MoonrakerWeb <-->|JSON-RPC| RestWS
+    RestWS <--> DB
+    RestWS <--> SerialBridge
+    OpenPnPBridge <--> SerialBridge
     
-    SerDeHost <==>|Binary Packets| SerLink
-    SerLink <==>|Frame Parsing| SerDeMCU
-    
-    SerDeMCU -->|Received Commands| Dispatcher
-    Dispatcher -->|Enqueue Move| StepQueue
-    Dispatcher -->|Set Thermal Targets| ThermalMPC
-    ClockSync -->|Time Alignments| Dispatcher
-    
-    StepQueue -->|Drain segments| DmaStepper
-    DmaStepper -->|Timer & DMA Pulses| Motors
-    
-    ThermalMPC -->|PWM Output| Heaters
-    Thermistors -->|ADC Readings| ThermalMPC
-    Thermistors -->|Thermal Limits| Safety
-    
-    Accel -->|SPI Samples| HIL
-    Safety -->|Atomic Kill Switch| Heaters
-    Safety -->|Disable Pins| Motors
+    SerialBridge <==>|COBS + Postcard| DPLL
+    DPLL --> Planner
+    Planner --> KinematicsSelector
+    Planner --> Extruder
+    Planner --> SyncIO
+    Planner --> Spindle
+    Planner --> StepQueue
+    StepQueue --> DmaStepper
+    SafetySupervisor --> DmaStepper
 ```
 
 ---
 
-## 2. Advanced Motion Control Pipeline
+## 2. Pick & Place (PnP / PIP) Trajectory & Camera Synchronization
 
-This diagram tracks how movements are solved using continuous blending, Jerk/Snap/Crackle-bounded kinematic profiling, and hardware-assisted stepping.
+```mermaid
+sequenceDiagram
+    participant PnP as OpenPnP Engine
+    participant Bridge as OpenPnPBridge
+    participant Planner as Motion Planner
+    participant SyncIO as SyncIoScheduler
+    participant Camera as Bottom Vision Camera
+    participant Feeder as Smart Feeder Bus
+
+    PnP->>Bridge: G1 X100 Y50 Z-2 (Move to pickup)
+    Bridge->>Planner: PlanTrajectory
+    PnP->>Bridge: M800 P1 (Vacuum Valve 1 ON)
+    Bridge->>SyncIO: Schedule Pin High
+    
+    Note over Planner,SyncIO: Trajectory Execution
+    Planner->>SyncIO: Position Reached: X100 Y50
+    SyncIO->>Camera: 500µs Hardware Strobe Pulse
+    Camera-->>PnP: Capture Part Alignment Frame
+    
+    PnP->>Bridge: M810 F3 P4 (Advance Feeder 3 by 4mm)
+    Bridge->>Feeder: CAN-FD FeederCommand::Advance
+    Feeder-->>Bridge: FeederResponse::Ok
+```
+
+---
+
+## 3. 5-Axis CNC RTCP & Spindle Constant Surface Speed (CSS)
 
 ```mermaid
 flowchart LR
-    A["Linear Move Command"] --> B["Pythagorean-Hodograph Corner Blender"]
-    B -->|Calculate PhBezier15 chord bridge| C["Newton-Raphson Parameter solver"]
-    C -->|C^4 continuous geometry| D["31-Phase G4 Profile Generator"]
-    D -->|Continuous Jerk, Snap & Crackle| E["SPSC Step Queue (heapless::spsc::Queue)"]
+    GCode["G96 S200 (CSS 200 m/min) + G43 H1"] --> ToolManager["ToolTableManager (Apply Length & Wear)"]
+    ToolManager --> SpindleCtrl["SpindleController (Compute RPM = V_c / (pi * D))"]
+    SpindleCtrl --> VFD["VFD Spindle Controller (PWM / Modbus)"]
     
-    subgraph MCU_IRQ ["Real-Time Hardware DMA Offloading"]
-        E -->|Dequeue StepSegments| F["DmaStepEngine"]
-        F -->|Active: Buffer A| G["Timer Pulse Output"]
-        F -->|Inactive: Buffer B| H["Update from queue"]
-        G -->|Alternate double-buffer| F
-    end
+    GCode --> RTCP["FiveAxisRtcpKinematics (Table-Table AC Trunnion)"]
+    RTCP --> Trans["Rotate Coordinate Frame by (A, C) Angles"]
+    Trans --> Offset["Preserve Tool Tip in Part Coordinates"]
+    Offset --> StepEngine["Multi-Axis Step Generation"]
 ```
 
 ---
 
-## 3. Dual-Paradigm Concurrency Model
-
-This timeline chart illustrates the scheduling priorities of async (Embassy) and hardware real-time interrupt (RTIC 2) execution.
-
-```mermaid
-gantt
-    title Task & Interrupt Scheduling Priority Matrix
-    dateFormat  X
-    axisFormat %s
-    
-    section Hardware ISRs (RTIC 2)
-    Stepper Timer ISR (Priority 5)     :crit, active, 0, 1
-    Clock Sync Capture (Priority 4)    :active, 1, 2
-    
-    section Async Tasks (Embassy)
-    Serial Rx/Tx Processing (Priority 3): 2, 5
-    Thermal MPC updates (Priority 2)   : 5, 7
-    Clock Sync Fitting (Priority 1)    : 7, 9
-    Safety Supervision (Priority 1)    : 9, 10
-```
-
----
-
-## 4. State-Space MPC Thermal Regulation
-
-This diagram details the Kalman Filter prediction/correction loops and feedforward mechanism inside the thermal subsystem.
+## 4. State-Space MPC Thermal Regulation Pipeline
 
 ```mermaid
 flowchart TD
-    %% Estimation Loop
     subgraph Estimator ["Kalman Filter State Estimator"]
         Predict["State Prediction: x_pred(k+1) = A*x(k) + B*u(k) + G*d(k)"]
         Update["Error Correction: x(k+1) = x_pred + K * (y_measured - y_pred)"]
     end
 
-    %% Input Values
     T_ambient["Ambient Temp (T_ambient)"] --> Predict
-    Volumetric_Flow["Volumetric Flow Rate"] --> Predict
-    Prev_PWM["Previous PWM Output (u_prev)"] --> Predict
-    Sensor_Read["ADC Sensor Measurement (y_measured)"] --> Update
+    Volumetric_Flow["Extrusion Volumetric Flow"] --> Predict
+    Sensor_Read["ADC Sensor Measurement"] --> Update
+    Predict --> Update
     
-    Predict -->|Predicted Sensor Temp| Update
-    
-    %% Controller Loop
     subgraph Controller ["MPC Power Controller"]
-        Error["Calculate Internal Core Error: target_temp - T_heater_est"]
-        FF["Feed-Forward: scale heater current for extrusion flow rate"]
+        Error["Calculate Internal Core Error"]
+        FF["Feedforward Flow Compensation"]
         Clamp["Clamp PWM Output (0.0 to 1.0)"]
     end
     
-    Update -->|Estimated Heater Temp (T_heater_est)| Error
-    Update -->|Estimated Sensor Temp (T_sensor_est)| FF
+    Update --> Error
+    Update --> FF
     Volumetric_Flow --> FF
-    
     Error --> Clamp
     FF --> Clamp
-    Clamp -->|Output PWM Command| Heater["Physical Heater"]
-    Clamp -->|Update History| Prev_PWM
-```
-
----
-
-## 5. Multi-MCU Clock Synchronization
-
-This diagram details how the distributed Phase-Locked Loop (DPLL) calculates and updates master synchronization matrices in a lock-free manner.
-
-```mermaid
-sequenceDiagram
-    autonumber
-    participant HW as Hardware Timer Capture (Priority 4)
-    participant Model as SharedClockModel (Atomic Swap)
-    participant Task as Clock Model Task (Priority 1)
-
-    HW->>Model: Query active ClockSyncModel (local_to_master)
-    Model-->>HW: Returns active Model (slope & intercept)
-    Note over HW: Real-time tick offset translation
-    
-    Task->>Task: Collect local & master tick histories
-    Task->>Task: Run Recursive Least Squares regression
-    Task->>Model: Update inactive model slot
-    Task->>Model: Swap active index atomically
-    Note over Model: Active index toggled (lock-free)
+    Clamp --> HeaterMOSFET["Heater MOSFET"]
 ```

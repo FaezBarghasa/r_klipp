@@ -1,63 +1,66 @@
-# Klipper Protocol Overview
+# `r_klipp` Binary Wire & Inter-MCU Protocol Specification
 
-This document describes the communication protocol between the Klipper host and the Klipper in Rust MCU firmware. The protocol is designed to be efficient, low-latency, and robust.
-
----
-
-## 1. Protocol Basics
-
-- **Transport Layer**: The protocol is typically transmitted over a serial line (USB CDC-ACM or UART).
-- **Message Framing**: The protocol uses a simple framing mechanism to delineate messages. Each message is prefixed with a sync byte (`0x7E`) and followed by a checksum.
-- **Message Structure**: Messages are binary-encoded and consist of a message ID and a payload. The `klipper-proto` crate contains the definitions for all message types and their parameters.
+This document specifies the communication protocol connecting the `r_klipp` host server, the real-time MCU firmwares, and peripheral devices (such as CAN-FD smart feeders and toolhead controllers).
 
 ---
 
-## 2. Message Flow
+## 🛰️ 1. Protocol Architecture & Framing
 
-The communication is bidirectional, with both the host and the MCU sending messages.
+```mermaid
+sequenceDiagram
+    participant Host as r_klipp Host Engine
+    participant MCU1 as Primary Toolhead MCU (STM32F4)
+    participant Feeder as Smart Feeder Bus (CAN-FD)
 
-- **Host to MCU**: The host sends commands to the MCU to control the printer's hardware. Examples include:
-  - `Queue a motion block` (enqueueing `StepSegment` data)
-  - `Set heater temperature` (updating targets in the MPC thermal engine)
-  - `Read ADC value`
-  - `Configure GPIO pin`
-- **MCU to Host**: The MCU sends responses and status updates to the host. Examples include:
-  - `Command acknowledged`
-  - `Temperature reading`
-  - `Endstop triggered`
-  - `Error condition detected` / `Shutdown`
+    Note over Host,MCU1: Startup & Autoconfig Phase
+    Host->>MCU1: RequestManifest (COBS Framing)
+    MCU1-->>Host: HandshakeManifest (Board, Pin Capabilities)
+    
+    Note over Host,MCU1: DPLL Clock Calibration (Continuous 10Hz)
+    Host->>MCU1: Ping (Host Timestamp T_req)
+    MCU1-->>Host: Pong (Host T_req, MCU T_receive, MCU T_reply)
+    Host->>Host: Update DPLL Clock Skew & Jitter Model
+
+    Note over Host,MCU1: Motion Stream (Zero-Allocation Queuing)
+    Host->>MCU1: QueueStepSegment (Intervals, Direction, Microsecond Target)
+    MCU1-->>Host: Ack / BufferStatus
+
+    Note over Host,Feeder: Secondary CAN-FD RPC
+    Host->>Feeder: FeederCommand::Advance { feeder_id: 3, pitch_mm: 4.0 }
+    Feeder-->>Host: FeederResponse::Ok
+```
+
+### 1.1 Framing Layer: Consistent Overhead Byte Stuffing (COBS)
+- All frames over byte-stream serial transports (USB CDC-ACM, UART RS422/RS485) use **COBS (Consistent Overhead Byte Stuffing)**.
+- Packet delimiter is the standard `0x00` zero byte.
+- Zero-byte stuffing guarantees unambiguous packet boundary detection with negligible byte overhead ($1\text{ byte per }254\text{ bytes}$).
+
+### 1.2 Data Integrity: CRC-16 CCITT
+- Each packet payload terminates with a 16-bit CRC calculated with polynomial $0x1021$ (initial value $0xFFFF$).
+- Corrupted packets are rejected before deserialization without causing parser panics.
+
+### 1.3 Serialization: Postcard Binary Codec
+- Payloads are serialized using [`postcard`](https://crates.io/crates/postcard), an efficient `serde`-compatible binary format designed specifically for `no_std` embedded systems.
 
 ---
 
-## 3. Key Message Types
+## ⏱️ 2. Multi-MCU Clock Synchronization (DPLL)
 
-### Command Messages (Host -> MCU)
+In multi-board configurations (e.g. mainboard + toolhead CAN board), hardware timers drift due to quartz oscillator thermal variances.
 
-These messages instruct the MCU to perform an action.
+The `DpllClockSynchronizer` in [`crates/klipper-proto/src/clock_sync.rs`](../crates/klipper-proto/src/clock_sync.rs) implements a second-order digital phase-locked loop:
 
-- `Config_stepper`: Configures a stepper motor with its associated pins and parameters.
-- `Queue_step`: Adds a step segment (a series of timed step pulses containing `interval_ticks`, direction, and enable masks) to the SPSC motion queue.
-- `Set_heater_temperature`: Sets the target temperature for the Model Predictive Control (MPC) engine.
-- `Emergency_stop`: Commands the MCU to immediately enter a safe state.
+$$\text{MCU\_Clock}(t) = \text{Host\_Clock}(t) \cdot \alpha + \text{Phase\_Offset}$$
 
-### Response Messages (MCU -> Host)
-
-These messages provide feedback and data from the MCU.
-
-- `Klipper_ready`: Sent by the MCU on startup to signal that it is ready to receive commands.
-- `Steptrigger`: Reports that a stepper motor has completed a step.
-- `Adc_state`: Periodically sends the latest ADC readings for thermistors.
-- `Shutdown`: Sent by the MCU when it is entering a shutdown state due to an error.
+- **Sampling Rate**: Periodic roundtrip pings sent at $10\text{ Hz}$.
+- **Outlier Filtering**: Packets with roundtrip latency $\Delta t_{\text{RTT}} > 2 \cdot \overline{\Delta t_{\text{RTT}}}$ are discarded.
+- **Accuracy**: Sub-microsecond step pulse scheduling across distinct physical microcontrollers.
 
 ---
 
-## 4. Self-Describing Pinout Configuration Protocol (Autoconfig)
+## 📋 3. Self-Describing Autoconfig Manifest
 
-To decouple host configurations from static firmware pinouts, the system utilizes a **Self-Describing Pinout Configuration Protocol** located in [autoconfig.rs](file:///home/jrad/RustroverProjects/r_klipp-workspace/r_klipp/crates/klipper-proto/src/autoconfig.rs).
-
-### 4.1. Manifest structures
-
-During startup enumeration, the MCU compiles a `HandshakeManifest` detailing its physical resources:
+During startup, the MCU compiles a hardware manifest describing its pin capabilities:
 
 ```rust
 pub struct HandshakeManifest {
@@ -66,11 +69,7 @@ pub struct HandshakeManifest {
     pub step_resolution_ticks: u32,
     pub pins: heapless::Vec<PinDescriptor, 64>,
 }
-```
 
-Each pin is represented by a `PinDescriptor` describing its indexing, UTF-8 fixed-length name, capabilities mask, and capabilities vectors:
-
-```rust
 pub struct PinDescriptor {
     pub pin_index: u16,
     pub name: [u8; 8],
@@ -79,35 +78,30 @@ pub struct PinDescriptor {
 }
 ```
 
-The available capabilities are defined in the `PinCapability` enum:
-
-- `DigitalInput`
-- `DigitalOutput { max_current_ma: u8 }`
+Capabilities include:
+- `DigitalInput` / `DigitalOutput`
 - `AnalogInput { resolution_bits: u8 }`
 - `PwmOutput { max_freq_hz: u32 }`
 - `StepTimerChannel { timer_id: u8 }`
 
-### 4.2. Handshake Timing & Serialization
-
-1. **Protocol Negotiation**: The manifest negotiation must succeed within **1.5 seconds** of serial port enumeration.
-2. **Postcard Serialization**: Because the MCU operates under `no_std`, serialization is performed using the `postcard` binary codec.
-3. **Zero-Copy Deserialization**: The host deserializes capabilities directly out of the receive buffers without dynamic memory allocations, optimizing startup speeds and memory usage.
-
 ---
 
-## 5. Message Encoding and Decoding
+## 📦 4. Pick & Place CAN-FD Feeder Protocol
 
-The `klipper-proto` crate provides the serialization and deserialization logic for all messages.
+Located in [`crates/klipper-proto/src/feeder.rs`](../crates/klipper-proto/src/feeder.rs), the feeder RPC schema facilitates direct control of smart component tape feeders:
 
-### Serialization (Host Side)
-1. A command is constructed in the host software (e.g., Klippy).
-2. The command's parameters are packed into a binary format according to the message definition.
-3. A checksum is calculated over the message payload.
-4. The final message, including the sync byte, payload, and checksum, is sent over the serial link.
+```rust
+pub enum FeederCommand {
+    Advance { feeder_id: u8, pitch_mm: f32 },
+    Peel { feeder_id: u8, speed_pwm: u8 },
+    CalibratePitch { feeder_id: u8, steps_per_pitch: u32 },
+    GetTelemetry { feeder_id: u8 },
+}
 
-### Deserialization (MCU Side)
-1. The MCU's serial task continuously reads from the serial port, looking for the `0x7E` sync byte.
-2. Once a sync byte is found, the MCU reads the message length and payload.
-3. The checksum is verified to ensure data integrity.
-4. If the checksum is valid, the message payload is passed to the command dispatcher, which decodes the message ID and parameters.
-5. The corresponding command handler is executed.
+pub enum FeederResponse {
+    Ok,
+    Telemetry { feeder_id: u8, current_ma: u16, parts_dispensed: u32 },
+    StallDetected { feeder_id: u8 },
+    Error(String),
+}
+```
