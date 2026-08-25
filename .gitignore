@@ -9,3 +9,4 @@
 /crates/thermal/target/
 /target/
 graphify-out/
+.aider*

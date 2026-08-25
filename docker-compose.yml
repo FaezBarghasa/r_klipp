@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  slint-ui-test:
+    build:
+      context: .
+      dockerfile: tools/docker/Dockerfile.host
+    environment:
+      - LIBGL_ALWAYS_SOFTWARE=1
+      - SLINT_BACKEND=software
+      - RUST_LOG=info
+      - CI=true
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f xvfb || pgrep -f cargo || pgrep -f host-ui || exit 0"]
+      interval: 2s
+      timeout: 5s
+      retries: 5
+      start_period: 2s

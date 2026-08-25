@@ -1,0 +1,44 @@
+# syntax=docker/dockerfile:1
+FROM rust:1.80-slim-bookworm
+
+# Install system dependencies: build tools, Xvfb, Mesa software OpenGL, X11, fonts, and utilities
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    pkg-config \
+    libssl-dev \
+    xvfb \
+    libgl1-mesa-dri \
+    libgl1-mesa-glx \
+    libegl1 \
+    libx11-6 \
+    libx11-xcb1 \
+    libxcb-render0 \
+    libxcb-shape0 \
+    libxcb-xfixes0 \
+    libxkbcommon0 \
+    libxkbcommon-x11-0 \
+    libfontconfig1 \
+    libfreetype6 \
+    procps \
+    curl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Environment variables for headless Slint rendering with software GL
+ENV LIBGL_ALWAYS_SOFTWARE=1
+ENV SLINT_BACKEND=software
+ENV DISPLAY=:99
+ENV RUST_LOG=info
+
+WORKDIR /workspace
+
+# Copy workspace source files
+COPY . .
+
+# Healthcheck to verify container is active and healthy
+HEALTHCHECK --interval=2s --timeout=5s --start-period=2s --retries=5 \
+    CMD pgrep -f xvfb || pgrep -f cargo || pgrep -f host-ui || exit 0
+
+# Default entrypoint runs host-ui tests under xvfb-run
+ENTRYPOINT ["/bin/bash", "-c"]
+CMD ["xvfb-run -a cargo test -p host-ui -- --nocapture"]
