@@ -25,19 +25,26 @@ if ! command -v cargo >/dev/null 2>&1; then
     exit 1
 fi
 
-# Determine kernel path
-if [[ "${APP_NAME}" == */* ]]; then
+# Determine package name and binary path
+if [ "${APP_NAME}" = "klipper-mcu-firmware" ] || [ "${APP_NAME}" = "qemu_runner" ]; then
+    PKG_NAME="klipper-mcu-firmware"
+    BIN_NAME="qemu_runner"
+    KERNEL_PATH="target/${TARGET}/release/${BIN_NAME}"
+elif [[ "${APP_NAME}" == */* ]]; then
+    PKG_NAME=""
+    BIN_NAME=$(basename "${APP_NAME}")
     KERNEL_PATH="${APP_NAME}"
 else
+    PKG_NAME="${APP_NAME}"
+    BIN_NAME="${APP_NAME}"
     KERNEL_PATH="target/${TARGET}/release/${APP_NAME}"
 fi
 
 echo "[*] Step 1: Building target '${TARGET}' (release mode)..."
-if [[ "${APP_NAME}" != */* && "${APP_NAME}" != "your_app" ]]; then
-    cargo build --target "${TARGET}" --release -p "${APP_NAME}" || cargo build --target "${TARGET}" --release --bin "${APP_NAME}"
+if [ -n "${PKG_NAME}" ]; then
+    cargo build --target "${TARGET}" --release -p "${PKG_NAME}" --bin "${BIN_NAME}" || cargo build --target "${TARGET}" --release -p "${PKG_NAME}"
 else
-    # Build workspace or default embedded target if applicable
-    cargo build --target "${TARGET}" --release || true
+    cargo build --target "${TARGET}" --release --bin "${BIN_NAME}" || true
 fi
 
 if [ ! -f "${KERNEL_PATH}" ]; then

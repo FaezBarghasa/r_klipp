@@ -12,6 +12,15 @@ fn panic(_info: &core::panic::PanicInfo) -> ! {
     }
 }
 
+#[no_mangle]
+pub extern "C" fn DefaultHandler_() {}
+
+#[no_mangle]
+pub extern "C" fn FLASH() {}
+
+#[no_mangle]
+pub extern "C" fn RNG() {}
+
 // UART0 Data Register on LM3S6965EVB / QEMU
 const UART0_DR: *mut u32 = 0x4000_C000 as *mut u32;
 
