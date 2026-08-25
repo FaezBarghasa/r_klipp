@@ -31,7 +31,7 @@ pub async fn run_ui(mcu_cmd_sender: mpsc::Sender<HostToMcu>) -> Result<()> {
     let ui_handle_clone = ui_handle.clone();
     tokio::spawn(async move {
         info!("Connecting to WebSocket: {}", WS_URL);
-        let url = match Url::parse(WS_URL) {
+        let ws_url = match Url::parse(WS_URL) {
             Ok(u) => u,
             Err(e) => {
                 error!("Invalid websocket URL: {}", e);
@@ -40,7 +40,7 @@ pub async fn run_ui(mcu_cmd_sender: mpsc::Sender<HostToMcu>) -> Result<()> {
         };
 
         loop {
-            match connect_async(url.clone()).await {
+            match connect_async(ws_url.as_str()).await {
                 Ok((ws_stream, _)) => {
                     info!("WebSocket connected.");
                     let (mut write, mut read) = ws_stream.split();
@@ -49,7 +49,7 @@ pub async fn run_ui(mcu_cmd_sender: mpsc::Sender<HostToMcu>) -> Result<()> {
                     let write_handle = tokio::spawn(async move {
                         loop {
                             ping_interval.tick().await;
-                            if write.send(Message::Ping(vec![])).await.is_err() {
+                            if write.send(Message::Ping(Default::default())).await.is_err() {
                                 error!("WebSocket write error, reconnecting...");
                                 break;
                             }
