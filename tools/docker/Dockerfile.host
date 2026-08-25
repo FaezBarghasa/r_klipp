@@ -18,17 +18,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxkbcommon0 \
     libxkbcommon-x11-0 \
     libfontconfig1 \
+    libfontconfig1-dev \
     libfreetype6 \
     procps \
     curl \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Environment variables for headless Slint rendering with software GL
+# Environment variables for headless Slint rendering simulating MKS PI_TS35 3.5" (480x320)
 ENV LIBGL_ALWAYS_SOFTWARE=1
 ENV SLINT_BACKEND=software
 ENV DISPLAY=:99
 ENV RUST_LOG=info
+ENV CI=true
 
 WORKDIR /workspace
 
@@ -37,8 +39,8 @@ COPY . .
 
 # Healthcheck to verify container is active and healthy
 HEALTHCHECK --interval=2s --timeout=5s --start-period=2s --retries=5 \
-    CMD pgrep -f xvfb || pgrep -f cargo || pgrep -f host-ui || exit 0
+    CMD pgrep -f xvfb || pgrep -f cargo || pgrep -f host-ui || pgrep -f host-server || exit 0
 
-# Default entrypoint runs host-ui tests under xvfb-run
+# Entrypoint runs both Backend (host-server) and Frontend (host-ui Slint 480x320) tests under xvfb-run
 ENTRYPOINT ["/bin/bash", "-c"]
-CMD ["xvfb-run -a cargo test -p host-ui -- --nocapture"]
+CMD ["echo '[*] Running Backend tests (host-server)...' && cargo test -p host-server -- --nocapture && echo '[*] Running Frontend tests (host-ui Slint MKS PI_TS35)...' && xvfb-run -s '-screen 0 480x320x24' cargo test -p host-ui -- --nocapture"]

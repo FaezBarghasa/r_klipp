@@ -10,8 +10,9 @@ services:
       - SLINT_BACKEND=software
       - RUST_LOG=info
       - CI=true
+      - DISPLAY_RESOLUTION=480x320
     healthcheck:
-      test: ["CMD-SHELL", "pgrep -f xvfb || pgrep -f cargo || pgrep -f host-ui || exit 0"]
+      test: ["CMD-SHELL", "pgrep -f xvfb || pgrep -f cargo || pgrep -f host-ui || pgrep -f host-server || exit 0"]
       interval: 2s
       timeout: 5s
       retries: 5
