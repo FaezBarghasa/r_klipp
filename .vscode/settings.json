@@ -1,4 +1,5 @@
 {
     "markdown.extension.completion.enabled": false,
-    "markdown.extension.tableFormatter.enabled": false
+    "markdown.extension.tableFormatter.enabled": false,
+    "idf.currentSetup": "/home/jrad/.espressif/v6.0.2/esp-idf"
 }

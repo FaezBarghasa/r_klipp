@@ -253,6 +253,7 @@ version = "2.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "92589714878ca59a7626ea19734f0e07a6a875197eec751bb5d3f99e64998c63"
 dependencies = [
+ "actix-macros",
  "futures-core",
  "tokio",
 ]
@@ -1993,7 +1994,7 @@ name = "control"
 version = "0.1.0"
 dependencies = [
  "approx 0.5.1",
- "embassy-executor 0.6.3",
+ "embassy-executor",
  "embassy-sync 0.6.2",
  "embassy-time",
  "heapless 0.8.0",
@@ -2146,6 +2147,15 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.117",
+]
+
+[[package]]
+name = "cortex-m-semihosting"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c23234600452033cc77e4b761e740e02d2c4168e11dbf36ab14a0f58973592b0"
+dependencies = [
+ "cortex-m",
 ]
 
 [[package]]
@@ -3071,20 +3081,6 @@ dependencies = [
 
 [[package]]
 name = "embassy-executor"
-version = "0.5.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a3d8701436bf0dc453703175459805045d049bf7404df7a68e59d05c7fbd1f04"
-dependencies = [
- "cortex-m",
- "critical-section",
- "document-features",
- "embassy-executor-macros 0.4.2",
- "embassy-time-driver",
- "embassy-time-queue-driver",
-]
-
-[[package]]
-name = "embassy-executor"
 version = "0.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f64f84599b0f4296b92a4b6ac2109bc02340094bda47b9766c5f9ec6a318ebf8"
@@ -3093,21 +3089,9 @@ dependencies = [
  "critical-section",
  "defmt 0.3.100",
  "document-features",
- "embassy-executor-macros 0.6.2",
+ "embassy-executor-macros",
  "embassy-time-driver",
  "embassy-time-queue-driver",
-]
-
-[[package]]
-name = "embassy-executor-macros"
-version = "0.4.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2b11dfbb15afc12c4171ac6e2994567c00881f61a0c13ada4429028a3c7f425f"
-dependencies = [
- "darling 0.20.11",
- "proc-macro2",
- "quote",
- "syn 2.0.117",
 ]
 
 [[package]]
@@ -5828,6 +5812,7 @@ name = "klipper-host"
 version = "0.1.0"
 dependencies = [
  "actix",
+ "actix-rt",
  "actix-web",
  "actix-web-actors",
  "anyhow",
@@ -5841,6 +5826,7 @@ dependencies = [
  "tokio",
  "tokio-serial",
  "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
@@ -5849,9 +5835,10 @@ version = "0.1.0"
 dependencies = [
  "cortex-m",
  "cortex-m-rt",
+ "cortex-m-semihosting",
  "defmt 0.3.100",
  "defmt-rtt",
- "embassy-executor 0.6.3",
+ "embassy-executor",
  "embassy-stm32",
  "embassy-sync 0.6.2",
  "embassy-time",
@@ -6467,7 +6454,7 @@ dependencies = [
 name = "motors"
 version = "0.1.0"
 dependencies = [
- "embassy-executor 0.5.1",
+ "embassy-executor",
  "embassy-time",
  "embedded-hal-async",
  "micromath 2.1.0",
@@ -8199,7 +8186,7 @@ dependencies = [
  "cortex-m-rt",
  "defmt 0.3.100",
  "defmt-rtt",
- "embassy-executor 0.5.1",
+ "embassy-executor",
  "embassy-stm32",
  "embassy-sync 0.6.2",
  "embassy-time",
