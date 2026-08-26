@@ -67,7 +67,7 @@ fn App() -> Element {
         }
     });
 
-    let on_gcode = move |cmd: String| {
+    let mut on_gcode = move |cmd: String| {
         last_command.set(format!("Executed: {}", cmd));
         if cmd.starts_with("M104 S") {
             if let Ok(temp) = cmd[6..].trim().parse::<f32>() {
@@ -89,6 +89,7 @@ fn App() -> Element {
             print_job.write().status = "error".to_string();
         }
     };
+
 
     rsx! {
         div {

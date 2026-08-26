@@ -26,7 +26,7 @@ pub fn ConsoleView(props: ConsoleProps) -> Element {
         TerminalLine { id: 5, timestamp: "19:05:01".to_string(), text: "ok T:215.0 /220.0 B:60.0 /60.0 @:45 B@:0".to_string(), is_command: false, is_error: false },
     ]);
 
-    let send_cmd = move || {
+    let mut send_cmd = move || {
         let cmd = command_input.read().trim().to_string();
         if !cmd.is_empty() {
             let id = lines.read().len() as u64 + 1;
@@ -41,6 +41,7 @@ pub fn ConsoleView(props: ConsoleProps) -> Element {
             command_input.set(String::new());
         }
     };
+
 
     rsx! {
         div {

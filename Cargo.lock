@@ -8510,6 +8510,7 @@ dependencies = [
  "criterion 0.8.2",
  "dioxus",
  "futures-util",
+ "heapless 0.8.0",
  "nalgebra 0.35.0",
  "postcard",
  "r_klipp_api",

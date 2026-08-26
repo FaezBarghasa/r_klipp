@@ -49,8 +49,9 @@ pub fn FarmView() -> Element {
                     span { class: "text-2xl", "🏭" }
                     div {
                         h2 { class: "text-lg font-bold text-slate-100", "Multi-Printer Farm Mode" }
-                        p { class: "text-xs text-slate-400 font-mono", "Managing {} active printers on local network", printers.read().len() }
+                        p { class: "text-xs text-slate-400 font-mono", "Managing {printers.read().len()} active printers on local network" }
                     }
+
                 }
                 div {
                     class: "flex space-x-3",

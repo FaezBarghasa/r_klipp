@@ -4,11 +4,13 @@ use thermal::safety::RunawayWatchdogConfig;
 #[test]
 fn test_mpc_engine_converges_to_250c() {
     let watchdog_config = RunawayWatchdogConfig {
-        window_duration_ms: 10_000,
-        expected_temp_rise: 2.0,
-        max_allowable_temp: 300.0,
-        min_allowable_temp: -10.0,
+        max_temp_c: 300.0,
+        min_temp_c: -10.0,
+        max_heating_rate_c_per_s: 15.0,
+        runaway_timeout_ms: 10_000,
+        hysteresis_temp_c: 5.0,
     };
+
 
     let mut engine = MpcThermalEngine::new(
         (0.95, 0.05, 0.0, 0.90), // A matrix
@@ -47,11 +49,13 @@ fn test_mpc_engine_converges_to_250c() {
 #[test]
 fn test_mpc_engine_estop_cuts_heater_power() {
     let watchdog_config = RunawayWatchdogConfig {
-        window_duration_ms: 5000,
-        expected_temp_rise: 5.0, // Strict expectation: 5C rise required within 5s
-        max_allowable_temp: 280.0,
-        min_allowable_temp: 0.0,
+        max_temp_c: 280.0,
+        min_temp_c: 0.0,
+        max_heating_rate_c_per_s: 15.0,
+        runaway_timeout_ms: 5000,
+        hysteresis_temp_c: 5.0,
     };
+
 
     let mut engine = MpcThermalEngine::new(
         (0.98, 0.02, 0.0, 0.95),
