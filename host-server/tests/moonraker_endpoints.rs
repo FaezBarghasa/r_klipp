@@ -30,6 +30,10 @@ async fn test_moonraker_jsonrpc_endpoint() {
         file_manager: Arc::new(FileManager::new("/tmp/test_gcodes", "/tmp/test_config")),
         job_queue: Arc::new(host_server::components::JobQueue::new()),
         data_store: Arc::new(host_server::components::DataStore::new(600.0)),
+        machine_mgr: Arc::new(host_server::components::MachineManager::new()),
+        power_mgr: Arc::new(host_server::components::PowerManager::new()),
+        update_mgr: Arc::new(host_server::components::UpdateManager::new()),
+        spoolman: Arc::new(host_server::components::SpoolmanClient::new()),
     });
 
     let app = test::init_service(
@@ -56,29 +60,55 @@ async fn test_moonraker_jsonrpc_endpoint() {
     assert_eq!(json_resp["result"]["klippy_state"], "ready");
     assert_eq!(json_resp["result"]["klippy_connected"], true);
 
-    // 2. Test printer.objects.query via JSON-RPC
+    // 2. Test machine.system_info via JSON-RPC
     let req = test::TestRequest::post()
         .uri("/server/jsonrpc")
         .set_json(serde_json::json!({
             "jsonrpc": "2.0",
-            "method": "printer.objects.query",
+            "method": "machine.system_info",
             "id": 43
         }))
         .to_request();
     let resp = test::call_service(&app, req).await;
     let json_resp: serde_json::Value = test::read_body_json(resp).await;
-
     assert_eq!(json_resp["id"], 43);
-    assert!(json_resp["result"]["status"]["toolhead"].is_object());
-    assert!(json_resp["result"]["status"]["extruder"].is_object());
+    assert!(json_resp["result"]["cpu_info"]["cpu_count"].as_u64().unwrap() > 0);
 
-    // 3. Test unknown method error
+    // 3. Test machine.device_power.devices
+    let req = test::TestRequest::post()
+        .uri("/server/jsonrpc")
+        .set_json(serde_json::json!({
+            "jsonrpc": "2.0",
+            "method": "machine.device_power.devices",
+            "id": 44
+        }))
+        .to_request();
+    let resp = test::call_service(&app, req).await;
+    let json_resp: serde_json::Value = test::read_body_json(resp).await;
+    assert_eq!(json_resp["id"], 44);
+    assert!(json_resp["result"]["devices"].is_array());
+
+    // 4. Test machine.update.status
+    let req = test::TestRequest::post()
+        .uri("/server/jsonrpc")
+        .set_json(serde_json::json!({
+            "jsonrpc": "2.0",
+            "method": "machine.update.status",
+            "id": 45
+        }))
+        .to_request();
+    let resp = test::call_service(&app, req).await;
+    let json_resp: serde_json::Value = test::read_body_json(resp).await;
+    assert_eq!(json_resp["id"], 45);
+    assert!(json_resp["result"]["version_info"]["r_klipp"].is_object());
+
+    // 5. Test unknown method error
     let req = test::TestRequest::post()
         .uri("/server/jsonrpc")
         .set_json(serde_json::json!({
             "jsonrpc": "2.0",
             "method": "nonexistent.method",
-            "id": 44
+            "id": 46
         }))
         .to_request();
     let resp = test::call_service(&app, req).await;

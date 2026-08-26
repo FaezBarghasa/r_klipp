@@ -29,6 +29,10 @@ async fn test_printer_info_endpoint() {
         file_manager: Arc::new(host_server::components::FileManager::new("/tmp/test_gcodes", "/tmp/test_config")),
         job_queue: Arc::new(host_server::components::JobQueue::new()),
         data_store: Arc::new(host_server::components::DataStore::new(600.0)),
+        machine_mgr: Arc::new(host_server::components::MachineManager::new()),
+        power_mgr: Arc::new(host_server::components::PowerManager::new()),
+        update_mgr: Arc::new(host_server::components::UpdateManager::new()),
+        spoolman: Arc::new(host_server::components::SpoolmanClient::new()),
     });
 
     let app = test::init_service(
@@ -78,6 +82,10 @@ async fn test_objects_query_and_gcode_script() {
         file_manager: Arc::new(host_server::components::FileManager::new("/tmp/test_gcodes", "/tmp/test_config")),
         job_queue: Arc::new(host_server::components::JobQueue::new()),
         data_store: Arc::new(host_server::components::DataStore::new(600.0)),
+        machine_mgr: Arc::new(host_server::components::MachineManager::new()),
+        power_mgr: Arc::new(host_server::components::PowerManager::new()),
+        update_mgr: Arc::new(host_server::components::UpdateManager::new()),
+        spoolman: Arc::new(host_server::components::SpoolmanClient::new()),
     });
 
     let app = test::init_service(
