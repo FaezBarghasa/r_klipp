@@ -1,0 +1,150 @@
+import { Theme } from "../themes/material_dark.slint";
+import { BasePanel } from "../components/base_panel.slint";
+import { Button } from "std-widgets.slint";
+
+export component ZCalibratePanel inherits BasePanel {
+    title: "Z Calibrate";
+
+    in-out property <string> z-position: "Z: ?";
+    in-out property <string> saved-offset: "0.000";
+    in-out property <string> new-offset: "?";
+    in-out property <bool> is-calibrating: false;
+    in-out property <string> selected-command: "PROBE_CALIBRATE";
+    in-out property <string> move-distance: "0.1";
+    
+    in-out property <[string]> available-commands: ["PROBE_CALIBRATE", "Z_ENDSTOP_CALIBRATE", "BED_MESH_CALIBRATE METHOD=manual", "DELTA_CALIBRATE"];
+    in-out property <[string]> distances: ["0.01", "0.05", "0.1", "0.5", "1.0", "5.0"];
+
+    callback start-calibration(string);
+    callback move-nozzle(string, string); // direction (+/-), distance
+    callback accept-offset();
+    callback abort-calibration();
+    callback change-distance(string);
+    callback change-command(string);
+
+    HorizontalLayout {
+        padding: 15px;
+        spacing: 20px;
+
+        // Left controls (Command select and Start/Cancel)
+        VerticalLayout {
+            width: 250px;
+            spacing: 15px;
+
+            if !root.is-calibrating : VerticalLayout {
+                spacing: 10px;
+                Text { text: "Select Calibration:"; color: Theme.accent; font-weight: 700; }
+                
+                // Simplified command list selector
+                for cmd in root.available-commands : Rectangle {
+                    background: root.selected-command == cmd ? Theme.active : Theme.button-bg;
+                    border-radius: 4px;
+                    height: 40px;
+                    TouchArea { clicked => { root.change-command(cmd); root.selected-command = cmd; } }
+                    Text { text: cmd; color: Theme.text; vertical-alignment: center; horizontal-alignment: center; }
+                }
+
+                Button {
+                    text: "Start Calibration";
+                    clicked => { root.start-calibration(root.selected-command); }
+                }
+            }
+
+            if root.is-calibrating : VerticalLayout {
+                spacing: 15px;
+                
+                Button {
+                    text: "Accept / Save";
+                    clicked => { root.accept-offset(); }
+                }
+                
+                Rectangle {
+                    background: Theme.error;
+                    border-radius: 4px;
+                    height: 40px;
+                    TouchArea { clicked => { root.abort-calibration(); } }
+                    Text { text: "Abort"; color: Theme.bg; font-weight: 700; horizontal-alignment: center; vertical-alignment: center; }
+                }
+            }
+            
+            Rectangle { height: 100%; } // spacer
+        }
+
+        // Center / Right calibration controls (z offset adjustments)
+        VerticalLayout {
+            spacing: 15px;
+
+            Rectangle {
+                background: Theme.panel-bg;
+                border-radius: 5px;
+                padding: 15px;
+                
+                VerticalLayout {
+                    spacing: 10px;
+                    Text { text: "Status"; color: Theme.accent; font-size: 16px; }
+                    Text { text: root.z-position; font-size: 28px; color: Theme.text; horizontal-alignment: center; }
+                    
+                    HorizontalLayout {
+                        spacing: 15px;
+                        VerticalLayout {
+                            Text { text: "Saved Offset"; color: Theme.active; font-size: 12px; horizontal-alignment: center; }
+                            Text { text: root.saved-offset; color: Theme.text; font-size: 18px; horizontal-alignment: center; }
+                        }
+                        VerticalLayout {
+                            Text { text: "New Offset"; color: Theme.active; font-size: 12px; horizontal-alignment: center; }
+                            Text { text: root.new-offset; color: Theme.text; font-size: 18px; horizontal-alignment: center; }
+                        }
+                    }
+                }
+            }
+
+            // Adjustments (Up / Down)
+            if root.is-calibrating : VerticalLayout {
+                spacing: 15px;
+                
+                HorizontalLayout {
+                    spacing: 15px;
+                    height: 70px;
+                    
+                    Rectangle {
+                        background: Theme.button-bg;
+                        border-radius: 5px;
+                        TouchArea { clicked => { root.move-nozzle("+", root.move-distance); } }
+                        VerticalLayout {
+                            alignment: center;
+                            Text { text: "↑"; font-size: 24px; color: Theme.text; horizontal-alignment: center; }
+                            Text { text: "Raise Nozzle"; font-size: 12px; color: Theme.text; horizontal-alignment: center; }
+                        }
+                    }
+                    
+                    Rectangle {
+                        background: Theme.button-bg;
+                        border-radius: 5px;
+                        TouchArea { clicked => { root.move-nozzle("-", root.move-distance); } }
+                        VerticalLayout {
+                            alignment: center;
+                            Text { text: "↓"; font-size: 24px; color: Theme.text; horizontal-alignment: center; }
+                            Text { text: "Lower Nozzle"; font-size: 12px; color: Theme.text; horizontal-alignment: center; }
+                        }
+                    }
+                }
+
+                // Step sizes
+                VerticalLayout {
+                    spacing: 5px;
+                    Text { text: "Step Distance (mm)"; color: Theme.text; }
+                    HorizontalLayout {
+                        spacing: 5px;
+                        for dist in root.distances : Rectangle {
+                            background: root.move-distance == dist ? Theme.active : Theme.button-bg;
+                            border-radius: 4px;
+                            height: 40px;
+                            TouchArea { clicked => { root.change-distance(dist); root.move-distance = dist; } }
+                            Text { text: dist; color: Theme.text; horizontal-alignment: center; vertical-alignment: center; }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

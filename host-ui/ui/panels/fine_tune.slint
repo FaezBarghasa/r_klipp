@@ -1,0 +1,151 @@
+import { Theme } from "../themes/material_dark.slint";
+import { BasePanel } from "../components/base_panel.slint";
+import { Button } from "std-widgets.slint";
+
+export component FineTunePanel inherits BasePanel {
+    title: "Fine Tuning";
+
+    in-out property <float> z-offset: 0.0;
+    in-out property <float> z-delta: 0.05;
+    in-out property <[float]> z-deltas: [0.01, 0.05];
+
+    in-out property <int> speed-factor: 100;
+    in-out property <int> speed-delta: 25;
+    in-out property <[int]> speed-deltas: [5, 25];
+
+    in-out property <int> extrude-factor: 100;
+    in-out property <int> extrude-delta: 2;
+    in-out property <[int]> extrude-deltas: [1, 2];
+
+    callback change-z(string, float); // "+", "-", "reset", value
+    callback change-speed(string, int);
+    callback change-extrude(string, int);
+
+    HorizontalLayout {
+        padding: 15px;
+        spacing: 15px;
+
+        // Babystepping Column
+        VerticalLayout {
+            spacing: 10px;
+            
+            Rectangle {
+                background: Theme.panel-bg;
+                border-radius: 5px;
+                padding: 15px;
+                
+                VerticalLayout {
+                    spacing: 12px;
+                    alignment: center;
+                    
+                    Text { text: "Z-Offset / Babystep"; color: Theme.accent; font-size: 16px; horizontal-alignment: center; }
+                    Text { text: root.z-offset + " mm"; font-size: 24px; color: Theme.text; horizontal-alignment: center; }
+                    
+                    HorizontalLayout {
+                        spacing: 10px;
+                        Button { text: "-"; clicked => { root.change-z("-", root.z-delta); } }
+                        Button { text: "+"; clicked => { root.change-z("+", root.z-delta); } }
+                    }
+                    
+                    Button {
+                        text: "Reset Z";
+                        clicked => { root.change-z("reset", 0); }
+                    }
+                }
+            }
+            
+            HorizontalLayout {
+                spacing: 5px;
+                for d in root.z-deltas : Rectangle {
+                    background: root.z-delta == d ? Theme.active : Theme.button-bg;
+                    border-radius: 4px;
+                    height: 35px;
+                    TouchArea { clicked => { root.z-delta = d; } }
+                    Text { text: d; color: Theme.text; horizontal-alignment: center; vertical-alignment: center; }
+                }
+            }
+        }
+
+        // Speed Factor Column
+        VerticalLayout {
+            spacing: 10px;
+            
+            Rectangle {
+                background: Theme.panel-bg;
+                border-radius: 5px;
+                padding: 15px;
+                
+                VerticalLayout {
+                    spacing: 12px;
+                    alignment: center;
+                    
+                    Text { text: "Speed Factor"; color: Theme.accent; font-size: 16px; horizontal-alignment: center; }
+                    Text { text: root.speed-factor + "%"; font-size: 24px; color: Theme.text; horizontal-alignment: center; }
+                    
+                    HorizontalLayout {
+                        spacing: 10px;
+                        Button { text: "-"; clicked => { root.change-speed("-", root.speed-delta); } }
+                        Button { text: "+"; clicked => { root.change-speed("+", root.speed-delta); } }
+                    }
+                    
+                    Button {
+                        text: "Reset Speed";
+                        clicked => { root.change-speed("reset", 0); }
+                    }
+                }
+            }
+            
+            HorizontalLayout {
+                spacing: 5px;
+                for d in root.speed-deltas : Rectangle {
+                    background: root.speed-delta == d ? Theme.active : Theme.button-bg;
+                    border-radius: 4px;
+                    height: 35px;
+                    TouchArea { clicked => { root.speed-delta = d; } }
+                    Text { text: d + "%"; color: Theme.text; horizontal-alignment: center; vertical-alignment: center; }
+                }
+            }
+        }
+
+        // Flow / Extrusion Column
+        VerticalLayout {
+            spacing: 10px;
+            
+            Rectangle {
+                background: Theme.panel-bg;
+                border-radius: 5px;
+                padding: 15px;
+                
+                VerticalLayout {
+                    spacing: 12px;
+                    alignment: center;
+                    
+                    Text { text: "Flow Factor"; color: Theme.accent; font-size: 16px; horizontal-alignment: center; }
+                    Text { text: root.extrude-factor + "%"; font-size: 24px; color: Theme.text; horizontal-alignment: center; }
+                    
+                    HorizontalLayout {
+                        spacing: 10px;
+                        Button { text: "-"; clicked => { root.change-extrude("-", root.extrude-delta); } }
+                        Button { text: "+"; clicked => { root.change-extrude("+", root.extrude-delta); } }
+                    }
+                    
+                    Button {
+                        text: "Reset Flow";
+                        clicked => { root.change-extrude("reset", 0); }
+                    }
+                }
+            }
+            
+            HorizontalLayout {
+                spacing: 5px;
+                for d in root.extrude-deltas : Rectangle {
+                    background: root.extrude-delta == d ? Theme.active : Theme.button-bg;
+                    border-radius: 4px;
+                    height: 35px;
+                    TouchArea { clicked => { root.extrude-delta = d; } }
+                    Text { text: d + "%"; color: Theme.text; horizontal-alignment: center; vertical-alignment: center; }
+                }
+            }
+        }
+    }
+}

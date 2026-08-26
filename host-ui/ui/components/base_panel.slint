@@ -1,0 +1,74 @@
+import { Theme } from "../themes/material_dark.slint";
+import { Titlebar } from "titlebar.slint";
+
+export component ActionButton inherits Rectangle {
+    in-out property <string> icon;
+    callback clicked();
+
+    width: 60px;
+    height: 60px;
+    background: touch.pressed ? Theme.active : Theme.button-bg;
+    border-radius: 5px;
+    
+    touch := TouchArea {
+        clicked => { root.clicked(); }
+    }
+    
+    Text {
+        text: root.icon; // In a real app we'd use an Image with an actual icon
+        color: Theme.text;
+        font-size: 24px;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+}
+
+export component BasePanel inherits Rectangle {
+    in-out property <string> title: "Panel Title";
+    in-out property <string> time: "00:00 AM";
+    in-out property <bool> show-back: true;
+    in-out property <bool> show-home: true;
+    
+    callback back-clicked();
+    callback home-clicked();
+    callback estop-clicked();
+
+    background: Theme.bg;
+
+    VerticalLayout {
+        Titlebar {
+            title: root.title;
+            time: root.time;
+        }
+
+        HorizontalLayout {
+            // Main content area, uses remaining space
+            @children
+
+            // Action bar on the right side (like in landscape KlipperScreen)
+            VerticalLayout {
+                width: 70px;
+                padding: 5px;
+                spacing: 10px;
+                alignment: start;
+                
+                if root.show-back : ActionButton {
+                    icon: "←";
+                    clicked => { root.back-clicked(); }
+                }
+                
+                if root.show-home : ActionButton {
+                    icon: "⌂";
+                    clicked => { root.home-clicked(); }
+                }
+
+                Rectangle { height: 100%; } // spacer
+                
+                ActionButton {
+                    icon: "⚠"; // estop
+                    clicked => { root.estop-clicked(); }
+                }
+            }
+        }
+    }
+}

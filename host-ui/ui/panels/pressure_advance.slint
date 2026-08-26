@@ -1,0 +1,132 @@
+import { Theme } from "../themes/material_dark.slint";
+import { BasePanel } from "../components/base_panel.slint";
+import { Button, Slider } from "std-widgets.slint";
+
+export component PressureAdvancePanel inherits BasePanel {
+    title: "Pressure Advance";
+
+    in-out property <string> current-extruder: "extruder0";
+    in-out property <float> pressure-advance: 0.05;
+    in-out property <float> smooth-time: 0.04;
+
+    callback pa-changed(float);
+    callback smooth-time-changed(float);
+    callback reset-pa();
+    callback reset-smooth-time();
+
+    VerticalLayout {
+        padding: 15px;
+        spacing: 15px;
+
+        // Current extruder display
+        Rectangle {
+            background: Theme.panel-bg;
+            border-radius: 5px;
+            height: 50px;
+            
+            HorizontalLayout {
+                padding-left: 15px;
+                padding-right: 15px;
+                alignment: space-between;
+                Text { text: "Active Extruder:"; color: Theme.text; vertical-alignment: center; }
+                Text { text: root.current-extruder; color: Theme.accent; font-weight: 700; vertical-alignment: center; }
+            }
+        }
+
+        // Pressure Advance Option
+        Rectangle {
+            background: Theme.panel-bg;
+            border-radius: 5px;
+            height: 100px;
+            
+            HorizontalLayout {
+                padding: 15px;
+                spacing: 15px;
+                alignment: space-between;
+
+                VerticalLayout {
+                    width: 250px;
+                    alignment: center;
+                    Text {
+                        text: "Pressure Advance (mm)";
+                        font-size: 16px;
+                        color: Theme.text;
+                        font-weight: 700;
+                    }
+                    Text {
+                        text: root.pressure-advance;
+                        font-size: 18px;
+                        color: Theme.accent;
+                    }
+                }
+
+                HorizontalLayout {
+                    spacing: 10px;
+                    alignment: end;
+                    
+                    Slider {
+                        minimum: 0.0;
+                        maximum: 1.0;
+                        value: root.pressure-advance;
+                        width: 250px;
+                        changed(val) => { root.pressure-advance = val; root.pa-changed(val); }
+                    }
+
+                    Button {
+                        text: "Reset";
+                        clicked => { root.reset-pa(); }
+                    }
+                }
+            }
+        }
+
+        // Smooth Time Option
+        Rectangle {
+            background: Theme.panel-bg;
+            border-radius: 5px;
+            height: 100px;
+            
+            HorizontalLayout {
+                padding: 15px;
+                spacing: 15px;
+                alignment: space-between;
+
+                VerticalLayout {
+                    width: 250px;
+                    alignment: center;
+                    Text {
+                        text: "Smooth Time (s)";
+                        font-size: 16px;
+                        color: Theme.text;
+                        font-weight: 700;
+                    }
+                    Text {
+                        text: root.smooth-time;
+                        font-size: 18px;
+                        color: Theme.accent;
+                    }
+                }
+
+                HorizontalLayout {
+                    spacing: 10px;
+                    alignment: end;
+                    
+                    Slider {
+                        minimum: 0.0;
+                        maximum: 0.2;
+                        value: root.smooth-time;
+                        width: 250px;
+                        changed(val) => { root.smooth-time = val; root.smooth-time-changed(val); }
+                    }
+
+                    Button {
+                        text: "Reset";
+                        clicked => { root.reset-smooth-time(); }
+                    }
+                }
+            }
+        }
+        
+        Rectangle { height: 100%; } // spacer
+    }
+}

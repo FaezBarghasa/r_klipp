@@ -1,0 +1,80 @@
+import { Theme } from "../themes/material_dark.slint";
+import { BasePanel } from "../components/base_panel.slint";
+import { Button, Slider } from "std-widgets.slint";
+
+export struct RetractionOption {
+    name: string,
+    key: string,
+    units: string,
+    value: float,
+    default-value: float,
+    min: float,
+    max: float,
+}
+
+export component RetractionPanel inherits BasePanel {
+    title: "Retraction";
+
+    in-out property <[RetractionOption]> options: [
+        { name: "Retraction Length", key: "retract_length", units: "mm", value: 0.8, default-value: 0.8, min: 0.0, max: 10.0 },
+        { name: "Retraction Speed", key: "retract_speed", units: "mm/s", value: 30.0, default-value: 30.0, min: 1.0, max: 100.0 },
+        { name: "Unretract Extra Length", key: "unretract_extra_length", units: "mm", value: 0.0, default-value: 0.0, min: 0.0, max: 10.0 },
+        { name: "Unretract Speed", key: "unretract_speed", units: "mm/s", value: 30.0, default-value: 30.0, min: 1.0, max: 100.0 }
+    ];
+
+    callback retract-changed(string, float);
+    callback reset-retract(string);
+
+    VerticalLayout {
+        padding: 15px;
+        spacing: 15px;
+
+        for opt in root.options : Rectangle {
+            background: Theme.panel-bg;
+            border-radius: 5px;
+            height: 90px;
+            
+            HorizontalLayout {
+                padding: 12px;
+                spacing: 15px;
+                alignment: space-between;
+
+                VerticalLayout {
+                    width: 250px;
+                    alignment: center;
+                    Text {
+                        text: opt.name + " (" + opt.units + ")";
+                        font-size: 16px;
+                        color: Theme.text;
+                        font-weight: 700;
+                    }
+                    Text {
+                        text: Math.round(opt.value * 100) / 100;
+                        font-size: 18px;
+                        color: Theme.accent;
+                    }
+                }
+
+                HorizontalLayout {
+                    spacing: 10px;
+                    alignment: end;
+                    
+                    Slider {
+                        minimum: opt.min;
+                        maximum: opt.max;
+                        value: opt.value;
+                        width: 250px;
+                        changed(val) => { root.retract-changed(opt.key, val); }
+                    }
+
+                    Button {
+                        text: "Reset";
+                        clicked => { root.reset-retract(opt.key); }
+                    }
+                }
+            }
+        }
+        
+        Rectangle { height: 100%; } // spacer
+    }
+}

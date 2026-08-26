@@ -1,0 +1,189 @@
+import { Theme } from "../themes/material_dark.slint";
+import { BasePanel } from "../components/base_panel.slint";
+import { Button, ScrollView } from "std-widgets.slint";
+
+export component SettingsPanel inherits BasePanel {
+    title: "Settings";
+
+    in-out property <string> current-view: "main"; // "main", "printers", "languages"
+    in-out property <bool> use-dpms: true;
+    in-out property <bool> use-24h: true;
+    in-out property <string> selected-lang: "English";
+    in-out property <string> selected-printer: "Ender 3";
+
+    in-out property <[string]> printers: ["Ender 3", "Voron 2.4", "Prusa Mini"];
+    in-out property <[string]> languages: ["English", "Deutsch", "Français", "Español", "中文"];
+
+    callback toggle-dpms(bool);
+    callback toggle-24h(bool);
+    callback select-printer(string);
+    callback select-language(string);
+
+    HorizontalLayout {
+        padding: 15px;
+        spacing: 20px;
+
+        // Settings Category Navigation
+        if root.current-view == "main" : ScrollView {
+            VerticalLayout {
+                spacing: 12px;
+
+                // General Settings Row
+                Rectangle {
+                    background: Theme.panel-bg;
+                    border-radius: 5px;
+                    height: 60px;
+                    HorizontalLayout {
+                        padding-left: 15px;
+                        padding-right: 15px;
+                        alignment: space-between;
+                        Text { text: "Screen Blanking (DPMS)"; color: Theme.text; vertical-alignment: center; font-size: 16px; font-weight: 700; }
+                        // Switch simulator
+                        VerticalLayout {
+                            alignment: center;
+                            Rectangle {
+                                width: 60px;
+                                height: 30px;
+                                background: root.use-dpms ? Theme.active : Theme.button-bg;
+                                border-radius: 15px;
+                                TouchArea { clicked => { root.use-dpms = !root.use-dpms; root.toggle-dpms(root.use-dpms); } }
+                                Rectangle {
+                                    x: root.use-dpms ? 32px : 2px;
+                                    y: 2px;
+                                    width: 26px;
+                                    height: 26px;
+                                    background: Theme.text;
+                                    border-radius: 13px;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 24 Hour Time Row
+                Rectangle {
+                    background: Theme.panel-bg;
+                    border-radius: 5px;
+                    height: 60px;
+                    HorizontalLayout {
+                        padding-left: 15px;
+                        padding-right: 15px;
+                        alignment: space-between;
+                        Text { text: "24-Hour Time Format"; color: Theme.text; vertical-alignment: center; font-size: 16px; font-weight: 700; }
+                        // Switch simulator
+                        VerticalLayout {
+                            alignment: center;
+                            Rectangle {
+                                width: 60px;
+                                height: 30px;
+                                background: root.use-24h ? Theme.active : Theme.button-bg;
+                                border-radius: 15px;
+                                TouchArea { clicked => { root.use-24h = !root.use-24h; root.toggle-24h(root.use-24h); } }
+                                Rectangle {
+                                    x: root.use-24h ? 32px : 2px;
+                                    y: 2px;
+                                    width: 26px;
+                                    height: 26px;
+                                    background: Theme.text;
+                                    border-radius: 13px;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Printer Connections Row
+                Rectangle {
+                    background: Theme.panel-bg;
+                    border-radius: 5px;
+                    height: 60px;
+                    TouchArea { clicked => { root.current-view = "printers"; } }
+                    HorizontalLayout {
+                        padding-left: 15px;
+                        padding-right: 15px;
+                        alignment: space-between;
+                        VerticalLayout {
+                            alignment: center;
+                            Text { text: "Printer Connections"; color: Theme.text; font-size: 16px; font-weight: 700; }
+                            Text { text: "Active: " + root.selected-printer; color: Theme.accent; font-size: 12px; }
+                        }
+                        Text { text: "➔"; color: Theme.active; vertical-alignment: center; font-size: 20px; }
+                    }
+                }
+
+                // Language Selection Row
+                Rectangle {
+                    background: Theme.panel-bg;
+                    border-radius: 5px;
+                    height: 60px;
+                    TouchArea { clicked => { root.current-view = "languages"; } }
+                    HorizontalLayout {
+                        padding-left: 15px;
+                        padding-right: 15px;
+                        alignment: space-between;
+                        VerticalLayout {
+                            alignment: center;
+                            Text { text: "Language"; color: Theme.text; font-size: 16px; font-weight: 700; }
+                            Text { text: root.selected-lang; color: Theme.accent; font-size: 12px; }
+                        }
+                        Text { text: "➔"; color: Theme.active; vertical-alignment: center; font-size: 20px; }
+                    }
+                }
+            }
+        }
+
+        // Sub-View: Printers
+        if root.current-view == "printers" : VerticalLayout {
+            spacing: 15px;
+            HorizontalLayout {
+                alignment: space-between;
+                Text { text: "Printer Connections"; color: Theme.accent; font-size: 18px; font-weight: 700; }
+                Button { text: "Back"; clicked => { root.current-view = "main"; } }
+            }
+            ScrollView {
+                VerticalLayout {
+                    spacing: 10px;
+                    for printer in root.printers : Rectangle {
+                        background: root.selected-printer == printer ? Theme.active : Theme.panel-bg;
+                        border-radius: 5px;
+                        height: 50px;
+                        TouchArea { clicked => { root.selected-printer = printer; root.select-printer(printer); } }
+                        HorizontalLayout {
+                            padding-left: 15px;
+                            padding-right: 15px;
+                            Text { text: printer; color: Theme.text; vertical-alignment: center; font-weight: 700; }
+                            if root.selected-printer == printer : Text { text: "✓"; color: Theme.accent; vertical-alignment: center; }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Sub-View: Languages
+        if root.current-view == "languages" : VerticalLayout {
+            spacing: 15px;
+            HorizontalLayout {
+                alignment: space-between;
+                Text { text: "Select Language"; color: Theme.accent; font-size: 18px; font-weight: 700; }
+                Button { text: "Back"; clicked => { root.current-view = "main"; } }
+            }
+            ScrollView {
+                VerticalLayout {
+                    spacing: 10px;
+                    for lang in root.languages : Rectangle {
+                        background: root.selected-lang == lang ? Theme.active : Theme.panel-bg;
+                        border-radius: 5px;
+                        height: 50px;
+                        TouchArea { clicked => { root.selected-lang = lang; root.select-language(lang); } }
+                        HorizontalLayout {
+                            padding-left: 15px;
+                            padding-right: 15px;
+                            Text { text: lang; color: Theme.text; vertical-alignment: center; font-weight: 700; }
+                            if root.selected-lang == lang : Text { text: "✓"; color: Theme.accent; vertical-alignment: center; }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

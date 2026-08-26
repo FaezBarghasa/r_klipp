@@ -1,0 +1,93 @@
+import { Button, ScrollView, LineEdit } from "std-widgets.slint";
+import { Theme } from "../themes/material_dark.slint";
+import { L10n } from "./temperature.slint";
+import { ConsoleLine } from "../types.slint";
+
+component KeyButton inherits Rectangle {
+    in-out property <string> label;
+    callback clicked(string);
+
+    background: touch.pressed ? Theme.active : Theme.button-bg;
+    border-radius: 4px;
+    border-width: 1px;
+    border-color: Theme.active;
+
+    touch := TouchArea {
+        clicked => { root.clicked(root.label); }
+    }
+
+    Text {
+        text: root.label;
+        color: Theme.text;
+        font-size: 18px;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+}
+
+export component ConsolePanel inherits VerticalLayout {
+    in-out property <[ConsoleLine]> console-lines;
+    in-out property <string> temp-input-buffer: "";
+
+    callback send-gcode(string);
+    callback estop-clicked;
+
+    padding: 8px;
+    spacing: 8px;
+
+    ScrollView {
+        height: 250px;
+        VerticalLayout {
+            spacing: 4px;
+            for line in root.console-lines : HorizontalLayout {
+                Text {
+                    text: line.text;
+                    color: line.is-input ? Theme.accent : Theme.text;
+                    font-family: "monospace";
+                    font-size: 12px;
+                    wrap: word-wrap;
+                }
+            }
+        }
+    }
+
+    // Input and Keyboard trigger
+    HorizontalLayout {
+        spacing: 8px;
+        height: 40px;
+        Rectangle {
+            background: Theme.panel-bg;
+            border-width: 1px;
+            border-color: Theme.accent;
+            border-radius: 4px;
+            HorizontalLayout {
+                padding-left: 8px;
+                Text {
+                    text: root.temp-input-buffer == "" ? L10n.translate("Type G-code command...") : root.temp-input-buffer;
+                    color: root.temp-input-buffer == "" ? Theme.active : Theme.text;
+                    vertical-alignment: center;
+                    font-family: "monospace";
+                }
+            }
+        }
+        Button {
+            text: L10n.translate("Send");
+            clicked => {
+                if (root.temp-input-buffer != "") {
+                    root.send-gcode(root.temp-input-buffer);
+                    root.temp-input-buffer = "";
+                }
+            }
+        }
+    }
+
+    // Simple Virtual Keyboard for console
+    HorizontalLayout {
+        spacing: 4px;
+        KeyButton { label: "G28"; clicked(k) => { root.send-gcode(k); } }
+        KeyButton { label: "G28 X0"; clicked(k) => { root.send-gcode(k); } }
+        KeyButton { label: "M105"; clicked(k) => { root.send-gcode(k); } }
+        KeyButton { label: "M112"; clicked(k) => { root.estop-clicked(); } }
+        KeyButton { label: "M84"; clicked(k) => { root.send-gcode(k); } }
+    }
+}

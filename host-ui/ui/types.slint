@@ -1,0 +1,116 @@
+// ─── Types shared across all panels ──────────────────────────────────────────
+
+export struct MenuItemInfo {
+    name: string,
+    icon_name: string,
+    icon: image,
+    panel_name: string,
+    is_submenu: bool,
+}
+
+export struct GCodeFileInfo {
+    name: string,
+    is_dir: bool,
+    size: string,
+    thumbnail: image,
+}
+
+export struct ConsoleLine {
+    text: string,
+    is_input: bool,
+}
+
+export struct ThermalSensor {
+    name: string,
+    actual: float,
+    target: float,
+    power: float,
+}
+
+export struct TemperaturePreset {
+    label: string,
+    nozzle: float,
+    bed: float,
+}
+
+export struct FanEntry {
+    name: string,
+    speed: float,
+    controllable: bool,
+}
+
+export struct MacroEntry {
+    name: string,
+    description: string,
+    visible: bool,
+}
+
+export struct BedMeshPoint {
+    col: int,
+    row: int,
+    value: float,
+}
+
+export struct WifiNetwork {
+    ssid: string,
+    bssid: string,
+    signal: int,
+    connected: bool,
+    known: bool,
+    security: string,
+}
+
+export struct PowerDevice {
+    name: string,
+    status: string,   // "on" | "off" | "unknown"
+}
+
+export struct PackageInfo {
+    name: string,
+    version: string,
+    up_to_date: bool,
+    can_restart: bool,
+}
+
+export struct SpoolInfo {
+    id: int,
+    name: string,
+    material: string,
+    weight_g: float,
+    used_g: float,
+    color: color,
+}
+
+export struct AxisPosition {
+    x: float,
+    y: float,
+    z: float,
+    e: float,
+    homed_axes: string,
+}
+
+export struct PrintStats {
+    filename: string,
+    state: string,
+    progress: float,
+    print_duration_sec: int,
+    filament_used_mm: float,
+    layer_current: int,
+    layer_total: int,
+    speed_factor: float,
+    extrude_factor: float,
+}
+
+export struct SystemInfo {
+    hostname: string,
+    ip_address: string,
+    cpu_usage: float,
+    cpu_cores: [float],
+    memory_usage: float,
+    memory_text: string,
+    date_time: string,
+    os_version: string,
+    kernel_version: string,
+    klipper_version: string,
+    moonraker_version: string,
+}

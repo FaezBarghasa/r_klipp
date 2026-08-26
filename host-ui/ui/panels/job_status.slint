@@ -1,0 +1,114 @@
+import { Theme } from "../themes/material_dark.slint";
+import { BasePanel } from "../components/base_panel.slint";
+
+export component JobStatusPanel inherits BasePanel {
+    title: "Job Status";
+    
+    in-out property <string> filename: "No file selected";
+    in-out property <float> progress: 0.0;
+    in-out property <string> time-elapsed: "00:00:00";
+    in-out property <string> time-remaining: "00:00:00";
+    in-out property <string> status: "Ready";
+    in-out property <string> layer-info: "0 / 0";
+    
+    callback pause-job();
+    callback resume-job();
+    callback cancel-job();
+
+    VerticalLayout {
+        padding: 20px;
+        spacing: 20px;
+        
+        // Status & File Info
+        Rectangle {
+            background: Theme.panel-bg;
+            border-radius: 5px;
+            padding: 15px;
+            
+            VerticalLayout {
+                spacing: 10px;
+                Text { text: root.status; font-size: 24px; color: Theme.accent; horizontal-alignment: center; }
+                Text { text: root.filename; font-size: 18px; color: Theme.text; horizontal-alignment: center; }
+            }
+        }
+        
+        // Progress Bar & Stats
+        Rectangle {
+            background: Theme.panel-bg;
+            border-radius: 5px;
+            padding: 20px;
+            
+            VerticalLayout {
+                spacing: 20px;
+                
+                // Progress Bar Background
+                Rectangle {
+                    height: 30px;
+                    background: Theme.button-bg;
+                    border-radius: 15px;
+                    
+                    // Progress Fill
+                    Rectangle {
+                        x: 0;
+                        width: parent.width * root.progress;
+                        background: Theme.accent;
+                        border-radius: 15px;
+                    }
+                    
+                    Text {
+                        text: Math.round(root.progress * 100) + "%";
+                        color: root.progress > 0.5 ? Theme.bg : Theme.text;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+                
+                HorizontalLayout {
+                    alignment: space-between;
+                    
+                    VerticalLayout {
+                        Text { text: "Elapsed"; color: Theme.active; font-size: 14px; }
+                        Text { text: root.time-elapsed; color: Theme.text; font-size: 20px; }
+                    }
+                    
+                    VerticalLayout {
+                        Text { text: "Layer"; color: Theme.active; font-size: 14px; horizontal-alignment: center; }
+                        Text { text: root.layer-info; color: Theme.text; font-size: 20px; horizontal-alignment: center; }
+                    }
+                    
+                    VerticalLayout {
+                        Text { text: "Remaining"; color: Theme.active; font-size: 14px; horizontal-alignment: right; }
+                        Text { text: root.time-remaining; color: Theme.text; font-size: 20px; horizontal-alignment: right; }
+                    }
+                }
+            }
+        }
+        
+        // Controls
+        HorizontalLayout {
+            spacing: 20px;
+            height: 60px;
+            
+            Rectangle {
+                background: Theme.warning;
+                border-radius: 5px;
+                TouchArea { clicked => { root.pause-job(); } }
+                Text { text: "Pause"; color: Theme.bg; font-size: 20px; horizontal-alignment: center; vertical-alignment: center; }
+            }
+            
+            Rectangle {
+                background: Theme.echo; // Green-ish
+                border-radius: 5px;
+                TouchArea { clicked => { root.resume-job(); } }
+                Text { text: "Resume"; color: Theme.bg; font-size: 20px; horizontal-alignment: center; vertical-alignment: center; }
+            }
+            
+            Rectangle {
+                background: Theme.error;
+                border-radius: 5px;
+                TouchArea { clicked => { root.cancel-job(); } }
+                Text { text: "Cancel"; color: Theme.bg; font-size: 20px; horizontal-alignment: center; vertical-alignment: center; }
+            }
+        }
+    }
+}

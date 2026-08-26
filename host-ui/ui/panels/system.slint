@@ -1,0 +1,128 @@
+import { Theme } from "../themes/material_dark.slint";
+import { BasePanel } from "../components/base_panel.slint";
+import { ScrollView } from "std-widgets.slint";
+
+export component SystemPanel inherits BasePanel {
+    title: "System Info";
+
+    in-out property <float> cpu-usage: 0.25;
+    in-out property <[float]> cpu-cores: [0.2, 0.3, 0.1, 0.4];
+    in-out property <float> memory-usage: 0.55;
+    in-out property <string> memory-text: "2.2 GB / 4.0 GB";
+    
+    in-out property <string> date-time: "Thu Jun 11 03:53:00 EDT 2026";
+    in-out property <string> backend: "XServer";
+    in-out property <string> hostname: "klipper-host";
+    in-out property <string> os-version: "Debian GNU/Linux 11 (bullseye)";
+    in-out property <string> kernel-version: "5.10.0-18-amd64";
+    in-out property <string> python-version: "3.9.2";
+
+    ScrollView {
+        padding: 15px;
+        
+        VerticalLayout {
+            spacing: 15px;
+
+            // System Load (CPU & RAM)
+            Rectangle {
+                background: Theme.panel-bg;
+                border-radius: 5px;
+                padding: 15px;
+                
+                VerticalLayout {
+                    spacing: 10px;
+                    Text { text: "System Load"; color: Theme.accent; font-size: 16px; font-weight: 700; }
+                    
+                    // Overall CPU
+                    VerticalLayout {
+                        spacing: 4px;
+                        HorizontalLayout {
+                            alignment: space-between;
+                            Text { text: "Total CPU Usage"; color: Theme.text; }
+                            Text { text: Math.round(root.cpu-usage * 100) + "%"; color: Theme.text; }
+                        }
+                        Rectangle {
+                            background: Theme.button-bg;
+                            border-radius: 3px;
+                            height: 12px;
+                            Rectangle { x: 0; width: parent.width * root.cpu-usage; background: Theme.accent; border-radius: 3px; }
+                        }
+                    }
+
+                    // CPU Cores
+                    GridLayout {
+                        spacing: 8px;
+                        Row {
+                            for core-load[idx] in root.cpu-cores : VerticalLayout {
+                                spacing: 4px;
+                                HorizontalLayout {
+                                    alignment: space-between;
+                                    Text { text: "Core " + idx; color: Theme.text; font-size: 11px; }
+                                    Text { text: Math.round(core-load * 100) + "%"; color: Theme.text; font-size: 11px; }
+                                }
+                                Rectangle {
+                                    background: Theme.button-bg;
+                                    border-radius: 2px;
+                                    height: 8px;
+                                    Rectangle { x: 0; width: parent.width * core-load; background: Theme.active; border-radius: 2px; }
+                                }
+                            }
+                        }
+                    }
+
+                    // Memory
+                    VerticalLayout {
+                        spacing: 4px;
+                        HorizontalLayout {
+                            alignment: space-between;
+                            Text { text: "Memory Usage"; color: Theme.text; }
+                            Text { text: root.memory-text + " (" + Math.round(root.memory-usage * 100) + "%)"; color: Theme.text; }
+                        }
+                        Rectangle {
+                            background: Theme.button-bg;
+                            border-radius: 3px;
+                            height: 12px;
+                            Rectangle { x: 0; width: parent.width * root.memory-usage; background: Theme.accent; border-radius: 3px; }
+                        }
+                    }
+                }
+            }
+
+            // Software & Hardware Details
+            Rectangle {
+                background: Theme.panel-bg;
+                border-radius: 5px;
+                padding: 15px;
+                
+                GridLayout {
+                    spacing: 12px;
+                    
+                    Row {
+                        Text { text: "Host Date/Time:"; color: Theme.active; font-weight: 700; }
+                        Text { text: root.date-time; color: Theme.text; }
+                    }
+                    Row {
+                        Text { text: "Display Backend:"; color: Theme.active; font-weight: 700; }
+                        Text { text: root.backend; color: Theme.text; }
+                    }
+                    Row {
+                        Text { text: "Hostname:"; color: Theme.active; font-weight: 700; }
+                        Text { text: root.hostname; color: Theme.text; }
+                    }
+                    Row {
+                        Text { text: "OS Version:"; color: Theme.active; font-weight: 700; }
+                        Text { text: root.os-version; color: Theme.text; }
+                    }
+                    Row {
+                        Text { text: "Kernel Version:"; color: Theme.active; font-weight: 700; }
+                        Text { text: root.kernel-version; color: Theme.text; }
+                    }
+                    Row {
+                        Text { text: "Python Version:"; color: Theme.active; font-weight: 700; }
+                        Text { text: root.python-version; color: Theme.text; }
+                    }
+                }
+            }
+        }
+    }
+}

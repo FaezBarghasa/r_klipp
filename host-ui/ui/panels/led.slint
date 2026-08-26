@@ -1,0 +1,182 @@
+import { Theme } from "../themes/material_dark.slint";
+import { BasePanel } from "../components/base_panel.slint";
+import { Slider, Button } from "std-widgets.slint";
+
+export struct LedPreset {
+    name: string,
+    r: float,
+    g: float,
+    b: float,
+    w: float,
+}
+
+export component LedPanel inherits BasePanel {
+    title: "LED Control";
+
+    in-out property <string> selected-led: "logo_leds";
+    in-out property <[string]> led-strips: ["logo_leds", "nozzle_leds", "case_lights"];
+    in-out property <bool> has-multiple-strips: true;
+    in-out property <bool> is-strip-selected: false;
+
+    // Color channels (0.0 to 1.0)
+    in-out property <float> r-channel: 1.0;
+    in-out property <float> g-channel: 0.5;
+    in-out property <float> b-channel: 0.0;
+    in-out property <float> w-channel: 0.0;
+    in-out property <bool> has-white-channel: true;
+
+    in-out property <[LedPreset]> presets: [
+        { name: "Off", r: 0.0, g: 0.0, b: 0.0, w: 0.0 },
+        { name: "White", r: 1.0, g: 1.0, b: 1.0, w: 1.0 },
+        { name: "Red", r: 1.0, g: 0.0, b: 0.0, w: 0.0 },
+        { name: "Green", r: 0.0, g: 1.0, b: 0.0, w: 0.0 },
+        { name: "Blue", r: 0.0, g: 0.0, b: 1.0, w: 0.0 }
+    ];
+
+    callback select-led-strip(string);
+    callback color-changed(float, float, float, float); // r,g,b,w
+    callback apply-preset(string);
+
+    HorizontalLayout {
+        padding: 15px;
+        spacing: 20px;
+
+        // Strip Selector View (if not selected yet)
+        if root.has-multiple-strips && !root.is-strip-selected : VerticalLayout {
+            spacing: 10px;
+            Text { text: "Select LED strip to edit:"; color: Theme.accent; font-weight: 700; }
+            for strip in root.led-strips : Rectangle {
+                background: Theme.panel-bg;
+                border-radius: 5px;
+                height: 50px;
+                TouchArea { clicked => { root.selected-led = strip; root.is-strip-selected = true; root.select-led-strip(strip); } }
+                HorizontalLayout {
+                    padding-left: 15px;
+                    padding-right: 15px;
+                    Text { text: strip; color: Theme.text; vertical-alignment: center; font-weight: 700; }
+                    Text { text: "➔"; color: Theme.active; vertical-alignment: center; }
+                }
+            }
+        }
+
+        // Color editor View (if strip selected or only one strip)
+        if !root.has-multiple-strips || root.is-strip-selected : HorizontalLayout {
+            spacing: 20px;
+
+            // Colors Sliders
+            VerticalLayout {
+                spacing: 12px;
+                width: 320px;
+                
+                if root.has-multiple-strips : HorizontalLayout {
+                    alignment: space-between;
+                    Text { text: "Editing: " + root.selected-led; color: Theme.accent; font-weight: 700; }
+                    Button { text: "Strips"; clicked => { root.is-strip-selected = false; } }
+                }
+
+                // Red
+                HorizontalLayout {
+                    spacing: 10px;
+                    Text { text: "Red"; color: #ff5252; width: 45px; vertical-alignment: center; font-weight: 700; }
+                    Slider {
+                        minimum: 0.0;
+                        maximum: 1.0;
+                        value: root.r-channel;
+                        changed(val) => { root.r-channel = val; root.color-changed(val, root.g-channel, root.b-channel, root.w-channel); }
+                    }
+                    Text { text: Math.round(root.r-channel * 255); color: Theme.text; width: 30px; vertical-alignment: center; }
+                }
+
+                // Green
+                HorizontalLayout {
+                    spacing: 10px;
+                    Text { text: "Green"; color: #4caf50; width: 45px; vertical-alignment: center; font-weight: 700; }
+                    Slider {
+                        minimum: 0.0;
+                        maximum: 1.0;
+                        value: root.g-channel;
+                        changed(val) => { root.g-channel = val; root.color-changed(root.r-channel, val, root.b-channel, root.w-channel); }
+                    }
+                    Text { text: Math.round(root.g-channel * 255); color: Theme.text; width: 30px; vertical-alignment: center; }
+                }
+
+                // Blue
+                HorizontalLayout {
+                    spacing: 10px;
+                    Text { text: "Blue"; color: #2196f3; width: 45px; vertical-alignment: center; font-weight: 700; }
+                    Slider {
+                        minimum: 0.0;
+                        maximum: 1.0;
+                        value: root.b-channel;
+                        changed(val) => { root.b-channel = val; root.color-changed(root.r-channel, root.g-channel, val, root.w-channel); }
+                    }
+                    Text { text: Math.round(root.b-channel * 255); color: Theme.text; width: 30px; vertical-alignment: center; }
+                }
+
+                // White
+                if root.has-white-channel : HorizontalLayout {
+                    spacing: 10px;
+                    Text { text: "White"; color: Theme.text; width: 45px; vertical-alignment: center; font-weight: 700; }
+                    Slider {
+                        minimum: 0.0;
+                        maximum: 1.0;
+                        value: root.w-channel;
+                        changed(val) => { root.w-channel = val; root.color-changed(root.r-channel, root.g-channel, root.b-channel, val); }
+                    }
+                    Text { text: Math.round(root.w-channel * 255); color: Theme.text; width: 30px; vertical-alignment: center; }
+                }
+            }
+
+            // Preview & Presets Column
+            VerticalLayout {
+                spacing: 15px;
+                
+                // Color Preview Box
+                Rectangle {
+                    background: rgb(
+                        Math.round(root.r-channel * 255), 
+                        Math.round(root.g-channel * 255), 
+                        Math.round(root.b-channel * 255)
+                    );
+                    border-radius: 5px;
+                    height: 60px;
+                    
+                    Text {
+                        text: "Preview Color";
+                        color: (root.r-channel + root.g-channel + root.b-channel) > 1.5 ? #000000 : #ffffff;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                        font-weight: 700;
+                    }
+                }
+
+                // Presets Grid
+                VerticalLayout {
+                    spacing: 8px;
+                    Text { text: "Presets"; color: Theme.text; font-size: 14px; font-weight: 700; }
+                    
+                    GridLayout {
+                        spacing: 8px;
+                        Row {
+                            for preset in root.presets : Rectangle {
+                                background: Theme.button-bg;
+                                border-radius: 4px;
+                                height: 40px;
+                                TouchArea {
+                                    clicked => {
+                                        root.r-channel = preset.r;
+                                        root.g-channel = preset.g;
+                                        root.b-channel = preset.b;
+                                        root.w-channel = preset.w;
+                                        root.apply-preset(preset.name);
+                                    }
+                                }
+                                Text { text: preset.name; color: Theme.text; horizontal-alignment: center; vertical-alignment: center; font-size: 12px; }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

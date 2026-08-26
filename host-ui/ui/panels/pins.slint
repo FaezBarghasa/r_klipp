@@ -1,0 +1,111 @@
+import { Theme } from "../themes/material_dark.slint";
+import { BasePanel } from "../components/base_panel.slint";
+import { Button, Slider, ScrollView } from "std-widgets.slint";
+
+export struct PinDevice {
+    name: string,
+    value: float, // 0.0 to 1.0
+    pwm: bool,
+}
+
+export component PinsPanel inherits BasePanel {
+    title: "Pins Control";
+
+    in-out property <[PinDevice]> pins: [
+        { name: "LED Light", value: 0.8, pwm: true },
+        { name: "Chamber Light", value: 0.0, pwm: false },
+        { name: "Exhaust Fan", value: 0.5, pwm: true }
+    ];
+
+    callback pin-changed(string, float);
+
+    ScrollView {
+        padding: 15px;
+        
+        VerticalLayout {
+            spacing: 15px;
+
+            for pin in root.pins : Rectangle {
+                background: Theme.panel-bg;
+                border-radius: 5px;
+                height: 90px;
+                
+                HorizontalLayout {
+                    padding: 15px;
+                    spacing: 15px;
+                    alignment: space-between;
+
+                    VerticalLayout {
+                        alignment: center;
+                        spacing: 5px;
+                        Text {
+                            text: pin.name;
+                            font-size: 18px;
+                            color: Theme.text;
+                            font-weight: 700;
+                        }
+                        if pin.pwm : Text {
+                            text: Math.round(pin.value * 100) + "%";
+                            font-size: 14px;
+                            color: Theme.accent;
+                        }
+                        if !pin.pwm : Text {
+                            text: pin.value > 0.5 ? "ON" : "OFF";
+                            font-size: 14px;
+                            color: pin.value > 0.5 ? Theme.echo : Theme.error;
+                        }
+                    }
+
+                    if pin.pwm : HorizontalLayout {
+                        spacing: 10px;
+                        alignment: end;
+                        
+                        Button {
+                            text: "Off";
+                            clicked => { root.pin-changed(pin.name, 0.0); }
+                        }
+                        
+                        Slider {
+                            width: 200px;
+                            minimum: 0.0;
+                            maximum: 1.0;
+                            value: pin.value;
+                            changed(val) => { root.pin-changed(pin.name, val); }
+                        }
+
+                        Button {
+                            text: "100%";
+                            clicked => { root.pin-changed(pin.name, 1.0); }
+                        }
+                    }
+
+                    if !pin.pwm : HorizontalLayout {
+                        alignment: end;
+                        // Simple Switch simulation in Slint
+                        Rectangle {
+                            width: 60px;
+                            height: 30px;
+                            background: pin.value > 0.5 ? Theme.active : Theme.button-bg;
+                            border-radius: 15px;
+                            
+                            TouchArea {
+                                clicked => {
+                                    root.pin-changed(pin.name, pin.value > 0.5 ? 0.0 : 1.0);
+                                }
+                            }
+                            
+                            Rectangle {
+                                x: pin.value > 0.5 ? 32px : 2px;
+                                width: 26px;
+                                height: 26px;
+                                background: Theme.text;
+                                border-radius: 13px;
+                                // Simple transition animation can be added if needed, but not required
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

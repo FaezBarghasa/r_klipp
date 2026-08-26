@@ -1,0 +1,153 @@
+import { Theme } from "../themes/material_dark.slint";
+import { BasePanel } from "../components/base_panel.slint";
+import { Keypad } from "../components/keypad.slint";
+import { Button } from "std-widgets.slint";
+
+export component SpoolEditorPanel inherits BasePanel {
+    title: "Spool Editor";
+
+    in-out property <string> spool-name: "Generic PLA Red";
+    in-out property <float> measured-weight: 970.0;
+    in-out property <float> remaining-weight: 750.0;
+    in-out property <float> initial-weight: 1000.0;
+    in-out property <float> empty-weight: 220.0;
+    in-out property <float> used-weight: 250.0;
+    
+    in-out property <string> vendor: "Generic";
+    in-out property <string> material: "PLA";
+    in-out property <string> location: "Drybox 1";
+    in-out property <string> price: "$20.00";
+    in-out property <string> comment: "Good filament, prints well at 200C";
+
+    in-out property <bool> numpad-visible: false;
+    in-out property <string> active-field: ""; // "measured", "remaining", "initial", "empty"
+
+    callback update-weight(string, float);
+
+    HorizontalLayout {
+        padding: 15px;
+        spacing: 20px;
+
+        // Left Panel: Weight Adjustment buttons
+        VerticalLayout {
+            width: 280px;
+            spacing: 12px;
+            
+            Text { text: "Adjust Weights"; color: Theme.accent; font-weight: 700; }
+            
+            Button {
+                text: "Measured Weight: " + root.measured-weight + " g";
+                clicked => { root.active-field = "measured"; root.numpad-visible = true; }
+            }
+            Button {
+                text: "Remaining Weight: " + root.remaining-weight + " g";
+                clicked => { root.active-field = "remaining"; root.numpad-visible = true; }
+            }
+            Button {
+                text: "Initial Weight: " + root.initial-weight + " g";
+                clicked => { root.active-field = "initial"; root.numpad-visible = true; }
+            }
+            Button {
+                text: "Empty Spool Weight: " + root.empty-weight + " g";
+                clicked => { root.active-field = "empty"; root.numpad-visible = true; }
+            }
+        }
+
+        // Right Panel: Info or Keypad
+        if !root.numpad-visible : VerticalLayout {
+            spacing: 15px;
+
+            // Spool Header
+            Rectangle {
+                background: Theme.panel-bg;
+                border-radius: 5px;
+                height: 60px;
+                
+                HorizontalLayout {
+                    padding-left: 15px;
+                    padding-right: 15px;
+                    alignment: space-between;
+                    Text { text: root.spool-name; font-size: 18px; color: Theme.text; font-weight: 700; vertical-alignment: center; }
+                    Text { text: root.material; color: Theme.accent; vertical-alignment: center; font-weight: 700; }
+                }
+            }
+
+            // Progress Bar (Used / Initial)
+            VerticalLayout {
+                spacing: 4px;
+                HorizontalLayout {
+                    alignment: space-between;
+                    Text { text: "Filament Used"; color: Theme.text; }
+                    Text { text: root.used-weight + "g / " + root.initial-weight + "g (" + Math.round((root.used-weight/root.initial-weight)*100) + "%)"; color: Theme.text; }
+                }
+                Rectangle {
+                    background: Theme.button-bg;
+                    border-radius: 3px;
+                    height: 12px;
+                    Rectangle { x: 0; width: parent.width * (root.used-weight / root.initial-weight); background: Theme.accent; border-radius: 3px; }
+                }
+            }
+
+            // Info details
+            Rectangle {
+                background: Theme.panel-bg;
+                border-radius: 5px;
+                padding: 15px;
+                
+                GridLayout {
+                    spacing: 10px;
+                    Row {
+                        Text { text: "Vendor:"; color: Theme.active; font-weight: 700; }
+                        Text { text: root.vendor; color: Theme.text; }
+                    }
+                    Row {
+                        Text { text: "Location:"; color: Theme.active; font-weight: 700; }
+                        Text { text: root.location; color: Theme.text; }
+                    }
+                    Row {
+                        Text { text: "Price:"; color: Theme.active; font-weight: 700; }
+                        Text { text: root.price; color: Theme.text; }
+                    }
+                    Row {
+                        Text { text: "Comment:"; color: Theme.active; font-weight: 700; }
+                        Text { text: root.comment; color: Theme.text; wrap: word-wrap; }
+                    }
+                }
+            }
+        }
+
+        if root.numpad-visible : Rectangle {
+            background: Theme.panel-bg;
+            border-radius: 5px;
+            padding: 15px;
+            
+            VerticalLayout {
+                spacing: 10px;
+                Text { text: "Enter Weight for: " + root.active-field; color: Theme.accent; font-size: 16px; font-weight: 700; }
+                
+                Keypad {
+                    key-pressed(k) => {
+                        // Keypad logic simulator
+                    }
+                }
+                
+                HorizontalLayout {
+                    spacing: 10px;
+                    alignment: center;
+                    Button {
+                        text: "Cancel";
+                        clicked => { root.numpad-visible = false; }
+                    }
+                    Button {
+                        text: "Save";
+                        clicked => {
+                            root.numpad-visible = false;
+                            // Trigger callback here
+                            root.update-weight(root.active-field, 0.0);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

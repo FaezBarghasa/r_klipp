@@ -1,0 +1,73 @@
+import { Theme } from "../themes/material_dark.slint";
+import { BasePanel } from "../components/base_panel.slint";
+import { ScrollView } from "std-widgets.slint";
+
+export struct PowerDevice {
+    name: string,
+    status: string, // "on" or "off"
+}
+
+export component PowerPanel inherits BasePanel {
+    title: "Power Devices";
+
+    in-out property <[PowerDevice]> devices: [
+        { name: "Printer Main Power", status: "on" },
+        { name: "Chamber Lights", status: "off" }
+    ];
+
+    callback toggle-device(string, bool);
+
+    ScrollView {
+        padding: 15px;
+        
+        VerticalLayout {
+            spacing: 12px;
+
+            for dev in root.devices : Rectangle {
+                background: Theme.panel-bg;
+                border-radius: 5px;
+                height: 70px;
+                
+                HorizontalLayout {
+                    padding: 15px;
+                    spacing: 15px;
+                    alignment: space-between;
+
+                    Text {
+                        text: dev.name;
+                        font-size: 18px;
+                        color: Theme.text;
+                        font-weight: 700;
+                        vertical-alignment: center;
+                    }
+
+                    // Switch simulator
+                    VerticalLayout {
+                        alignment: center;
+                        Rectangle {
+                            width: 60px;
+                            height: 30px;
+                            background: dev.status == "on" ? Theme.active : Theme.button-bg;
+                            border-radius: 15px;
+                            
+                            TouchArea {
+                                clicked => {
+                                    root.toggle-device(dev.name, dev.status != "on");
+                                }
+                            }
+                            
+                            Rectangle {
+                                x: dev.status == "on" ? 32px : 2px;
+                                y: 2px;
+                                width: 26px;
+                                height: 26px;
+                                background: Theme.text;
+                                border-radius: 13px;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

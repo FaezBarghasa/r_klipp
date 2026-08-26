@@ -1,0 +1,132 @@
+import { Theme } from "../themes/material_dark.slint";
+import { BasePanel } from "../components/base_panel.slint";
+import { Keypad } from "../components/keypad.slint";
+
+export component MenuButton inherits Rectangle {
+    in-out property <string> text;
+    in-out property <string> icon;
+    callback clicked();
+
+    background: touch.pressed ? Theme.active : Theme.button-bg;
+    border-radius: 5px;
+    
+    touch := TouchArea {
+        clicked => { root.clicked(); }
+    }
+    
+    VerticalLayout {
+        alignment: center;
+        spacing: 10px;
+        Text {
+            text: root.icon;
+            font-size: 36px;
+            color: Theme.text;
+            horizontal-alignment: center;
+        }
+        Text {
+            text: root.text;
+            font-size: 18px;
+            color: Theme.text;
+            horizontal-alignment: center;
+        }
+    }
+}
+
+export component MainMenuPanel inherits BasePanel {
+    title: "Main Menu";
+    show-back: false;
+    show-home: false;
+
+    callback menu-selected(string);
+    
+    in-out property <string> active-heater: "";
+    in-out property <string> bed-temp: "0.0";
+    in-out property <string> bed-target: "0.0";
+    in-out property <string> hotend-temp: "0.0";
+    in-out property <string> hotend-target: "0.0";
+
+    HorizontalLayout {
+        spacing: 10px;
+        padding: 10px;
+
+        // Left area: Heaters & Graph
+        VerticalLayout {
+            width: 300px;
+            spacing: 10px;
+            
+            Rectangle {
+                background: Theme.panel-bg;
+                border-radius: 5px;
+                height: 120px;
+                
+                VerticalLayout {
+                    padding: 10px;
+                    spacing: 5px;
+                    Text { text: "Temperatures"; color: Theme.accent; font-size: 16px; }
+                    
+                    HorizontalLayout {
+                        spacing: 10px;
+                        Rectangle {
+                            background: root.active-heater == "extruder" ? Theme.active : Theme.button-bg;
+                            border-radius: 4px;
+                            TouchArea { clicked => { root.active-heater = root.active-heater == "extruder" ? "" : "extruder"; } }
+                            VerticalLayout {
+                                padding: 5px;
+                                Text { text: "Hotend"; color: Theme.text; }
+                                Text { text: root.hotend-temp + " / " + root.hotend-target + "°"; color: #ff5252; font-size: 20px; }
+                            }
+                        }
+                        Rectangle {
+                            background: root.active-heater == "bed" ? Theme.active : Theme.button-bg;
+                            border-radius: 4px;
+                            TouchArea { clicked => { root.active-heater = root.active-heater == "bed" ? "" : "bed"; } }
+                            VerticalLayout {
+                                padding: 5px;
+                                Text { text: "Bed"; color: Theme.text; }
+                                Text { text: root.bed-temp + " / " + root.bed-target + "°"; color: #448aff; font-size: 20px; }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            Rectangle {
+                background: Theme.panel-bg;
+                border-radius: 5px;
+                // Graph placeholder
+                Text {
+                    text: "Temperature Graph Placeholder";
+                    color: Theme.text;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+            }
+        }
+
+        // Right area: Menu or Keypad
+        if root.active-heater != "" : Rectangle {
+            background: Theme.panel-bg;
+            border-radius: 5px;
+            padding: 10px;
+            VerticalLayout {
+                spacing: 10px;
+                Text { text: "Set Target: " + (root.active-heater == "extruder" ? "Hotend" : "Bed"); color: Theme.accent; font-size: 18px; }
+                Keypad {
+                    key-pressed(k) => { /* Handle keypad input */ }
+                }
+            }
+        }
+
+        if root.active-heater == "" : GridLayout {
+            spacing: 10px;
+            Row {
+                MenuButton { text: "Actions"; icon: "⚙"; clicked => { root.menu-selected("actions"); } }
+                MenuButton { text: "Configuration"; icon: "🛠"; clicked => { root.menu-selected("configuration"); } }
+            }
+            Row {
+                MenuButton { text: "Print"; icon: "⎙"; clicked => { root.menu-selected("print"); } }
+                MenuButton { text: "System"; icon: "💻"; clicked => { root.menu-selected("system"); } }
+            }
+        }
+    }
+}

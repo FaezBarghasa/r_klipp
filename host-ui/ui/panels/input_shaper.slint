@@ -1,0 +1,144 @@
+import { Theme } from "../themes/material_dark.slint";
+import { BasePanel } from "../components/base_panel.slint";
+import { Button, Slider } from "std-widgets.slint";
+
+export component InputShaperPanel inherits BasePanel {
+    title: "Input Shaper";
+
+    in-out property <float> shaper-freq-x: 45.0;
+    in-out property <float> shaper-freq-y: 50.0;
+    in-out property <string> shaper-type-x: "mzv";
+    in-out property <string> shaper-type-y: "mzv";
+    in-out property <string> status-text: "Accelerometer status: Ready";
+    in-out property <bool> has-adxl: true;
+
+    callback calibrate(string); // "x", "y", "both"
+    callback save-config();
+    callback shaper-changed(string, float, string); // axis, freq, type
+
+    in-out property <[string]> shaper-types: ["zv", "mzv", "zvd", "ei", "2hump_ei", "3hump_ei"];
+
+    VerticalLayout {
+        padding: 15px;
+        spacing: 15px;
+
+        // Auto Calibration section
+        Rectangle {
+            background: Theme.panel-bg;
+            border-radius: 5px;
+            padding: 15px;
+            
+            VerticalLayout {
+                spacing: 10px;
+                Text { text: "Auto Calibration"; color: Theme.accent; font-size: 16px; font-weight: 700; }
+                
+                HorizontalLayout {
+                    spacing: 15px;
+                    alignment: start;
+                    
+                    Button {
+                        text: "Measure X";
+                        enabled: root.has-adxl;
+                        clicked => { root.calibrate("x"); }
+                    }
+                    Button {
+                        text: "Measure Y";
+                        enabled: root.has-adxl;
+                        clicked => { root.calibrate("y"); }
+                    }
+                    Button {
+                        text: "Measure Both";
+                        enabled: root.has-adxl;
+                        clicked => { root.calibrate("both"); }
+                    }
+                    Button {
+                        text: "Save Config";
+                        clicked => { root.save-config(); }
+                    }
+                }
+            }
+        }
+
+        // Manual Calibration section
+        Rectangle {
+            background: Theme.panel-bg;
+            border-radius: 5px;
+            padding: 15px;
+            
+            VerticalLayout {
+                spacing: 15px;
+                
+                Text { text: "Manual Calibration"; color: Theme.accent; font-size: 16px; font-weight: 700; }
+                Text { text: "NOTE: Edit your printer.cfg to save manual calibration changes permanently."; color: Theme.text; font-size: 12px; }
+
+                // Axis X
+                HorizontalLayout {
+                    spacing: 15px;
+                    alignment: space-between;
+                    
+                    Text { text: "X Axis"; font-weight: 700; width: 60px; vertical-alignment: center; }
+                    
+                    Slider {
+                        minimum: 0.0;
+                        maximum: 130.0;
+                        value: root.shaper-freq-x;
+                        width: 250px;
+                        changed(val) => { root.shaper-freq-x = val; root.shaper-changed("x", val, root.shaper-type-x); }
+                    }
+                    
+                    Text { text: Math.round(root.shaper-freq-x) + " Hz"; width: 60px; vertical-alignment: center; }
+                    
+                    // Simple selection buttons
+                    HorizontalLayout {
+                        spacing: 4px;
+                        for t in root.shaper-types : Rectangle {
+                            background: root.shaper-type-x == t ? Theme.active : Theme.button-bg;
+                            border-radius: 4px;
+                            width: 60px;
+                            height: 35px;
+                            TouchArea { clicked => { root.shaper-type-x = t; root.shaper-changed("x", root.shaper-freq-x, t); } }
+                            Text { text: t; color: Theme.text; horizontal-alignment: center; vertical-alignment: center; font-size: 11px; }
+                        }
+                    }
+                }
+
+                // Axis Y
+                HorizontalLayout {
+                    spacing: 15px;
+                    alignment: space-between;
+                    
+                    Text { text: "Y Axis"; font-weight: 700; width: 60px; vertical-alignment: center; }
+                    
+                    Slider {
+                        minimum: 0.0;
+                        maximum: 130.0;
+                        value: root.shaper-freq-y;
+                        width: 250px;
+                        changed(val) => { root.shaper-freq-y = val; root.shaper-changed("y", val, root.shaper-type-y); }
+                    }
+                    
+                    Text { text: Math.round(root.shaper-freq-y) + " Hz"; width: 60px; vertical-alignment: center; }
+                    
+                    HorizontalLayout {
+                        spacing: 4px;
+                        for t in root.shaper-types : Rectangle {
+                            background: root.shaper-type-y == t ? Theme.active : Theme.button-bg;
+                            border-radius: 4px;
+                            width: 60px;
+                            height: 35px;
+                            TouchArea { clicked => { root.shaper-type-y = t; root.shaper-changed("y", root.shaper-freq-y, t); } }
+                            Text { text: t; color: Theme.text; horizontal-alignment: center; vertical-alignment: center; font-size: 11px; }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Status text
+        Text {
+            text: root.status-text;
+            color: Theme.text;
+            font-size: 14px;
+        }
+    }
+}

@@ -1,0 +1,98 @@
+import { Theme } from "../themes/material_dark.slint";
+import { BasePanel } from "../components/base_panel.slint";
+import { Button, ScrollView } from "std-widgets.slint";
+
+export struct PrintableObject {
+    name: string,
+    excluded: bool,
+}
+
+export component ExcludeObjectPanel inherits BasePanel {
+    title: "Exclude Objects";
+
+    in-out property <string> current-object: "object_3_perimeter";
+    in-out property <[PrintableObject]> objects: [
+        { name: "object_1_infill", excluded: false },
+        { name: "object_2_outer_wall", excluded: false },
+        { name: "object_3_perimeter", excluded: false },
+        { name: "object_4_top_solid", excluded: true }
+    ];
+
+    callback exclude-object(string);
+    callback exclude-current();
+
+    HorizontalLayout {
+        padding: 15px;
+        spacing: 20px;
+
+        // Left controls (Exclude Current)
+        VerticalLayout {
+            width: 250px;
+            spacing: 15px;
+
+            Rectangle {
+                background: Theme.panel-bg;
+                border-radius: 5px;
+                padding: 15px;
+                
+                VerticalLayout {
+                    spacing: 12px;
+                    alignment: center;
+                    
+                    Text { text: "Current Object:"; color: Theme.accent; font-size: 14px; }
+                    Text { text: root.current-object; font-size: 18px; color: Theme.text; font-weight: 700; horizontal-alignment: center; }
+                    
+                    Button {
+                        text: "Exclude Current";
+                        enabled: root.current-object != "";
+                        clicked => { root.exclude-current(); }
+                    }
+                }
+            }
+            
+            Rectangle { height: 100%; } // spacer
+        }
+
+        // Right List of all objects
+        VerticalLayout {
+            spacing: 10px;
+            Text { text: "Print Objects List"; color: Theme.accent; font-weight: 700; }
+            
+            ScrollView {
+                VerticalLayout {
+                    spacing: 10px;
+                    for obj in root.objects : Rectangle {
+                        background: obj.excluded ? #442222 : Theme.panel-bg;
+                        border-radius: 5px;
+                        height: 60px;
+                        
+                        HorizontalLayout {
+                            padding: 10px;
+                            spacing: 15px;
+                            alignment: space-between;
+
+                            Text {
+                                text: obj.name;
+                                font-size: 15px;
+                                color: obj.excluded ? Theme.error : Theme.text;
+                                font-weight: 700;
+                                vertical-alignment: center;
+                            }
+
+                            if !obj.excluded : Button {
+                                text: "Exclude";
+                                clicked => { root.exclude-object(obj.name); }
+                            }
+                            if obj.excluded : Text {
+                                text: "Excluded";
+                                color: Theme.error;
+                                font-weight: 700;
+                                vertical-alignment: center;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

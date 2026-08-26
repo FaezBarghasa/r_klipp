@@ -1,0 +1,84 @@
+import { Theme } from "../themes/material_dark.slint";
+import { L10n } from "./temperature.slint";
+
+component IconButton inherits Rectangle {
+    in-out property <string> text;
+    in-out property <bool> active: false;
+    callback clicked;
+
+    background: self.active ? Theme.active : (touch.pressed ? Theme.active : Theme.button-bg);
+    border-radius: 6px;
+    border-width: 1px;
+    border-color: Theme.accent;
+
+    touch := TouchArea {
+        clicked => { root.clicked(); }
+    }
+
+    Text {
+        text: root.text;
+        color: Theme.text;
+        font-size: 14px;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+}
+
+export component MovePanel inherits HorizontalLayout {
+    in-out property <float> jog-increment: 10.0;
+
+    callback jog-move(string, float);
+    callback home-axis(string);
+
+    padding: 12px;
+    spacing: 12px;
+
+    // Jogging grid
+    VerticalLayout {
+        spacing: 12px;
+        Text { text: L10n.translate("Move Toolhead"); color: Theme.text; font-weight: 700; }
+        HorizontalLayout {
+            spacing: 8px;
+            // Jog left/right/up/down
+            VerticalLayout {
+                spacing: 8px;
+                alignment: center;
+                HorizontalLayout {
+                    alignment: center;
+                    IconButton { text: "Y+"; clicked => { root.jog-move("Y", root.jog-increment); } }
+                }
+                HorizontalLayout {
+                    spacing: 8px;
+                    IconButton { text: "X-"; clicked => { root.jog-move("X", -root.jog-increment); } }
+                    IconButton { text: L10n.translate("Home All"); clicked => { root.home-axis("all"); } }
+                    IconButton { text: "X+"; clicked => { root.jog-move("X", root.jog-increment); } }
+                }
+                HorizontalLayout {
+                    alignment: center;
+                    IconButton { text: "Y-"; clicked => { root.jog-move("Y", -root.jog-increment); } }
+                }
+            }
+
+            // Z controls
+            VerticalLayout {
+                spacing: 8px;
+                width: 100px;
+                alignment: center;
+                IconButton { text: "Z+"; clicked => { root.jog-move("Z", root.jog-increment); } }
+                IconButton { text: "Z-"; clicked => { root.jog-move("Z", -root.jog-increment); } }
+            }
+        }
+    }
+
+    // Increments sidebar
+    VerticalLayout {
+        width: 120px;
+        spacing: 8px;
+        Text { text: L10n.translate("Distance"); color: Theme.text; font-size: 14px; }
+        IconButton { text: "0.1mm"; active: root.jog-increment == 0.1; clicked => { root.jog-increment = 0.1; } }
+        IconButton { text: "1mm"; active: root.jog-increment == 1.0; clicked => { root.jog-increment = 1.0; } }
+        IconButton { text: "10mm"; active: root.jog-increment == 10.0; clicked => { root.jog-increment = 10.0; } }
+        IconButton { text: "50mm"; active: root.jog-increment == 50.0; clicked => { root.jog-increment = 50.0; } }
+        IconButton { text: "100mm"; active: root.jog-increment == 100.0; clicked => { root.jog-increment = 100.0; } }
+    }
+}

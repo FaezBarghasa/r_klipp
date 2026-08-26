@@ -1,0 +1,68 @@
+import { Theme } from "../themes/material_dark.slint";
+import { BasePanel } from "../components/base_panel.slint";
+
+export component ShutdownPanel inherits BasePanel {
+    title: "System Power";
+
+    in-out property <bool> show-estop: true;
+    in-out property <bool> show-power-shortcut: true;
+
+    callback power-clicked();
+    callback restart-ks-clicked();
+    callback lock-clicked();
+    callback shutdown-clicked();
+    callback reboot-clicked();
+
+    GridLayout {
+        padding: 20px;
+        spacing: 15px;
+
+        Row {
+            if root.show-estop : Rectangle {
+                background: Theme.error;
+                border-radius: 5px;
+                TouchArea { clicked => { root.estop-clicked(); } }
+                Text { text: "Emergency Stop"; color: Theme.text; font-size: 20px; font-weight: 700; horizontal-alignment: center; vertical-alignment: center; }
+            }
+            
+            if root.show-power-shortcut : Rectangle {
+                background: Theme.warning;
+                border-radius: 5px;
+                TouchArea { clicked => { root.power-clicked(); } }
+                Text { text: "Power Devices"; color: Theme.bg; font-size: 20px; font-weight: 700; horizontal-alignment: center; vertical-alignment: center; }
+            }
+        }
+        
+        Row {
+            Rectangle {
+                background: Theme.button-bg;
+                border-radius: 5px;
+                TouchArea { clicked => { root.restart-ks-clicked(); } }
+                Text { text: "Restart KlipperScreen"; color: Theme.text; font-size: 16px; horizontal-alignment: center; vertical-alignment: center; }
+            }
+            
+            Rectangle {
+                background: Theme.button-bg;
+                border-radius: 5px;
+                TouchArea { clicked => { root.lock-clicked(); } }
+                Text { text: "Lock Screen"; color: Theme.text; font-size: 16px; horizontal-alignment: center; vertical-alignment: center; }
+            }
+        }
+
+        Row {
+            Rectangle {
+                background: #8B0000; // Deep dark red
+                border-radius: 5px;
+                TouchArea { clicked => { root.shutdown-clicked(); } }
+                Text { text: "Shutdown Host"; color: Theme.text; font-size: 16px; horizontal-alignment: center; vertical-alignment: center; }
+            }
+            
+            Rectangle {
+                background: Theme.active;
+                border-radius: 5px;
+                TouchArea { clicked => { root.reboot-clicked(); } }
+                Text { text: "Reboot Host"; color: Theme.text; font-size: 16px; horizontal-alignment: center; vertical-alignment: center; }
+            }
+        }
+    }
+}

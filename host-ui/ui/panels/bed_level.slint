@@ -1,0 +1,172 @@
+import { Theme } from "../themes/material_dark.slint";
+import { BasePanel } from "../components/base_panel.slint";
+import { Button } from "std-widgets.slint";
+
+export struct ScrewState {
+    name: string,
+    enabled: bool,
+    value: string,      // e.g. "Reference", "CW 00:05", etc.
+    z-height: string,   // e.g. "Z: 0.120"
+}
+
+export component BedLevelPanel inherits BasePanel {
+    title: "Bed Level";
+
+    in-out property <[ScrewState]> screws: [
+        { name: "Top-Left", enabled: true, value: "CW 00:10", z-height: "Z: 0.050" },
+        { name: "Top-Middle", enabled: false, value: "", z-height: "" },
+        { name: "Top-Right", enabled: true, value: "CCW 00:05", z-height: "Z: -0.020" },
+        { name: "Middle-Left", enabled: false, value: "", z-height: "" },
+        { name: "Center", enabled: true, value: "Reference", z-height: "Z: 0.000" },
+        { name: "Middle-Right", enabled: false, value: "", z-height: "" },
+        { name: "Bottom-Left", enabled: true, value: "CW 00:02", z-height: "Z: 0.010" },
+        { name: "Bottom-Middle", enabled: false, value: "", z-height: "" },
+        { name: "Bottom-Right", enabled: true, value: "CCW 00:08", z-height: "Z: -0.040" },
+    ];
+    
+    in-out property <bool> has-screws-tilt-adjust: true;
+
+    callback screw-clicked(int);
+    callback disable-motors();
+    callback screws-adjust();
+
+    HorizontalLayout {
+        padding: 15px;
+        spacing: 20px;
+
+        // Left controls
+        VerticalLayout {
+            width: 180px;
+            spacing: 15px;
+            
+            Button {
+                text: "Disable Motors";
+                clicked => { root.disable-motors(); }
+            }
+            
+            if root.has-screws-tilt-adjust : Button {
+                text: "Screws Adjust";
+                clicked => { root.screws-adjust(); }
+            }
+            
+            Rectangle { height: 100%; } // spacer
+        }
+
+        // Right 3x3 bed screws grid
+        Rectangle {
+            background: Theme.panel-bg;
+            border-radius: 5px;
+            padding: 10px;
+            
+            GridLayout {
+                spacing: 10px;
+                
+                // Row 0: TL, TM, TR
+                Row {
+                    Rectangle {
+                        background: root.screws[0].enabled ? touch-tl.pressed ? Theme.active : Theme.button-bg : #333333;
+                        border-radius: 4px;
+                        touch-tl := TouchArea { clicked => { if root.screws[0].enabled { root.screw-clicked(0); } } }
+                        VerticalLayout {
+                            alignment: center;
+                            Text { text: "TL"; color: Theme.text; horizontal-alignment: center; }
+                            if root.screws[0].value != "" : Text { text: root.screws[0].value; color: Theme.accent; font-size: 12px; horizontal-alignment: center; }
+                            if root.screws[0].z-height != "" : Text { text: root.screws[0].z-height; color: Theme.text; font-size: 10px; horizontal-alignment: center; }
+                        }
+                    }
+                    Rectangle {
+                        background: root.screws[1].enabled ? touch-tm.pressed ? Theme.active : Theme.button-bg : #333333;
+                        border-radius: 4px;
+                        touch-tm := TouchArea { clicked => { if root.screws[1].enabled { root.screw-clicked(1); } } }
+                        VerticalLayout {
+                            alignment: center;
+                            Text { text: "TM"; color: Theme.text; horizontal-alignment: center; }
+                            if root.screws[1].value != "" : Text { text: root.screws[1].value; color: Theme.accent; font-size: 12px; horizontal-alignment: center; }
+                        }
+                    }
+                    Rectangle {
+                        background: root.screws[2].enabled ? touch-tr.pressed ? Theme.active : Theme.button-bg : #333333;
+                        border-radius: 4px;
+                        touch-tr := TouchArea { clicked => { if root.screws[2].enabled { root.screw-clicked(2); } } }
+                        VerticalLayout {
+                            alignment: center;
+                            Text { text: "TR"; color: Theme.text; horizontal-alignment: center; }
+                            if root.screws[2].value != "" : Text { text: root.screws[2].value; color: Theme.accent; font-size: 12px; horizontal-alignment: center; }
+                            if root.screws[2].z-height != "" : Text { text: root.screws[2].z-height; color: Theme.text; font-size: 10px; horizontal-alignment: center; }
+                        }
+                    }
+                }
+                
+                // Row 1: ML, Center, MR
+                Row {
+                    Rectangle {
+                        background: root.screws[3].enabled ? touch-ml.pressed ? Theme.active : Theme.button-bg : #333333;
+                        border-radius: 4px;
+                        touch-ml := TouchArea { clicked => { if root.screws[3].enabled { root.screw-clicked(3); } } }
+                        VerticalLayout {
+                            alignment: center;
+                            Text { text: "ML"; color: Theme.text; horizontal-alignment: center; }
+                            if root.screws[3].value != "" : Text { text: root.screws[3].value; color: Theme.accent; font-size: 12px; horizontal-alignment: center; }
+                        }
+                    }
+                    Rectangle {
+                        background: root.screws[4].enabled ? touch-c.pressed ? Theme.active : Theme.button-bg : #333333;
+                        border-radius: 4px;
+                        touch-c := TouchArea { clicked => { if root.screws[4].enabled { root.screw-clicked(4); } } }
+                        VerticalLayout {
+                            alignment: center;
+                            Text { text: "Center"; color: Theme.text; horizontal-alignment: center; }
+                            if root.screws[4].value != "" : Text { text: root.screws[4].value; color: Theme.accent; font-size: 12px; horizontal-alignment: center; }
+                        }
+                    }
+                    Rectangle {
+                        background: root.screws[5].enabled ? touch-mr.pressed ? Theme.active : Theme.button-bg : #333333;
+                        border-radius: 4px;
+                        touch-mr := TouchArea { clicked => { if root.screws[5].enabled { root.screw-clicked(5); } } }
+                        VerticalLayout {
+                            alignment: center;
+                            Text { text: "MR"; color: Theme.text; horizontal-alignment: center; }
+                            if root.screws[5].value != "" : Text { text: root.screws[5].value; color: Theme.accent; font-size: 12px; horizontal-alignment: center; }
+                        }
+                    }
+                }
+
+                // Row 2: BL, BM, BR
+                Row {
+                    Rectangle {
+                        background: root.screws[6].enabled ? touch-bl.pressed ? Theme.active : Theme.button-bg : #333333;
+                        border-radius: 4px;
+                        touch-bl := TouchArea { clicked => { if root.screws[6].enabled { root.screw-clicked(6); } } }
+                        VerticalLayout {
+                            alignment: center;
+                            Text { text: "BL"; color: Theme.text; horizontal-alignment: center; }
+                            if root.screws[6].value != "" : Text { text: root.screws[6].value; color: Theme.accent; font-size: 12px; horizontal-alignment: center; }
+                            if root.screws[6].z-height != "" : Text { text: root.screws[6].z-height; color: Theme.text; font-size: 10px; horizontal-alignment: center; }
+                        }
+                    }
+                    Rectangle {
+                        background: root.screws[7].enabled ? touch-bm.pressed ? Theme.active : Theme.button-bg : #333333;
+                        border-radius: 4px;
+                        touch-bm := TouchArea { clicked => { if root.screws[7].enabled { root.screw-clicked(7); } } }
+                        VerticalLayout {
+                            alignment: center;
+                            Text { text: "BM"; color: Theme.text; horizontal-alignment: center; }
+                            if root.screws[7].value != "" : Text { text: root.screws[7].value; color: Theme.accent; font-size: 12px; horizontal-alignment: center; }
+                        }
+                    }
+                    Rectangle {
+                        background: root.screws[8].enabled ? touch-br.pressed ? Theme.active : Theme.button-bg : #333333;
+                        border-radius: 4px;
+                        touch-br := TouchArea { clicked => { if root.screws[8].enabled { root.screw-clicked(8); } } }
+                        VerticalLayout {
+                            alignment: center;
+                            Text { text: "BR"; color: Theme.text; horizontal-alignment: center; }
+                            if root.screws[8].value != "" : Text { text: root.screws[8].value; color: Theme.accent; font-size: 12px; horizontal-alignment: center; }
+                            if root.screws[8].z-height != "" : Text { text: root.screws[8].z-height; color: Theme.text; font-size: 10px; horizontal-alignment: center; }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

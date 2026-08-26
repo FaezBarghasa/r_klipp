@@ -1,0 +1,110 @@
+import { Theme } from "../themes/material_dark.slint";
+import { BasePanel } from "../components/base_panel.slint";
+
+export component ExtrudeButton inherits Rectangle {
+    in-out property <string> text;
+    callback clicked();
+
+    background: touch.pressed ? Theme.active : Theme.button-bg;
+    border-radius: 5px;
+    height: 60px;
+    
+    touch := TouchArea {
+        clicked => { root.clicked(); }
+    }
+    
+    Text {
+        text: root.text;
+        font-size: 20px;
+        color: Theme.text;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+}
+
+export component ExtrudePanel inherits BasePanel {
+    title: "Extrude";
+    
+    in-out property <string> hotend-temp: "0.0";
+    in-out property <string> hotend-target: "0.0";
+    in-out property <float> extrude-distance: 5.0;
+    in-out property <float> extrude-speed: 5.0;
+    
+    callback extrude(float, float); // distance, speed
+    callback retract(float, float);
+    callback temp-pressed();
+
+    HorizontalLayout {
+        padding: 10px;
+        spacing: 20px;
+
+        // Left side: Temperature
+        VerticalLayout {
+            width: 250px;
+            spacing: 20px;
+            
+            Rectangle {
+                background: Theme.panel-bg;
+                border-radius: 5px;
+                padding: 15px;
+                
+                VerticalLayout {
+                    spacing: 10px;
+                    alignment: center;
+                    Text { text: "Hotend"; color: Theme.accent; font-size: 20px; horizontal-alignment: center; }
+                    Text { text: root.hotend-temp + "° / " + root.hotend-target + "°"; color: #ff5252; font-size: 32px; horizontal-alignment: center; }
+                    
+                    Rectangle {
+                        height: 40px;
+                        background: Theme.button-bg;
+                        border-radius: 4px;
+                        TouchArea { clicked => { root.temp-pressed(); } }
+                        Text { text: "Set Temp"; color: Theme.text; horizontal-alignment: center; vertical-alignment: center; }
+                    }
+                }
+            }
+        }
+        
+        // Right side: Extrude Controls
+        VerticalLayout {
+            spacing: 20px;
+            
+            HorizontalLayout {
+                spacing: 10px;
+                height: 80px;
+                
+                ExtrudeButton { text: "Retract"; clicked => { root.retract(root.extrude-distance, root.extrude-speed); } }
+                ExtrudeButton { text: "Extrude"; clicked => { root.extrude(root.extrude-distance, root.extrude-speed); } }
+            }
+            
+            Rectangle {
+                background: Theme.panel-bg;
+                border-radius: 5px;
+                padding: 10px;
+                
+                VerticalLayout {
+                    spacing: 15px;
+                    Text { text: "Distance (mm): " + root.extrude-distance; color: Theme.text; }
+                    HorizontalLayout {
+                        spacing: 5px;
+                        ExtrudeButton { text: "1"; clicked => { root.extrude-distance = 1.0; } }
+                        ExtrudeButton { text: "5"; clicked => { root.extrude-distance = 5.0; } }
+                        ExtrudeButton { text: "10"; clicked => { root.extrude-distance = 10.0; } }
+                        ExtrudeButton { text: "25"; clicked => { root.extrude-distance = 25.0; } }
+                        ExtrudeButton { text: "50"; clicked => { root.extrude-distance = 50.0; } }
+                    }
+                    
+                    Text { text: "Speed (mm/s): " + root.extrude-speed; color: Theme.text; }
+                    HorizontalLayout {
+                        spacing: 5px;
+                        ExtrudeButton { text: "1"; clicked => { root.extrude-speed = 1.0; } }
+                        ExtrudeButton { text: "2"; clicked => { root.extrude-speed = 2.0; } }
+                        ExtrudeButton { text: "5"; clicked => { root.extrude-speed = 5.0; } }
+                        ExtrudeButton { text: "10"; clicked => { root.extrude-speed = 10.0; } }
+                        ExtrudeButton { text: "25"; clicked => { root.extrude-speed = 25.0; } }
+                    }
+                }
+            }
+        }
+    }
+}

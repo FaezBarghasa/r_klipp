@@ -1,0 +1,189 @@
+import { Theme } from "../themes/material_dark.slint";
+import { BasePanel } from "../components/base_panel.slint";
+import { Button, ScrollView } from "std-widgets.slint";
+
+export struct MeshProfile {
+    name: string,
+    active: bool,
+}
+
+export component BedMeshPanel inherits BasePanel {
+    title: "Bed Mesh";
+
+    in-out property <[MeshProfile]> profiles: [
+        { name: "default", active: true },
+        { name: "pla_bed", active: false },
+        { name: "abs_bed", active: false }
+    ];
+    
+    in-out property <bool> show-create: false;
+    in-out property <string> new-profile-name: "";
+
+    callback calibrate();
+    callback clear-mesh();
+    callback add-profile(string);
+    callback select-profile(string);
+    callback save-profile(string);
+    callback delete-profile(string);
+
+    HorizontalLayout {
+        padding: 15px;
+        spacing: 20px;
+
+        if !root.show-create : VerticalLayout {
+            spacing: 15px;
+            
+            // Topbar buttons
+            HorizontalLayout {
+                spacing: 10px;
+                height: 45px;
+                
+                Button {
+                    text: "Add Profile";
+                    clicked => { root.show-create = true; }
+                }
+                Button {
+                    text: "Clear Mesh";
+                    clicked => { root.clear-mesh(); }
+                }
+                Button {
+                    text: "Calibrate";
+                    clicked => { root.calibrate(); }
+                }
+            }
+
+            // Bed Map and profiles split
+            HorizontalLayout {
+                spacing: 15px;
+                
+                // Heightmap Mock Representation
+                Rectangle {
+                    background: Theme.panel-bg;
+                    border-radius: 5px;
+                    
+                    Text {
+                        text: "3D heightmap visualization here";
+                        color: Theme.text;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+
+                // Profile selection
+                VerticalLayout {
+                    width: 250px;
+                    spacing: 10px;
+                    
+                    Text {
+                        text: "Profiles";
+                        color: Theme.accent;
+                        font-weight: 700;
+                    }
+                    
+                    ScrollView {
+                        VerticalLayout {
+                            spacing: 8px;
+                            for profile in root.profiles : Rectangle {
+                                background: profile.active ? Theme.active : Theme.button-bg;
+                                border-radius: 4px;
+                                height: 50px;
+                                
+                                touch := TouchArea { clicked => { root.select-profile(profile.name); } }
+                                
+                                HorizontalLayout {
+                                    padding: 8px;
+                                    alignment: space-between;
+                                    
+                                    Text {
+                                        text: profile.name;
+                                        color: Theme.text;
+                                        vertical-alignment: center;
+                                        font-weight: 700;
+                                    }
+                                    
+                                    HorizontalLayout {
+                                        spacing: 5px;
+                                        if profile.name != "default" : Rectangle {
+                                            width: 30px;
+                                            height: 30px;
+                                            background: Theme.panel-bg;
+                                            border-radius: 3px;
+                                            TouchArea { clicked => { root.save-profile(profile.name); } }
+                                            Text { text: "💾"; horizontal-alignment: center; vertical-alignment: center; }
+                                        }
+                                        Rectangle {
+                                            width: 30px;
+                                            height: 30px;
+                                            background: Theme.error;
+                                            border-radius: 3px;
+                                            TouchArea { clicked => { root.delete-profile(profile.name); } }
+                                            Text { text: "🗑"; horizontal-alignment: center; vertical-alignment: center; }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if root.show-create : Rectangle {
+            background: Theme.panel-bg;
+            border-radius: 5px;
+            padding: 30px;
+            
+            VerticalLayout {
+                spacing: 20px;
+                alignment: center;
+                
+                Text {
+                    text: "Create New Profile";
+                    font-size: 20px;
+                    color: Theme.accent;
+                    horizontal-alignment: center;
+                }
+                
+                // Basic text input simulator
+                Rectangle {
+                    background: Theme.bg;
+                    border-radius: 4px;
+                    height: 50px;
+                    width: 300px;
+                    x: (parent.width - self.width) / 2;
+                    
+                    TextInput {
+                        text: root.new-profile-name;
+                        color: Theme.text;
+                        font-size: 18px;
+                        // For simplicity in Slint, we directly use standard input elements
+                    }
+                }
+                
+                HorizontalLayout {
+                    spacing: 15px;
+                    alignment: center;
+                    
+                    Button {
+                        text: "Cancel";
+                        clicked => {
+                            root.show-create = false;
+                            root.new-profile-name = "";
+                        }
+                    }
+                    
+                    Button {
+                        text: "Save";
+                        clicked => {
+                            if (root.new-profile-name != "") {
+                                root.add-profile(root.new-profile-name);
+                                root.show-create = false;
+                                root.new-profile-name = "";
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

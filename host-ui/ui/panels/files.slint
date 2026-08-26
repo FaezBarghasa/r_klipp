@@ -1,0 +1,54 @@
+import { Button, ScrollView } from "std-widgets.slint";
+import { Theme } from "../themes/material_dark.slint";
+import { L10n } from "./temperature.slint";
+import { GCodeFileInfo } from "../types.slint";
+
+export component FilesPanel inherits VerticalLayout {
+    in-out property <[GCodeFileInfo]> gcode-files;
+
+    callback file-action(string, string);
+
+    padding: 8px;
+    spacing: 8px;
+
+    HorizontalLayout {
+        alignment: space-between;
+        Text { text: L10n.translate("G-code Files"); color: Theme.text; font-weight: 700; }
+        Button {
+            text: L10n.translate("Back / Up");
+            clicked => { root.file-action("back", ""); }
+        }
+    }
+
+    ScrollView {
+        VerticalLayout {
+            spacing: 4px;
+            for file in root.gcode-files : Rectangle {
+                height: 60px;
+                background: Theme.panel-bg;
+                border-radius: 4px;
+                TouchArea {
+                    clicked => { root.file-action(file.is-dir ? "select" : "print", file.name); }
+                }
+                HorizontalLayout {
+                    padding: 8px;
+                    spacing: 12px;
+
+                    // Display extracted thumbnail, or folder/file icon
+                    Image {
+                        source: file.thumbnail;
+                        width: 48px;
+                        height: 48px;
+                        image-fit: contain;
+                    }
+
+                    VerticalLayout {
+                        alignment: center;
+                        Text { text: file.name; color: Theme.text; font-weight: 700; font-size: 14px; }
+                        if !file.is-dir : Text { text: file.size; color: Theme.active; font-size: 12px; }
+                    }
+                }
+            }
+        }
+    }
+}

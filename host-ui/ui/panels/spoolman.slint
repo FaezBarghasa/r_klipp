@@ -1,0 +1,150 @@
+import { Theme } from "../themes/material_dark.slint";
+import { BasePanel } from "../components/base_panel.slint";
+import { Button, ScrollView } from "std-widgets.slint";
+
+export struct SpoolItem {
+    id: int,
+    name: string,
+    material: string,
+    vendor: string,
+    color: color,
+    remaining-weight: float,
+    remaining-length: float,
+    last-used: string,
+    comment: string,
+    active: bool,
+    archived: bool,
+}
+
+export component SpoolmanPanel inherits BasePanel {
+    title: "Spoolman";
+
+    in-out property <[SpoolItem]> spools: [
+        { id: 1, name: "PLA Red", material: "PLA", vendor: "Generic", color: #ff0000, remaining-weight: 750.0, remaining-length: 250.0, last-used: "2026-06-10", comment: "Good quality", active: true, archived: false },
+        { id: 2, name: "PETG Black", material: "PETG", vendor: "Prusament", color: #000000, remaining-weight: 400.0, remaining-length: 120.0, last-used: "2026-06-08", comment: "Needs drying", active: false, archived: false }
+    ];
+
+    in-out property <string> filter-material: "All";
+    in-out property <[string]> materials: ["All", "PLA", "PETG", "ABS", "ASA"];
+    in-out property <bool> hide-archived: true;
+
+    callback refresh-spools();
+    callback clear-active-spool();
+    callback set-active-spool(int);
+    callback edit-spool(int);
+    callback change-sort(string); // "id", "last_used"
+
+    VerticalLayout {
+        padding: 15px;
+        spacing: 15px;
+
+        // Controls
+        HorizontalLayout {
+            spacing: 10px;
+            height: 45px;
+            
+            Button { text: "Sort ID"; clicked => { root.change-sort("id"); } }
+            Button { text: "Sort Used"; clicked => { root.change-sort("last_used"); } }
+            Button { text: "Clear Active"; clicked => { root.clear-active-spool(); } }
+            Button { text: "Refresh"; clicked => { root.refresh-spools(); } }
+            
+            // Archived Toggle
+            HorizontalLayout {
+                spacing: 5px;
+                Text { text: "Hide Archived"; color: Theme.text; vertical-alignment: center; }
+                VerticalLayout {
+                    alignment: center;
+                    Rectangle {
+                        width: 50px;
+                        height: 26px;
+                        background: root.hide-archived ? Theme.active : Theme.button-bg;
+                        border-radius: 13px;
+                        TouchArea { clicked => { root.hide-archived = !root.hide-archived; } }
+                        Rectangle {
+                            x: root.hide-archived ? 26px : 2px;
+                            y: 2px;
+                            width: 22px;
+                            height: 22px;
+                            background: Theme.text;
+                            border-radius: 11px;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Material Filter Bar
+        HorizontalLayout {
+            spacing: 10px;
+            height: 40px;
+            Text { text: "Filter:"; color: Theme.accent; vertical-alignment: center; font-weight: 700; }
+            for mat in root.materials : Rectangle {
+                background: root.filter-material == mat ? Theme.active : Theme.button-bg;
+                border-radius: 4px;
+                width: 60px;
+                TouchArea { clicked => { root.filter-material = mat; } }
+                Text { text: mat; color: Theme.text; horizontal-alignment: center; vertical-alignment: center; }
+            }
+        }
+
+        // Spool List
+        ScrollView {
+            VerticalLayout {
+                spacing: 10px;
+                for spool in root.spools : Rectangle {
+                    // Filter logic
+                    if (root.filter-material == "All" || spool.material == root.filter-material) && (!root.hide-archived || !spool.archived) : Rectangle {
+                        background: spool.active ? Theme.active : Theme.panel-bg;
+                        border-radius: 5px;
+                        height: 80px;
+                        
+                        HorizontalLayout {
+                            padding: 12px;
+                            spacing: 15px;
+                            alignment: space-between;
+
+                            HorizontalLayout {
+                                spacing: 15px;
+                                
+                                // Color swatch representation of filament color
+                                VerticalLayout {
+                                    alignment: center;
+                                    Rectangle {
+                                        width: 30px;
+                                        height: 30px;
+                                        background: spool.color;
+                                        border-radius: 15px;
+                                        border-width: 2px;
+                                        border-color: Theme.text;
+                                    }
+                                }
+
+                                VerticalLayout {
+                                    alignment: center;
+                                    Text { text: "[" + spool.id + "] " + spool.name; font-size: 16px; color: Theme.text; font-weight: 700; }
+                                    Text { text: spool.vendor + " • " + spool.material + " • " + spool.remaining-weight + "g (" + spool.remaining-length + "m) remaining"; font-size: 12px; color: Theme.accent; }
+                                }
+                            }
+
+                            HorizontalLayout {
+                                spacing: 10px;
+                                alignment: end;
+                                
+                                Button {
+                                    text: "📝 Edit";
+                                    clicked => { root.edit-spool(spool.id); }
+                                }
+                                
+                                Button {
+                                    text: spool.active ? "Active" : "Select";
+                                    enabled: !spool.active;
+                                    clicked => { root.set-active-spool(spool.id); }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

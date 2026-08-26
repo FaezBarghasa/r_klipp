@@ -1,0 +1,47 @@
+import { Theme } from "../themes/material_dark.slint";
+
+export component KeypadButton inherits Rectangle {
+    in-out property <string> text;
+    callback clicked();
+
+    background: touch.pressed ? Theme.active : Theme.button-bg;
+    border-radius: 4px;
+
+    touch := TouchArea {
+        clicked => { root.clicked(); }
+    }
+
+    Text {
+        text: root.text;
+        color: Theme.text;
+        font-size: 24px;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+}
+
+export component Keypad inherits GridLayout {
+    callback key-pressed(string);
+    spacing: 5px;
+    
+    Row {
+        KeypadButton { text: "1"; clicked => { root.key-pressed("1"); } }
+        KeypadButton { text: "2"; clicked => { root.key-pressed("2"); } }
+        KeypadButton { text: "3"; clicked => { root.key-pressed("3"); } }
+    }
+    Row {
+        KeypadButton { text: "4"; clicked => { root.key-pressed("4"); } }
+        KeypadButton { text: "5"; clicked => { root.key-pressed("5"); } }
+        KeypadButton { text: "6"; clicked => { root.key-pressed("6"); } }
+    }
+    Row {
+        KeypadButton { text: "7"; clicked => { root.key-pressed("7"); } }
+        KeypadButton { text: "8"; clicked => { root.key-pressed("8"); } }
+        KeypadButton { text: "9"; clicked => { root.key-pressed("9"); } }
+    }
+    Row {
+        KeypadButton { text: "."; clicked => { root.key-pressed("."); } }
+        KeypadButton { text: "0"; clicked => { root.key-pressed("0"); } }
+        KeypadButton { text: "⌫"; clicked => { root.key-pressed("backspace"); } } // backspace
+    }
+}

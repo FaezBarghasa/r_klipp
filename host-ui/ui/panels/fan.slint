@@ -1,0 +1,96 @@
+import { Theme } from "../themes/material_dark.slint";
+import { BasePanel } from "../components/base_panel.slint";
+import { Slider, Button } from "std-widgets.slint";
+
+export struct FanDevice {
+    name: string,
+    speed: float, // 0.0 to 1.0
+    changeable: bool,
+}
+
+export component FanPanel inherits BasePanel {
+    title: "Fan Control";
+    
+    in-out property <[FanDevice]> fans: [
+        { name: "Part Cooling Fan", speed: 0.0, changeable: true },
+        { name: "Chamber Fan", speed: 0.5, changeable: true },
+        { name: "Heatsink Fan", speed: 1.0, changeable: false }
+    ];
+
+    callback fan-speed-changed(string, float);
+
+    VerticalLayout {
+        padding: 15px;
+        spacing: 15px;
+
+        for fan in root.fans : Rectangle {
+            background: Theme.panel-bg;
+            border-radius: 5px;
+            height: 100px;
+            
+            HorizontalLayout {
+                padding: 15px;
+                spacing: 15px;
+                alignment: space-between;
+
+                VerticalLayout {
+                    alignment: center;
+                    spacing: 5px;
+                    Text {
+                        text: fan.name;
+                        font-size: 18px;
+                        color: Theme.text;
+                        font-weight: 700;
+                    }
+                    Text {
+                        text: Math.round(fan.speed * 100) + "%";
+                        font-size: 16px;
+                        color: Theme.accent;
+                    }
+                }
+
+                if fan.changeable : HorizontalLayout {
+                    spacing: 10px;
+                    alignment: end;
+                    
+                    Button {
+                        text: "Off";
+                        clicked => { root.fan-speed-changed(fan.name, 0.0); }
+                    }
+                    
+                    Slider {
+                        width: 200px;
+                        minimum: 0.0;
+                        maximum: 1.0;
+                        value: fan.speed;
+                        changed(val) => { root.fan-speed-changed(fan.name, val); }
+                    }
+
+                    Button {
+                        text: "100%";
+                        clicked => { root.fan-speed-changed(fan.name, 1.0); }
+                    }
+                }
+                
+                if !fan.changeable : Rectangle {
+                    width: 250px;
+                    // Progress bar for non-changeable fans
+                    Rectangle {
+                        background: Theme.button-bg;
+                        border-radius: 4px;
+                        height: 20px;
+                        
+                        Rectangle {
+                            x: 0;
+                            width: parent.width * fan.speed;
+                            background: Theme.active;
+                            border-radius: 4px;
+                        }
+                    }
+                }
+            }
+        }
+        
+        Rectangle { height: 100%; } // spacer
+    }
+}

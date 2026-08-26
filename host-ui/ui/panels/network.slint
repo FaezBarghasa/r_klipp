@@ -1,0 +1,199 @@
+import { Theme } from "../themes/material_dark.slint";
+import { BasePanel } from "../components/base_panel.slint";
+import { Button, ScrollView } from "std-widgets.slint";
+
+export struct WifiNetwork {
+    ssid: string,
+    bssid: string,
+    signal: int, // percentage
+    connected: bool,
+    known: bool,
+    security: string,
+}
+
+export component NetworkPanel inherits BasePanel {
+    title: "Network";
+
+    in-out property <string> active-interface: "wlan0";
+    in-out property <string> ip-address: "192.168.1.123";
+    in-out property <bool> wifi-enabled: true;
+    in-out property <[WifiNetwork]> networks: [
+        { ssid: "Home_Wifi", bssid: "00:11:22:33:44:55", signal: 92, connected: true, known: true, security: "WPA2" },
+        { ssid: "Guest_Network", bssid: "AA:BB:CC:DD:EE:FF", signal: 65, connected: false, known: false, security: "WPA2" },
+        { ssid: "CoffeeShop", bssid: "12:34:56:78:90:AB", signal: 45, connected: false, known: false, security: "Open" }
+    ];
+
+    in-out property <bool> show-connect-popup: false;
+    in-out property <string> popup-ssid: "";
+    in-out property <string> popup-password: "";
+
+    callback toggle-wifi(bool);
+    callback connect-to-network(string, string); // ssid, password
+    callback forget-network(string);
+    callback reload-networks();
+
+    HorizontalLayout {
+        padding: 15px;
+        spacing: 20px;
+
+        if !root.show-connect-popup : VerticalLayout {
+            spacing: 15px;
+
+            // Status bar
+            Rectangle {
+                background: Theme.panel-bg;
+                border-radius: 5px;
+                height: 50px;
+                
+                HorizontalLayout {
+                    padding-left: 15px;
+                    padding-right: 15px;
+                    spacing: 15px;
+                    alignment: space-between;
+
+                    Text { text: "Iface: " + root.active-interface; color: Theme.text; vertical-alignment: center; }
+                    Text { text: "IP: " + root.ip-address; color: Theme.text; vertical-alignment: center; }
+                    
+                    HorizontalLayout {
+                        spacing: 10px;
+                        alignment: end;
+                        
+                        Button {
+                            text: "Reload";
+                            clicked => { root.reload-networks(); }
+                        }
+                        
+                        // Switch simulator
+                        Rectangle {
+                            width: 60px;
+                            height: 30px;
+                            background: root.wifi-enabled ? Theme.active : Theme.button-bg;
+                            border-radius: 15px;
+                            TouchArea { clicked => { root.wifi-enabled = !root.wifi-enabled; root.toggle-wifi(root.wifi-enabled); } }
+                            Rectangle {
+                                x: root.wifi-enabled ? 32px : 2px;
+                                width: 26px;
+                                height: 26px;
+                                background: Theme.text;
+                                border-radius: 13px;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Networks scroll view
+            if root.wifi-enabled : ScrollView {
+                VerticalLayout {
+                    spacing: 10px;
+                    for net in root.networks : Rectangle {
+                        background: net.connected ? Theme.active : Theme.panel-bg;
+                        border-radius: 5px;
+                        height: 70px;
+                        
+                        HorizontalLayout {
+                            padding: 10px;
+                            spacing: 15px;
+                            alignment: space-between;
+
+                            VerticalLayout {
+                                alignment: center;
+                                Text { text: net.ssid; font-size: 16px; color: Theme.text; font-weight: 700; }
+                                Text { text: "Signal: " + net.signal + "% (" + net.security + ")"; font-size: 12px; color: Theme.accent; }
+                            }
+
+                            HorizontalLayout {
+                                spacing: 10px;
+                                alignment: end;
+                                
+                                if net.known && !net.connected : Button {
+                                    text: "Forget";
+                                    clicked => { root.forget-network(net.ssid); }
+                                }
+                                
+                                if !net.connected : Button {
+                                    text: "Connect";
+                                    clicked => {
+                                        if (net.security == "Open") {
+                                            root.connect-to-network(net.ssid, "");
+                                        } else {
+                                            root.popup-ssid = net.ssid;
+                                            root.popup-password = "";
+                                            root.show-connect-popup = true;
+                                        }
+                                    }
+                                }
+                                if net.connected : Text {
+                                    text: "Connected";
+                                    color: Theme.echo;
+                                    vertical-alignment: center;
+                                    font-weight: 700;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            if !root.wifi-enabled : Rectangle {
+                background: Theme.panel-bg;
+                border-radius: 5px;
+                Text { text: "Wi-Fi is disabled"; color: Theme.text; horizontal-alignment: center; vertical-alignment: center; }
+            }
+        }
+
+        if root.show-connect-popup : Rectangle {
+            background: Theme.panel-bg;
+            border-radius: 5px;
+            padding: 30px;
+            
+            VerticalLayout {
+                spacing: 20px;
+                alignment: center;
+                
+                Text {
+                    text: "Connect to " + root.popup-ssid;
+                    font-size: 20px;
+                    color: Theme.accent;
+                    horizontal-alignment: center;
+                }
+                
+                // Password Textbox simulator
+                Rectangle {
+                    background: Theme.bg;
+                    border-radius: 4px;
+                    height: 50px;
+                    width: 300px;
+                    x: (parent.width - self.width) / 2;
+                    
+                    TextInput {
+                        text: root.popup-password;
+                        color: Theme.text;
+                        font-size: 18px;
+                    }
+                }
+                
+                HorizontalLayout {
+                    spacing: 15px;
+                    alignment: center;
+                    
+                    Button {
+                        text: "Cancel";
+                        clicked => {
+                            root.show-connect-popup = false;
+                            root.popup-ssid = "";
+                            root.popup-password = "";
+                        }
+                    }
+                    
+                    Button {
+                        text: "Connect";
+                        clicked => {
+                            root.connect-to-network(root.popup-ssid, root.popup-password);
+                            root.show-connect-popup = false;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

@@ -1,186 +1,437 @@
-import { VerticalBox, HorizontalBox, Button, LineEdit, Switch, ListView, TabWidget } from "std-widgets.slint";
+import { ConsolePanel } from "panels/console.slint";
+import { FilesPanel } from "panels/files.slint";
+import { MovePanel } from "panels/move.slint";
+import { TemperaturePanel } from "panels/temperature.slint";
+import { MainMenuPanel } from "panels/main_menu.slint";
+import { JobStatusPanel } from "panels/job_status.slint";
+import { ExtrudePanel } from "panels/extrude.slint";
+import { FanPanel, FanDevice } from "panels/fan.slint";
+import { BedLevelPanel } from "panels/bed_level.slint";
+import { BedMeshPanel } from "panels/bed_mesh.slint";
+import { ZCalibratePanel } from "panels/zcalibrate.slint";
+import { InputShaperPanel } from "panels/input_shaper.slint";
+import { LimitsPanel } from "panels/limits.slint";
+import { PressureAdvancePanel } from "panels/pressure_advance.slint";
+import { RetractionPanel } from "panels/retraction.slint";
+import { FineTunePanel } from "panels/fine_tune.slint";
+import { PinsPanel } from "panels/pins.slint";
+import { NetworkPanel } from "panels/network.slint";
+import { SystemPanel } from "panels/system.slint";
+import { SettingsPanel } from "panels/settings.slint";
+import { UpdaterPanel } from "panels/updater.slint";
+import { PowerPanel } from "panels/power.slint";
+import { ShutdownPanel } from "panels/shutdown.slint";
+import { CameraPanel } from "panels/camera.slint";
+import { SpoolmanPanel } from "panels/spoolman.slint";
+import { SpoolEditorPanel } from "panels/spool_editor.slint";
+import { GCodeMacrosPanel } from "panels/gcode_macros.slint";
+import { ExcludeObjectPanel } from "panels/exclude.slint";
+import { LedPanel } from "panels/led.slint";
 
-export struct GCodeFile {
-    name: string,
-    size: string,
-    upload_date: string,
+import {
+    MenuItemInfo,
+    GCodeFileInfo,
+    ConsoleLine,
+    ThermalSensor,
+    TemperaturePreset,
+    FanEntry,
+    MacroEntry,
+    BedMeshPoint,
+    WifiNetwork,
+    PowerDevice,
+    PackageInfo,
+    SpoolInfo,
+    AxisPosition,
+    PrintStats,
+    SystemInfo
+} from "types.slint";
+
+import { Theme } from "themes/material_dark.slint";
+
+export {
+    ConsolePanel,
+    FilesPanel,
+    MovePanel,
+    TemperaturePanel,
+    MainMenuPanel,
+    JobStatusPanel,
+    ExtrudePanel,
+    FanPanel,
+    BedLevelPanel,
+    BedMeshPanel,
+    ZCalibratePanel,
+    InputShaperPanel,
+    LimitsPanel,
+    PressureAdvancePanel,
+    RetractionPanel,
+    FineTunePanel,
+    PinsPanel,
+    NetworkPanel,
+    SystemPanel,
+    SettingsPanel,
+    UpdaterPanel,
+    PowerPanel,
+    ShutdownPanel,
+    CameraPanel,
+    SpoolmanPanel,
+    SpoolEditorPanel,
+    GCodeMacrosPanel,
+    ExcludeObjectPanel,
+    LedPanel,
+    MenuItemInfo,
+    GCodeFileInfo,
+    ConsoleLine,
+    ThermalSensor,
+    TemperaturePreset,
+    FanEntry,
+    FanDevice,
+    MacroEntry,
+    BedMeshPoint,
+    WifiNetwork,
+    PowerDevice,
+    PackageInfo,
+    SpoolInfo,
+    AxisPosition,
+    PrintStats,
+    SystemInfo,
+    Theme
 }
 
 export component AppWindow inherits Window {
+    title: "r_klipp";
     width: 800px;
     height: 480px;
-    title: "rKlipperScreen";
-    background: #282c34;
+    background: Theme.bg;
 
-    in property <float> nozzle_temp_actual: 0.0;
-    in property <float> nozzle_temp_target: 0.0;
-    in property <float> bed_temp_actual: 0.0;
-    in property <float> bed_temp_target: 0.0;
-    in property <float> print_progress: 0.0;
-    in property <string> current_print_file: "No file selected";
-    in property <[string]> console_output: ["Welcome to rKlipperScreen!"];
-    in property <[GCodeFile]> gcode_files: [];
+    // Navigation state
+    in-out property <string> active-screen: "main_menu";
+    in-out property <string> header-time: "00:00 AM";
+    in-out property <string> printer-state: "idle";
 
-    callback set_nozzle_target(float);
-    callback set_bed_target(float);
-    callback start_print(string);
-    callback refresh_files();
-    callback send_gcode_command(string);
+    // Telemetry properties
+    in-out property <float> nozzle-temp-actual: 0.0;
+    in-out property <float> nozzle-temp-target: 0.0;
+    in-out property <float> bed-temp-actual: 0.0;
+    in-out property <float> bed-temp-target: 0.0;
+    in-out property <float> chamber-temp-actual: 0.0;
+    in-out property <float> chamber-temp-target: 0.0;
 
-    VerticalBox {
-        alignment: start;
-        spacing: 10px;
-        padding: 12px;
+    // Motion properties
+    in-out property <float> pos-x: 0.0;
+    in-out property <float> pos-y: 0.0;
+    in-out property <float> pos-z: 0.0;
+    in-out property <float> pos-e: 0.0;
+    in-out property <string> homed-axes: "";
+    in-out property <float> jog-distance: 10.0;
+    in-out property <float> jog-speed: 50.0;
 
-        // Header
-        HorizontalBox {
-            height: 40px;
-            alignment: space-between;
-            Text {
-                text: "r_klipp Touch Screen";
-                font-size: 22px;
-                color: #61afef;
-                font-weight: 700;
+    // Print job properties
+    in-out property <float> print-progress: 0.0;
+    in-out property <string> current-print-file: "";
+    in-out property <int> print-duration-sec: 0;
+    in-out property <int> layer-current: 0;
+    in-out property <int> layer-total: 0;
+    in-out property <float> speed-factor: 1.0;
+    in-out property <float> flow-factor: 1.0;
+
+    // Extruder & Fan properties
+    in-out property <float> extrude-length: 5.0;
+    in-out property <float> extrude-speed: 5.0;
+    in-out property <float> fan-speed: 0.0;
+    in-out property <[FanDevice]> fans: [
+        { name: "Part Cooling Fan", speed: 0.0, changeable: true },
+        { name: "Chamber Fan", speed: 0.0, changeable: true },
+        { name: "Heatsink Fan", speed: 1.0, changeable: false }
+    ];
+
+    // System info properties
+    in-out property <string> host-name: "mks-skipr";
+    in-out property <string> ip-address: "192.168.1.100";
+    in-out property <float> cpu-usage: 0.15;
+    in-out property <float> mem-usage: 0.40;
+    in-out property <string> mem-text: "1.6 GB / 4.0 GB";
+
+    // Models for lists
+    in-out property <[GCodeFileInfo]> gcode-files: [];
+    in-out property <[ConsoleLine]> console-lines: [];
+    in-out property <[WifiNetwork]> networks: [];
+
+    // Global Callbacks
+    callback navigate-to(string);
+    callback emergency-stop();
+    callback home-axis(string);
+    callback jog-axis(string, float, float);
+    callback disable-motors();
+    callback set-nozzle-target(float);
+    callback set-bed-target(float);
+    callback set-chamber-target(float);
+    callback extrude(float, float);
+    callback set-fan-speed(int, float);
+    callback start-print(string);
+    callback pause-print();
+    callback resume-print();
+    callback cancel-print();
+    callback send-gcode-command(string);
+    callback refresh-files();
+    callback run-macro(string);
+    callback update-package(string);
+    callback restart-service(string);
+    callback shutdown-system();
+    callback reboot-system();
+
+    // Top-level panel router
+    VerticalLayout {
+        padding: 0px;
+        spacing: 0px;
+
+        if root.active-screen == "main_menu" : MainMenuPanel {
+            time: root.header-time;
+            hotend-temp: root.nozzle-temp-actual + "";
+            hotend-target: root.nozzle-temp-target + "";
+            bed-temp: root.bed-temp-actual + "";
+            bed-target: root.bed-temp-target + "";
+            menu-selected(panel) => {
+                root.active-screen = panel;
+                root.navigate-to(panel);
             }
-            Text {
-                text: "Target: 3D / PnP / CNC";
-                font-size: 14px;
-                color: #98c379;
-                vertical-alignment: center;
+            home-clicked => { root.active-screen = "main_menu"; }
+            estop-clicked => { root.emergency-stop(); }
+        }
+
+        if root.active-screen == "job_status" : JobStatusPanel {
+            time: root.header-time;
+            filename: root.current-print-file;
+            status: root.printer-state;
+            progress: root.print-progress;
+            back-clicked => { root.active-screen = "main_menu"; }
+            home-clicked => { root.active-screen = "main_menu"; }
+            estop-clicked => { root.emergency-stop(); }
+            pause-job => { root.pause-print(); }
+            resume-job => { root.resume-print(); }
+            cancel-job => { root.cancel-print(); }
+        }
+
+        if root.active-screen == "move" : MovePanel {
+            jog-increment: root.jog-distance;
+            jog-move(axis, dist) => {
+                root.jog-axis(axis, dist, root.jog-speed);
+            }
+            home-axis(axis) => { root.home-axis(axis); }
+        }
+
+        if root.active-screen == "temperature" : TemperaturePanel {
+            extruder-temp: root.nozzle-temp-actual;
+            extruder-target: root.nozzle-temp-target;
+            bed-temp: root.bed-temp-actual;
+            bed-target: root.bed-temp-target;
+            set-temperature(device, target) => {
+                if device == "extruder" {
+                    root.set-nozzle-target(target);
+                } else if device == "heater_bed" {
+                    root.set-bed-target(target);
+                }
             }
         }
 
-        // Main Content Area
-        HorizontalBox {
-            spacing: 12px;
+        if root.active-screen == "extrude" : ExtrudePanel {
+            time: root.header-time;
+            hotend-temp: root.nozzle-temp-actual + "";
+            hotend-target: root.nozzle-temp-target + "";
+            back-clicked => { root.active-screen = "main_menu"; }
+            home-clicked => { root.active-screen = "main_menu"; }
+            estop-clicked => { root.emergency-stop(); }
+            extrude(dist, spd) => { root.extrude(dist, spd); }
+            retract(dist, spd) => { root.extrude(-dist, spd); }
+        }
 
-            // Left Panel (Dashboard/Controls)
-            Rectangle {
-                width: 380px;
-                background: #323842;
-                border-radius: 8px;
+        if root.active-screen == "fan" : FanPanel {
+            time: root.header-time;
+            fans: root.fans;
+            back-clicked => { root.active-screen = "main_menu"; }
+            home-clicked => { root.active-screen = "main_menu"; }
+            estop-clicked => { root.emergency-stop(); }
+            fan-speed-changed(fan_name, spd) => {
+                root.fan-speed = spd;
+                root.set-fan-speed(0, spd);
+            }
+        }
 
-                VerticalBox {
-                    padding: 12px;
-                    spacing: 10px;
-
-                    Text { text: "Dashboard & Temperatures"; font-size: 16px; color: #abb2bf; font-weight: 600; }
-
-                    // Temperatures
-                    HorizontalBox {
-                        spacing: 12px;
-                        VerticalBox {
-                            Text { text: "Nozzle: \{round(root.nozzle_temp_actual)}°C / \{round(root.nozzle_temp_target)}°C"; color: #e06c75; font-size: 14px; }
-                            HorizontalBox {
-                                spacing: 6px;
-                                Button { text: "-5°C"; clicked => { root.set_nozzle_target(root.nozzle_temp_target - 5.0); } }
-                                Button { text: "+5°C"; clicked => { root.set_nozzle_target(root.nozzle_temp_target + 5.0); } }
-                            }
-                        }
-                        VerticalBox {
-                            Text { text: "Bed: \{round(root.bed_temp_actual)}°C / \{round(root.bed_temp_target)}°C"; color: #98c379; font-size: 14px; }
-                            HorizontalBox {
-                                spacing: 6px;
-                                Button { text: "-5°C"; clicked => { root.set_bed_target(root.bed_temp_target - 5.0); } }
-                                Button { text: "+5°C"; clicked => { root.set_bed_target(root.bed_temp_target + 5.0); } }
-                            }
-                        }
-                    }
-
-                    // Print Progress
-                    VerticalBox {
-                        spacing: 4px;
-                        Text { text: "Print Progress: \{round(root.print_progress * 100)}%"; color: #abb2bf; font-size: 14px; }
-                        Rectangle {
-                            height: 12px;
-                            background: #4b5263;
-                            border-radius: 6px;
-                            Rectangle {
-                                x: 0px;
-                                width: root.print_progress * parent.width;
-                                height: parent.height;
-                                background: #61afef;
-                                border-radius: 6px;
-                            }
-                        }
-                        Text { text: "File: \{root.current_print_file}"; color: #abb2bf; font-size: 13px; }
-                    }
-
-                    // Quick Actions
-                    HorizontalBox {
-                        spacing: 8px;
-                        Button { text: "Home All (G28)"; clicked => { root.send_gcode_command("G28"); } }
-                        Button { text: "E-Stop"; clicked => { root.send_gcode_command("M112"); } }
-                    }
+        if root.active-screen == "files" : FilesPanel {
+            gcode-files: root.gcode-files;
+            file-action(action, name) => {
+                if action == "print" {
+                    root.start-print(name);
+                } else if action == "back" {
+                    root.active-screen = "main_menu";
                 }
             }
+        }
 
-            // Right Panel (Tabs)
-            Rectangle {
-                horizontal-stretch: 1;
-                background: #323842;
-                border-radius: 8px;
+        if root.active-screen == "console" : ConsolePanel {
+            console-lines: root.console-lines;
+            send-gcode(cmd) => { root.send-gcode-command(cmd); }
+            estop-clicked => { root.emergency-stop(); }
+        }
 
-                TabWidget {
-                    Tab {
-                        title: "Files";
-                        VerticalBox {
-                            padding: 8px;
-                            spacing: 6px;
-                            HorizontalBox {
-                                Button { text: "Refresh Files"; clicked => { root.refresh_files(); } }
-                            }
-                            ListView {
-                                for file in root.gcode_files: HorizontalBox {
-                                    spacing: 8px;
-                                    Text { text: file.name; color: #ffffff; width: 140px; font-size: 13px; vertical-alignment: center; }
-                                    Text { text: file.size; color: #abb2bf; width: 60px; font-size: 12px; vertical-alignment: center; }
-                                    Button { text: "Print"; clicked => { root.start_print(file.name); } }
-                                }
-                            }
-                        }
-                    }
-                    Tab {
-                        title: "Console";
-                        VerticalBox {
-                            padding: 8px;
-                            spacing: 6px;
-                            ListView {
-                                for line in root.console_output: Text {
-                                    text: line;
-                                    color: #abb2bf;
-                                    font-size: 12px;
-                                }
-                            }
-                            HorizontalBox {
-                                spacing: 6px;
-                                gcode_input := LineEdit {
-                                    placeholder-text: "Enter G-code / OpenPnP command";
-                                    font-size: 13px;
-                                }
-                                Button {
-                                    text: "Send";
-                                    clicked => {
-                                        root.send_gcode_command(gcode_input.text);
-                                        gcode_input.text = "";
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    Tab {
-                        title: "Multi-Target Profile";
-                        VerticalBox {
-                            padding: 12px;
-                            spacing: 8px;
-                            Text { text: "Active Profiles: 3D Printer / PnP / CNC"; color: #ffffff; font-size: 14px; }
-                            Text { text: "• CAN-FD Smart Feeders: Active"; color: #98c379; font-size: 12px; }
-                            Text { text: "• 5-Axis RTCP Transform: Enabled"; color: #61afef; font-size: 12px; }
-                            Text { text: "• TMC2240 Paste StallGuard: Armed"; color: #e5c07b; font-size: 12px; }
-                        }
-                    }
-                }
-            }
+        if root.active-screen == "bed_level" : BedLevelPanel {
+            time: root.header-time;
+            back-clicked => { root.active-screen = "main_menu"; }
+            home-clicked => { root.active-screen = "main_menu"; }
+            estop-clicked => { root.emergency-stop(); }
+        }
+
+        if root.active-screen == "bed_mesh" : BedMeshPanel {
+            time: root.header-time;
+            back-clicked => { root.active-screen = "main_menu"; }
+            home-clicked => { root.active-screen = "main_menu"; }
+            estop-clicked => { root.emergency-stop(); }
+        }
+
+        if root.active-screen == "zcalibrate" : ZCalibratePanel {
+            time: root.header-time;
+            back-clicked => { root.active-screen = "main_menu"; }
+            home-clicked => { root.active-screen = "main_menu"; }
+            estop-clicked => { root.emergency-stop(); }
+        }
+
+        if root.active-screen == "input_shaper" : InputShaperPanel {
+            time: root.header-time;
+            back-clicked => { root.active-screen = "main_menu"; }
+            home-clicked => { root.active-screen = "main_menu"; }
+            estop-clicked => { root.emergency-stop(); }
+        }
+
+        if root.active-screen == "limits" : LimitsPanel {
+            time: root.header-time;
+            back-clicked => { root.active-screen = "main_menu"; }
+            home-clicked => { root.active-screen = "main_menu"; }
+            estop-clicked => { root.emergency-stop(); }
+        }
+
+        if root.active-screen == "pressure_advance" : PressureAdvancePanel {
+            time: root.header-time;
+            back-clicked => { root.active-screen = "main_menu"; }
+            home-clicked => { root.active-screen = "main_menu"; }
+            estop-clicked => { root.emergency-stop(); }
+        }
+
+        if root.active-screen == "retraction" : RetractionPanel {
+            time: root.header-time;
+            back-clicked => { root.active-screen = "main_menu"; }
+            home-clicked => { root.active-screen = "main_menu"; }
+            estop-clicked => { root.emergency-stop(); }
+        }
+
+        if root.active-screen == "fine_tune" : FineTunePanel {
+            time: root.header-time;
+            back-clicked => { root.active-screen = "main_menu"; }
+            home-clicked => { root.active-screen = "main_menu"; }
+            estop-clicked => { root.emergency-stop(); }
+        }
+
+        if root.active-screen == "pins" : PinsPanel {
+            time: root.header-time;
+            back-clicked => { root.active-screen = "main_menu"; }
+            home-clicked => { root.active-screen = "main_menu"; }
+            estop-clicked => { root.emergency-stop(); }
+        }
+
+        if root.active-screen == "network" : NetworkPanel {
+            time: root.header-time;
+            ip-address: root.ip-address;
+            networks: root.networks;
+            back-clicked => { root.active-screen = "main_menu"; }
+            home-clicked => { root.active-screen = "main_menu"; }
+            estop-clicked => { root.emergency-stop(); }
+        }
+
+        if root.active-screen == "system" : SystemPanel {
+            time: root.header-time;
+            hostname: root.host-name;
+            cpu-usage: root.cpu-usage;
+            memory-usage: root.mem-usage;
+            memory-text: root.mem-text;
+            back-clicked => { root.active-screen = "main_menu"; }
+            home-clicked => { root.active-screen = "main_menu"; }
+            estop-clicked => { root.emergency-stop(); }
+        }
+
+        if root.active-screen == "settings" : SettingsPanel {
+            time: root.header-time;
+            back-clicked => { root.active-screen = "main_menu"; }
+            home-clicked => { root.active-screen = "main_menu"; }
+            estop-clicked => { root.emergency-stop(); }
+        }
+
+        if root.active-screen == "updater" : UpdaterPanel {
+            time: root.header-time;
+            back-clicked => { root.active-screen = "main_menu"; }
+            home-clicked => { root.active-screen = "main_menu"; }
+            estop-clicked => { root.emergency-stop(); }
+            update-package(pkg) => { root.update-package(pkg); }
+            restart-service(svc) => { root.restart-service(svc); }
+        }
+
+        if root.active-screen == "power" : PowerPanel {
+            time: root.header-time;
+            back-clicked => { root.active-screen = "main_menu"; }
+            home-clicked => { root.active-screen = "main_menu"; }
+            estop-clicked => { root.emergency-stop(); }
+        }
+
+        if root.active-screen == "shutdown" : ShutdownPanel {
+            time: root.header-time;
+            back-clicked => { root.active-screen = "main_menu"; }
+            home-clicked => { root.active-screen = "main_menu"; }
+            estop-clicked => { root.emergency-stop(); }
+            shutdown-clicked => { root.shutdown-system(); }
+            reboot-clicked => { root.reboot-system(); }
+            restart-ks-clicked => { root.restart-service("klipperscreen"); }
+        }
+
+        if root.active-screen == "camera" : CameraPanel {
+            time: root.header-time;
+            back-clicked => { root.active-screen = "main_menu"; }
+            home-clicked => { root.active-screen = "main_menu"; }
+            estop-clicked => { root.emergency-stop(); }
+        }
+
+        if root.active-screen == "spoolman" : SpoolmanPanel {
+            time: root.header-time;
+            back-clicked => { root.active-screen = "main_menu"; }
+            home-clicked => { root.active-screen = "main_menu"; }
+            estop-clicked => { root.emergency-stop(); }
+        }
+
+        if root.active-screen == "spool_editor" : SpoolEditorPanel {
+            time: root.header-time;
+            back-clicked => { root.active-screen = "main_menu"; }
+            home-clicked => { root.active-screen = "main_menu"; }
+            estop-clicked => { root.emergency-stop(); }
+        }
+
+        if root.active-screen == "gcode_macros" : GCodeMacrosPanel {
+            time: root.header-time;
+            back-clicked => { root.active-screen = "main_menu"; }
+            home-clicked => { root.active-screen = "main_menu"; }
+            estop-clicked => { root.emergency-stop(); }
+            run-macro(name) => { root.run-macro(name); }
+        }
+
+        if root.active-screen == "exclude" : ExcludeObjectPanel {
+            time: root.header-time;
+            back-clicked => { root.active-screen = "main_menu"; }
+            home-clicked => { root.active-screen = "main_menu"; }
+            estop-clicked => { root.emergency-stop(); }
+        }
+
+        if root.active-screen == "led" : LedPanel {
+            time: root.header-time;
+            back-clicked => { root.active-screen = "main_menu"; }
+            home-clicked => { root.active-screen = "main_menu"; }
+            estop-clicked => { root.emergency-stop(); }
         }
     }
 }
+
+export component RKlipperScreen inherits AppWindow {}

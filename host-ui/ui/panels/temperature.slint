@@ -1,0 +1,232 @@
+import { Theme } from "../themes/material_dark.slint";
+
+export global L10n {
+    pure callback translate(string) -> string;
+}
+
+component KeyButton inherits Rectangle {
+    in-out property <string> label;
+    callback clicked(string);
+
+    background: touch.pressed ? Theme.active : Theme.button-bg;
+    border-radius: 4px;
+    border-width: 1px;
+    border-color: Theme.active;
+
+    touch := TouchArea {
+        clicked => { root.clicked(root.label); }
+    }
+
+    Text {
+        text: root.label;
+        color: Theme.text;
+        font-size: 18px;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+}
+
+component Numpad inherits Rectangle {
+    callback key-pressed(string);
+    callback closed;
+
+    background: Theme.panel-bg;
+    border-radius: 8px;
+    border-width: 1px;
+    border-color: Theme.accent;
+
+    VerticalLayout {
+        padding: 12px;
+        spacing: 8px;
+
+        HorizontalLayout {
+            alignment: space-between;
+            Text {
+                text: L10n.translate("Enter Value");
+                color: Theme.text;
+                font-weight: 700;
+                font-size: 16px;
+            }
+            TouchArea {
+                clicked => { root.closed(); }
+                Text {
+                    text: "✕";
+                    color: Theme.error;
+                    font-weight: 700;
+                    font-size: 18px;
+                }
+            }
+        }
+
+        GridLayout {
+            spacing: 8px;
+            Row {
+                KeyButton { label: "1"; clicked(k) => { root.key-pressed(k); } }
+                KeyButton { label: "2"; clicked(k) => { root.key-pressed(k); } }
+                KeyButton { label: "3"; clicked(k) => { root.key-pressed(k); } }
+            }
+            Row {
+                KeyButton { label: "4"; clicked(k) => { root.key-pressed(k); } }
+                KeyButton { label: "5"; clicked(k) => { root.key-pressed(k); } }
+                KeyButton { label: "6"; clicked(k) => { root.key-pressed(k); } }
+            }
+            Row {
+                KeyButton { label: "7"; clicked(k) => { root.key-pressed(k); } }
+                KeyButton { label: "8"; clicked(k) => { root.key-pressed(k); } }
+                KeyButton { label: "9"; clicked(k) => { root.key-pressed(k); } }
+            }
+            Row {
+                KeyButton { label: "C"; clicked(k) => { root.key-pressed(k); } }
+                KeyButton { label: "0"; clicked(k) => { root.key-pressed(k); } }
+                KeyButton { label: "."; clicked(k) => { root.key-pressed(k); } }
+            }
+            Row {
+                Rectangle {
+                    colspan: 3;
+                    height: 40px;
+                    background: Theme.accent;
+                    border-radius: 4px;
+                    TouchArea {
+                        clicked => { root.key-pressed("OK"); }
+                    }
+                    Text {
+                        text: L10n.translate("Confirm");
+                        color: Theme.text;
+                        font-weight: 700;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+        }
+    }
+}
+
+component IconButton inherits Rectangle {
+    in-out property <image> icon;
+    in-out property <string> text;
+    in-out property <bool> active: false;
+    callback clicked;
+
+    background: self.active ? Theme.active : (touch.pressed ? Theme.active : Theme.button-bg);
+    border-radius: 6px;
+    border-width: 1px;
+    border-color: Theme.accent;
+
+    touch := TouchArea {
+        clicked => { root.clicked(); }
+    }
+
+    VerticalLayout {
+        padding: 8px;
+        spacing: 4px;
+        alignment: center;
+
+        if root.icon.width > 0 : Image {
+            source: root.icon;
+            width: 48px;
+            height: 48px;
+            image-fit: contain;
+        }
+        if root.text != "" : Text {
+            text: root.text;
+            color: Theme.text;
+            font-size: 14px;
+            horizontal-alignment: center;
+        }
+    }
+}
+
+export component TemperaturePanel inherits HorizontalLayout {
+    in-out property <float> extruder-temp;
+    in-out property <float> extruder-target;
+    in-out property <float> bed-temp;
+    in-out property <float> bed-target;
+
+    in-out property <string> active-temp-device: "";
+    in-out property <string> temp-input-buffer: "";
+
+    callback set-temperature(string, float);
+
+    padding: 12px;
+    spacing: 12px;
+
+    // Left Side Control Grid
+    VerticalLayout {
+        spacing: 12px;
+        HorizontalLayout {
+            spacing: 12px;
+            // Extruder Readout Card
+            Rectangle {
+                background: Theme.panel-bg;
+                border-radius: 8px;
+                border-width: 1px;
+                border-color: root.active-temp-device == "extruder" ? Theme.accent : Theme.active;
+                TouchArea {
+                    clicked => {
+                        root.active-temp-device = "extruder";
+                        root.temp-input-buffer = "";
+                    }
+                }
+                VerticalLayout {
+                    padding: 8px;
+                    alignment: center;
+                    Text { text: L10n.translate("Extruder"); color: Theme.text; font-size: 14px; horizontal-alignment: center; }
+                    Text { text: Math.round(root.extruder-temp) + " °C"; color: Theme.accent; font-size: 24px; font-weight: 700; horizontal-alignment: center; }
+                    Text { text: L10n.translate("Target") + ": " + Math.round(root.extruder-target) + " °C"; color: Theme.text; font-size: 12px; horizontal-alignment: center; }
+                }
+            }
+            // Bed Readout Card
+            Rectangle {
+                background: Theme.panel-bg;
+                border-radius: 8px;
+                border-width: 1px;
+                border-color: root.active-temp-device == "bed" ? Theme.accent : Theme.active;
+                TouchArea {
+                    clicked => {
+                        root.active-temp-device = "bed";
+                        root.temp-input-buffer = "";
+                    }
+                }
+                VerticalLayout {
+                    padding: 8px;
+                    alignment: center;
+                    Text { text: L10n.translate("Heater Bed"); color: Theme.text; font-size: 14px; horizontal-alignment: center; }
+                    Text { text: Math.round(root.bed-temp) + " °C"; color: Theme.accent; font-size: 24px; font-weight: 700; horizontal-alignment: center; }
+                    Text { text: L10n.translate("Target") + ": " + Math.round(root.bed-target) + " °C"; color: Theme.text; font-size: 12px; horizontal-alignment: center; }
+                }
+            }
+        }
+
+        // Quick presets
+        HorizontalLayout {
+            spacing: 8px;
+            height: 50px;
+            IconButton { text: "PLA"; clicked => { root.set-temperature("extruder", 195.0); root.set-temperature("bed", 60.0); } }
+            IconButton { text: "ABS"; clicked => { root.set-temperature("extruder", 220.0); root.set-temperature("bed", 90.0); } }
+            IconButton { text: "PETG"; clicked => { root.set-temperature("extruder", 240.0); root.set-temperature("bed", 80.0); } }
+            IconButton { text: L10n.translate("Cooldown"); background: Theme.error; clicked => { root.set-temperature("extruder", 0.0); root.set-temperature("bed", 0.0); } }
+        }
+    }
+
+    // Right Side Keyboard / Numpad if device active
+    if root.active-temp-device != "" : Numpad {
+        width: 240px;
+        key-pressed(key) => {
+            if (key == "C") {
+                root.temp-input-buffer = "";
+            } else if (key == "OK") {
+                if (root.temp-input-buffer != "") {
+                    let val = root.temp-input-buffer.to-float();
+                    root.set-temperature(root.active-temp-device, val);
+                }
+                root.active-temp-device = "";
+            } else {
+                root.temp-input-buffer = root.temp-input-buffer + key;
+            }
+        }
+        closed => {
+            root.active-temp-device = "";
+        }
+    }
+}

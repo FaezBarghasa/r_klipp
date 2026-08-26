@@ -1,0 +1,104 @@
+import { Theme } from "../themes/material_dark.slint";
+import { BasePanel } from "../components/base_panel.slint";
+import { Button, ScrollView } from "std-widgets.slint";
+
+export struct UpdateItem {
+    name: string,
+    version: string,
+    remote-version: string,
+    up-to-date: bool,
+    can-restart: bool,
+}
+
+export component UpdaterPanel inherits BasePanel {
+    title: "System Update";
+
+    in-out property <[UpdateItem]> packages: [
+        { name: "Klipper", version: "v0.11.0-120", remote-version: "v0.11.0-120", up-to-date: true, can-restart: true },
+        { name: "Moonraker", version: "v0.8.0-20", remote-version: "v0.8.0-22", up-to-date: false, can-restart: true },
+        { name: "System (OS Packages)", version: "2 packages pending", remote-version: "2 packages pending", up-to-date: false, can-restart: false },
+        { name: "KlipperScreen", version: "v0.3.0", remote-version: "v0.3.0", up-to-date: true, can-restart: true }
+    ];
+
+    callback update-package(string);
+    callback restart-service(string);
+    callback full-update();
+    callback refresh-updates();
+
+    VerticalLayout {
+        padding: 15px;
+        spacing: 15px;
+
+        // Topbar
+        HorizontalLayout {
+            spacing: 15px;
+            height: 45px;
+            
+            Button {
+                text: "Full Update";
+                clicked => { root.full-update(); }
+            }
+            
+            Button {
+                text: "Refresh";
+                clicked => { root.refresh-updates(); }
+            }
+        }
+
+        // Package status list
+        ScrollView {
+            VerticalLayout {
+                spacing: 10px;
+                
+                for pkg in root.packages : Rectangle {
+                    background: Theme.panel-bg;
+                    border-radius: 5px;
+                    height: 70px;
+                    
+                    HorizontalLayout {
+                        padding: 12px;
+                        spacing: 15px;
+                        alignment: space-between;
+
+                        VerticalLayout {
+                            alignment: center;
+                            Text { text: pkg.name; font-size: 16px; color: Theme.text; font-weight: 700; }
+                            Text {
+                                text: pkg.up-to-date ? pkg.version : pkg.version + " ➔ " + pkg.remote-version;
+                                font-size: 12px;
+                                color: Theme.accent;
+                            }
+                        }
+
+                        HorizontalLayout {
+                            spacing: 10px;
+                            alignment: end;
+                            
+                            if pkg.can-restart : Button {
+                                text: "Restart";
+                                clicked => { root.restart-service(pkg.name); }
+                            }
+                            
+                            if !pkg.up-to-date : Rectangle {
+                                width: 90px;
+                                height: 35px;
+                                background: Theme.active;
+                                border-radius: 4px;
+                                TouchArea { clicked => { root.update-package(pkg.name); } }
+                                Text { text: "Update"; color: Theme.text; font-weight: 700; horizontal-alignment: center; vertical-alignment: center; }
+                            }
+                            
+                            if pkg.up-to-date : Text {
+                                text: "Up To Date";
+                                color: Theme.echo;
+                                font-size: 14px;
+                                font-weight: 700;
+                                vertical-alignment: center;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

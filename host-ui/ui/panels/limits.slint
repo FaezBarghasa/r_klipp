@@ -1,0 +1,80 @@
+import { Theme } from "../themes/material_dark.slint";
+import { BasePanel } from "../components/base_panel.slint";
+import { Button, Slider } from "std-widgets.slint";
+
+export struct LimitOption {
+    name: string,
+    key: string,
+    units: string,
+    value: float,
+    default-value: float,
+    min: float,
+    max: float,
+}
+
+export component LimitsPanel inherits BasePanel {
+    title: "Limits";
+
+    in-out property <[LimitOption]> options: [
+        { name: "Max Acceleration", key: "max_accel", units: "mm/s²", value: 3000.0, default-value: 3000.0, min: 100.0, max: 10000.0 },
+        { name: "Minimum Cruise Ratio", key: "minimum_cruise_ratio", units: "%", value: 50.0, default-value: 50.0, min: 0.0, max: 99.0 },
+        { name: "Max Velocity", key: "max_velocity", units: "mm/s", value: 300.0, default-value: 300.0, min: 10.0, max: 1000.0 },
+        { name: "Square Corner Velocity", key: "square_corner_velocity", units: "mm/s", value: 5.0, default-value: 5.0, min: 0.1, max: 20.0 }
+    ];
+
+    callback limit-changed(string, float);
+    callback reset-limit(string);
+
+    VerticalLayout {
+        padding: 15px;
+        spacing: 15px;
+
+        for opt in root.options : Rectangle {
+            background: Theme.panel-bg;
+            border-radius: 5px;
+            height: 90px;
+            
+            HorizontalLayout {
+                padding: 12px;
+                spacing: 15px;
+                alignment: space-between;
+
+                VerticalLayout {
+                    width: 250px;
+                    alignment: center;
+                    Text {
+                        text: opt.name + " (" + opt.units + ")";
+                        font-size: 16px;
+                        color: Theme.text;
+                        font-weight: 700;
+                    }
+                    Text {
+                        text: Math.round(opt.value);
+                        font-size: 18px;
+                        color: Theme.accent;
+                    }
+                }
+
+                HorizontalLayout {
+                    spacing: 10px;
+                    alignment: end;
+                    
+                    Slider {
+                        minimum: opt.min;
+                        maximum: opt.max;
+                        value: opt.value;
+                        width: 250px;
+                        changed(val) => { root.limit-changed(opt.key, val); }
+                    }
+
+                    Button {
+                        text: "Reset";
+                        clicked => { root.reset-limit(opt.key); }
+                    }
+                }
+            }
+        }
+        
+        Rectangle { height: 100%; } // spacer
+    }
+}

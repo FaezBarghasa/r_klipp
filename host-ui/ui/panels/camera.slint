@@ -1,0 +1,72 @@
+import { Theme } from "../themes/material_dark.slint";
+import { BasePanel } from "../components/base_panel.slint";
+import { ScrollView } from "std-widgets.slint";
+
+export struct CameraItem {
+    name: string,
+    stream-url: string,
+    enabled: bool,
+}
+
+export component CameraPanel inherits BasePanel {
+    title: "Cameras";
+
+    in-out property <[CameraItem]> cameras: [
+        { name: "Nozzle Cam", stream-url: "http://localhost:8080/?action=stream", enabled: true },
+        { name: "Chamber Cam", stream-url: "http://localhost:8081/?action=stream", enabled: true }
+    ];
+
+    callback play-camera(string); // stream url
+
+    ScrollView {
+        padding: 15px;
+        
+        VerticalLayout {
+            spacing: 12px;
+
+            for cam in root.cameras : Rectangle {
+                if cam.enabled : Rectangle {
+                    background: Theme.panel-bg;
+                    border-radius: 5px;
+                    height: 80px;
+                    
+                    TouchArea {
+                        clicked => {
+                            root.play-camera(cam.stream-url);
+                        }
+                    }
+                    
+                    HorizontalLayout {
+                        padding: 15px;
+                        spacing: 15px;
+                        alignment: space-between;
+
+                        HorizontalLayout {
+                            spacing: 15px;
+                            Text {
+                                text: "📷";
+                                font-size: 28px;
+                                vertical-alignment: center;
+                            }
+                            Text {
+                                text: cam.name;
+                                font-size: 18px;
+                                color: Theme.text;
+                                font-weight: 700;
+                                vertical-alignment: center;
+                            }
+                        }
+
+                        Text {
+                            text: "Play Stream";
+                            color: Theme.accent;
+                            vertical-alignment: center;
+                            font-size: 14px;
+                            font-weight: 700;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
