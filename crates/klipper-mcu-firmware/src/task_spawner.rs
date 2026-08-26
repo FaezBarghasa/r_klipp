@@ -11,7 +11,7 @@ impl TaskSpawner {
     }
 
     pub fn spawn<S>(&self, token: SpawnToken<S>) {
-        self.spawner.spawn(token).unwrap();
+        self.spawner.spawn(token);
     }
 }
 
