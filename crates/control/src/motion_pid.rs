@@ -20,7 +20,7 @@ pub struct PidController {
     integral: f32,
     previous_error: f32,
     previous_measurement: f32,
-    previous_time: f32,
+    previous_time: Option<f32>,
     derivative: f32,
     output_limit_min: f32,
     output_limit_max: f32,
@@ -33,7 +33,7 @@ impl PidController {
             integral: 0.0,
             previous_error: 0.0,
             previous_measurement: 0.0,
-            previous_time: 0.0,
+            previous_time: None,
             derivative: 0.0,
             output_limit_min,
             output_limit_max,
@@ -44,17 +44,16 @@ impl PidController {
         self.integral = 0.0;
         self.previous_error = 0.0;
         self.previous_measurement = 0.0;
-        self.previous_time = 0.0;
+        self.previous_time = None;
         self.derivative = 0.0;
     }
 
     pub fn update(&mut self, setpoint: f32, measurement: f32, time: f32, velocity_cmd: f32, accel_cmd: f32) -> f32 {
-        let dt = if self.previous_time == 0.0 {
-            0.0
-        } else {
-            time - self.previous_time
+        let dt = match self.previous_time {
+            Some(prev) => time - prev,
+            None => 0.0,
         };
-        self.previous_time = time;
+        self.previous_time = Some(time);
 
         if dt <= 0.0 {
             // If dt is not positive, we can't do any calculations.
@@ -107,11 +106,11 @@ mod tests {
 
         // First update, dt should be 0
         pid.update(10.0, 0.0, 0.0, 0.0, 0.0);
-        assert_eq!(pid.previous_time, 0.0);
+        assert_eq!(pid.previous_time, Some(0.0));
 
         // Second update
         pid.update(10.0, 1.0, 0.001, 0.0, 0.0);
-        assert_eq!(pid.previous_time, 0.001);
+        assert_eq!(pid.previous_time, Some(0.001));
         // dt is 0.001, so integral should have changed
         assert_ne!(pid.integral, 0.0);
     }

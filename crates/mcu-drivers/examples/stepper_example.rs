@@ -9,9 +9,8 @@ use panic_probe as _;
 fn main() -> ! {
     defmt::info!("--- Stepper Control Example ---");
 
-    let mut controller = StepperController::<256>::new(0b0001);
+    let mut controller = StepperController::<256>::new(0b0001, 0b0010);
 
-    defmt::info!("Enqueuing a sequence of 5 steps for motor 0...");
     for i in 0..5 {
         let segment = StepSegment {
             interval_ticks: 1000 + (i * 100),
@@ -21,18 +20,15 @@ fn main() -> ! {
         controller.enqueue_segment(segment).expect("Failed to enqueue segment");
     }
 
-    defmt::info!("\n--- Simulating Timer Interrupts ---");
     let mut bsrr_dummy: u32 = 0;
     let mut arr_dummy: u32 = 0;
 
     let mut steps_processed = 0;
-    while controller.queue.len() > 0 {
+    while let Some(_) = controller.dequeue_segment() {
         steps_processed += 1;
-        defmt::info!("\n--- Interrupt Fired (Step {}) ---", steps_processed);
         unsafe {
             controller.execute_next_step_isr(&mut bsrr_dummy as *mut u32, &mut arr_dummy as *mut u32);
         }
-        defmt::info!("BSRR: {:08x}, ARR: {}", bsrr_dummy, arr_dummy);
     }
 
     loop {

@@ -23,7 +23,7 @@ impl SerialLink for MockSerialLink {
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
-    spawner.spawn(link_monitor(MockSerialLink)).unwrap();
+    spawner.spawn(link_monitor(MockSerialLink).expect("Failed to create task"));
 }
 
 #[embassy_executor::task]
@@ -50,11 +50,11 @@ async fn link_monitor(mut serial: MockSerialLink) {
             dropped_packets: 0, // Mock value
         };
 
-        let telemetry = McuToHost::Telemetry {
+        let telemetry = McuToHost::new(r_klipp_api::McuPayload::Telemetry {
             pos: [0.0; 6], // Mock
             temps: [0.0; 4], // Mock
             link_health,
-        };
+        });
 
         let mut send_buf = [0u8; 128];
         if let Ok(encoded) = postcard::to_slice(&telemetry, &mut send_buf) {
