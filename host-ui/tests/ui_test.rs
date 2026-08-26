@@ -1,4 +1,4 @@
-use host_ui::{AppWindow, GCodeFile};
+use host_ui::{AppWindow, ConsoleLine, GCodeFileInfo};
 use slint::Model;
 use std::rc::Rc;
 
@@ -26,19 +26,20 @@ fn test_slint_ui_full_lifecycle() {
     assert_eq!(window.get_current_print_file(), "test_benchy.gcode");
 
     // 4. Test Console Log Output Model
-    let initial_console: Vec<slint::SharedString> = vec![
-        "Init r_klipp".into(),
-        "MKS SKIPR connected".into(),
+    let initial_console: Vec<ConsoleLine> = vec![
+        ConsoleLine { text: "Init r_klipp".into(), is_input: false },
+        ConsoleLine { text: "MKS SKIPR connected".into(), is_input: false },
     ];
-    window.set_console_output(Rc::new(slint::VecModel::from(initial_console)).into());
-    assert_eq!(window.get_console_output().row_count(), 2);
+    window.set_console_lines(Rc::new(slint::VecModel::from(initial_console)).into());
+    assert_eq!(window.get_console_lines().row_count(), 2);
 
     // 5. Test G-Code File List Model
-    let files: Vec<GCodeFile> = vec![
-        GCodeFile {
+    let files: Vec<GCodeFileInfo> = vec![
+        GCodeFileInfo {
             name: "speed_test.gcode".into(),
             size: "3.2 MB".into(),
-            upload_date: "2026-08-25".into(),
+            is_dir: false,
+            thumbnail: Default::default(),
         },
     ];
     window.set_gcode_files(Rc::new(slint::VecModel::from(files)).into());

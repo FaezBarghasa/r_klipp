@@ -276,22 +276,26 @@ pub async fn run_ui(mcu_cmd_sender: mpsc::Sender<HostToMcu>) -> Result<()> {
             if let Ok(res) = client.get(format!("{}/server/files/list", API_BASE_URL)).send().await {
                 if let Ok(json) = res.json::<serde_json::Value>().await {
                     if let Some(files_array) = json.as_array() {
-                        let gcode_files: Vec<GCodeFileInfo> = files_array
+                        let files_data: Vec<(String, String, bool)> = files_array
                             .iter()
                             .filter_map(|f| {
                                 let name = f["name"].as_str()?.to_string();
                                 let size = f["size"].as_str().unwrap_or("0 B").to_string();
                                 let is_dir = f["is_dir"].as_bool().unwrap_or(false);
-                                Some(GCodeFileInfo {
-                                    name: slint::SharedString::from(name),
-                                    size: slint::SharedString::from(size),
-                                    is_dir,
-                                    thumbnail: Default::default(),
-                                })
+                                Some((name, size, is_dir))
                             })
                             .collect();
                         let _ = slint::invoke_from_event_loop(move || {
                             if let Some(ui) = ui_c.upgrade() {
+                                let gcode_files: Vec<GCodeFileInfo> = files_data
+                                    .into_iter()
+                                    .map(|(name, size, is_dir)| GCodeFileInfo {
+                                        name: slint::SharedString::from(name),
+                                        size: slint::SharedString::from(size),
+                                        is_dir,
+                                        thumbnail: Default::default(),
+                                    })
+                                    .collect();
                                 ui.set_gcode_files(Rc::new(slint::VecModel::from(gcode_files)).into());
                             }
                         });
