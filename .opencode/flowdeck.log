@@ -1,2 +1,6 @@
 {"timestamp":"2026-08-26T12:27:06.274Z","event":"idle","phase":null,"detail":"Session is idle. State checkpointed — resume with /fd-resume."}
 {"timestamp":"2026-08-26T12:34:38.497Z","event":"idle","phase":null,"detail":"Session is idle. State checkpointed — resume with /fd-resume."}
+{"timestamp":"2026-08-26T13:01:42.658Z","event":"idle","phase":null,"detail":"Session is idle. State checkpointed — resume with /fd-resume."}
+{"timestamp":"2026-08-26T13:05:19.668Z","event":"error","phase":null,"detail":"Session encountered an error."}
+{"timestamp":"2026-08-26T13:05:19.668Z","event":"idle","phase":null,"detail":"Session is idle. State checkpointed — resume with /fd-resume."}
+{"timestamp":"2026-08-26T13:05:19.753Z","event":"idle","phase":null,"detail":"Session is idle. State checkpointed — resume with /fd-resume."}
