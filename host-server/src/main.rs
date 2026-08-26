@@ -44,10 +44,18 @@ fn main() -> Result<()> {
     let file_manager = Arc::new(components::FileManager::new("./data/gcodes", "./data/config"));
     let job_queue = Arc::new(components::JobQueue::new());
     let data_store = Arc::new(components::DataStore::new(1200.0)); // 20-min temperature history
+    let machine_mgr = Arc::new(components::MachineManager::new());
+    let power_mgr = Arc::new(components::PowerManager::new());
+    let update_mgr = Arc::new(components::UpdateManager::new());
+    let spoolman = Arc::new(components::SpoolmanClient::new());
 
     let api_file_mgr = file_manager.clone();
     let api_job_queue = job_queue.clone();
     let api_data_store = data_store.clone();
+    let api_machine_mgr = machine_mgr.clone();
+    let api_power_mgr = power_mgr.clone();
+    let api_update_mgr = update_mgr.clone();
+    let api_spoolman = spoolman.clone();
 
     // 2. Initialize and spawn SerialBridge on Tokio
     let serial_port_path = "/dev/ttyUSB0".to_string();
@@ -76,6 +84,10 @@ fn main() -> Result<()> {
             api_file_mgr,
             api_job_queue,
             api_data_store,
+            api_machine_mgr,
+            api_power_mgr,
+            api_update_mgr,
+            api_spoolman,
         )) {
             error!("Actix-Web server error: {:?}", e);
         }
