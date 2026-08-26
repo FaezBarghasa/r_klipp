@@ -67,14 +67,13 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 echo "[*] Step 2: Executing QEMU test on '${KERNEL_PATH}' (Timeout: ${TIMEOUT_SEC}s)..."
-echo "[*] Command: qemu-system-arm -machine lm3s6965evb -cpu cortex-m3 -nographic -serial mon:stdio -kernel ${KERNEL_PATH}"
+echo "[*] Command: qemu-system-arm -machine olimex-stm32-h405 -nographic -semihosting-config enable=on,target=native -kernel ${KERNEL_PATH}"
 
 # Execute QEMU with timeout, enabling semihosting for output
 # Semihosting output goes to stderr, so capture both streams
 set +e
-timeout "${TIMEOUT_SEC}s" qemu-system-arm \
-    -machine lm3s6965evb \
-    -cpu cortex-m3 \
+timeout ${TIMEOUT_SEC} qemu-system-arm \
+    -machine olimex-stm32-h405 \
     -nographic \
     -semihosting-config enable=on,target=native \
     -kernel "${KERNEL_PATH}" > "${LOG_FILE}" 2>&1

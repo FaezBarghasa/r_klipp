@@ -5,9 +5,11 @@ PKG_CONFIG_PATH = { value = "target/pkgconfig", relative = true }
 rustflags = ["-L", "native=target/pkgconfig"]
 
 [target.thumbv7em-none-eabihf]
+runner = "qemu-system-arm -machine olimex-stm32-h405 -nographic -semihosting-config enable=on,target=native -kernel"
 rustflags = ["-C", "link-arg=-Tlink.x"]
 
 [target.thumbv7m-none-eabi]
+runner = "qemu-system-arm -machine olimex-stm32-h405 -nographic -semihosting-config enable=on,target=native -kernel"
 rustflags = ["-C", "link-arg=-Tlink.x"]
 
 [alias]

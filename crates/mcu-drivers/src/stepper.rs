@@ -45,7 +45,7 @@ impl<const N: usize> StepperController<N> {
     /// `arr_ptr` must point to a valid Timer Auto-Reload Register.
     pub unsafe fn execute_next_step_isr(&mut self, bsrr_ptr: *mut u32, arr_ptr: *mut u32) {
         if let Some(segment) = self.queue.dequeue() {
-            // Atomic evaluation of direction changes
+        unsafe {
             if self.current_dir != segment.direction {
                 self.current_dir = segment.direction;
                 
@@ -67,6 +67,7 @@ impl<const N: usize> StepperController<N> {
             
             // Reset the step pin low immediately to generate the minimum step pulse
             core::ptr::write_volatile(bsrr_ptr, self.step_pin_mask << 16);
+        }
         }
     }
 }
