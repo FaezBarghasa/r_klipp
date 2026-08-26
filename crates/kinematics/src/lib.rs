@@ -70,6 +70,19 @@ impl Kinematics for CoreXYKinematics {
     }
 }
 
+impl CoreXYKinematics {
+    pub fn inverse_kinematics(&self, target: nalgebra::Vector3<f64>) -> Result<nalgebra::Vector3<f64>, KinematicsError> {
+        let motors = self.cartesian_to_motors([target.x, target.y, target.z, 0.0])?;
+        Ok(nalgebra::Vector3::new(motors[0], motors[1], motors[2]))
+    }
+
+    pub fn forward_kinematics(&self, motors: nalgebra::Vector3<f64>) -> Result<nalgebra::Vector3<f64>, KinematicsError> {
+        let cart = self.motors_to_cartesian([motors.x, motors.y, motors.z, 0.0])?;
+        Ok(nalgebra::Vector3::new(cart[0], cart[1], cart[2]))
+    }
+}
+
+
 /// Delta Kinematics (3-tower parallel Delta robot geometry)
 #[derive(Debug, Clone, Copy)]
 pub struct DeltaKinematics {

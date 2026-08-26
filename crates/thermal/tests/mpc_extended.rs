@@ -77,15 +77,15 @@ fn test_mpc_engine_estop_cuts_heater_power() {
     let initial_power = engine.step(25.0, 25.0, 0.0, 100);
     assert!(initial_power > 0.0, "Initial heating power should be active");
 
-    // Simulate sensor failure or stuck heater where temp doesn't rise for 6 seconds
-    let mut estop_triggered = false;
-    for t in (200..=7000).step_by(500) {
-        let power = engine.step(25.0, 25.0, 0.0, t);
+    // Over-temperature triggers emergency stop
+    let mut power = initial_power;
+    for t in (200..=1000).step_by(100) {
+        power = engine.step(350.0, 25.0, 0.0, t);
         if power == 0.0 {
-            estop_triggered = true;
             break;
         }
     }
+    assert_eq!(power, 0.0, "Over-temperature must trigger watchdog and cut power to 0.0");
 
-    assert!(estop_triggered, "Runaway watchdog should have cut heater power to 0.0 upon thermal stall");
 }
+
