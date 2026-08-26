@@ -51,10 +51,11 @@ impl FocController {
     }
 }
 
-#[embassy_executor::task]
-pub async fn foc_controller_task(mut controller: FocController) {
-    loop {
-        // This task would run the velocity and position loops.
-        embassy_time::Timer::after(embassy_time::Duration::from_millis(1)).await;
+impl FocController {
+    pub async fn run_loop(&mut self) {
+        loop {
+            // This task would run the velocity and position loops.
+            embassy_time::Timer::after(embassy_time::Duration::from_millis(1)).await;
+        }
     }
 }

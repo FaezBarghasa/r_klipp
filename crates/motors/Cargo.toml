@@ -7,7 +7,7 @@ edition = "2021"
 micromath = "2.1.0"
 r_klipp_api = { path = "../libs/r_klipp_api" }
 hal = { path = "../hal" }
-embassy-time = { version = "0.5.1", features = [
+embassy-time = { version = "0.3.0", features = [
     "defmt",
     "defmt-timestamp-uptime",
 ] }

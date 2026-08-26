@@ -40,14 +40,17 @@ where
 {
     async fn command_position(&mut self, position: f32) -> Result<(), MotorError> {
         let steps_to_move = (position - self.position) * self.steps_per_mm;
-        let forward = steps_to_move > 0.0;
-        self.dir_pin.set_state(if forward { PinState::High } else { PinState::Low }).unwrap();
+        if forward {
+            let _ = self.dir_pin.set_high();
+        } else {
+            let _ = self.dir_pin.set_low();
+        }
 
         for _ in 0..steps_to_move.abs() as u32 {
-            self.step_pin.set_high().unwrap();
-            self.timer.delay_us(1).await.unwrap();
-            self.step_pin.set_low().unwrap();
-            self.timer.delay_us(1).await.unwrap();
+            let _ = self.step_pin.set_high();
+            let _ = self.timer.delay_us(1).await;
+            let _ = self.step_pin.set_low();
+            let _ = self.timer.delay_us(1).await;
         }
         self.position = position;
         Ok(())
@@ -57,7 +60,7 @@ where
         Ok(self.position)
     }
 
-    async fn set_torque_limit(&mut self, limit: f32) -> Result<(), MotorError> {
+    async fn set_torque_limit(&mut self, _limit: f32) -> Result<(), MotorError> {
         // Not supported by simple step/dir
         Err(MotorError::Fault)
     }
