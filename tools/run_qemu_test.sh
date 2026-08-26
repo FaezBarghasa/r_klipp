@@ -69,26 +69,16 @@ trap cleanup EXIT INT TERM
 echo "[*] Step 2: Executing QEMU test on '${KERNEL_PATH}' (Timeout: ${TIMEOUT_SEC}s)..."
 echo "[*] Command: qemu-system-arm -machine lm3s6965evb -cpu cortex-m3 -nographic -serial mon:stdio -kernel ${KERNEL_PATH}"
 
-# Execute QEMU with timeout, enabling semihosting and serial redirect
+# Execute QEMU with timeout, enabling semihosting for output
+# Semihosting output goes to stderr, so capture both streams
 set +e
 timeout "${TIMEOUT_SEC}s" qemu-system-arm \
     -machine lm3s6965evb \
     -cpu cortex-m3 \
     -nographic \
     -semihosting-config enable=on,target=native \
-    -serial mon:stdio \
     -kernel "${KERNEL_PATH}" > "${LOG_FILE}" 2>&1
 QEMU_EXIT_CODE=$?
-
-# If not found or timed out, try STM32 machine
-if ! grep -q "TESTS PASSED" "${LOG_FILE}"; then
-    timeout "${TIMEOUT_SEC}s" qemu-system-arm \
-        -machine olimex-stm32-h405 \
-        -nographic \
-        -semihosting-config enable=on,target=native \
-        -serial mon:stdio \
-        -kernel "${KERNEL_PATH}" > "${LOG_FILE}" 2>&1 || true
-fi
 set -e
 
 echo ""

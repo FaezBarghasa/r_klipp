@@ -32,6 +32,7 @@ members = [
     "crates/bin/r_klipp_host",
     "host-server",
     "host-ui",
+    "crates/qemu-test-runner",
 ]
 
 [workspace.dependencies]
