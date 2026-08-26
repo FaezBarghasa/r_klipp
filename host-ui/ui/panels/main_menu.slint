@@ -2,130 +2,303 @@ import { Theme } from "../themes/material_dark.slint";
 import { BasePanel } from "../components/base_panel.slint";
 import { Keypad } from "../components/keypad.slint";
 
-export component MenuButton inherits Rectangle {
-    in-out property <string> text;
+export component KlipperMenuTile inherits Rectangle {
+    in-out property <string> label;
     in-out property <string> icon;
+    in-out property <string> subtitle: "";
+    in-out property <brush> accent-color: Theme.accent;
     callback clicked();
 
-    background: touch.pressed ? Theme.active : Theme.button-bg;
-    border-radius: 5px;
-    
+    background: touch.pressed ? #3c3c3c : (touch.has-hover ? #323232 : Theme.button-bg);
+    border-radius: 8px;
+    border-width: 1px;
+    border-color: touch.pressed ? root.accent-color : #383838;
+
     touch := TouchArea {
         clicked => { root.clicked(); }
     }
-    
+
     VerticalLayout {
         alignment: center;
-        spacing: 10px;
+        spacing: 6px;
+        padding: 8px;
+
         Text {
             text: root.icon;
-            font-size: 36px;
-            color: Theme.text;
+            font-size: 28px;
             horizontal-alignment: center;
         }
         Text {
-            text: root.text;
-            font-size: 18px;
+            text: root.label;
+            font-size: 15px;
+            font-weight: 700;
             color: Theme.text;
+            horizontal-alignment: center;
+        }
+        if root.subtitle != "" : Text {
+            text: root.subtitle;
+            font-size: 11px;
+            color: Theme.active;
             horizontal-alignment: center;
         }
     }
 }
 
-export component MainMenuPanel inherits BasePanel {
-    title: "Main Menu";
-    show-back: false;
-    show-home: false;
+export component TempPill inherits Rectangle {
+    in-out property <string> name: "Hotend";
+    in-out property <string> icon: "♨";
+    in-out property <float> actual: 0.0;
+    in-out property <float> target: 0.0;
+    in-out property <brush> highlight: #ff5252;
+    in-out property <bool> is-active: false;
+    callback clicked();
 
-    callback menu-selected(string);
-    
-    in-out property <string> active-heater: "";
-    in-out property <string> bed-temp: "0.0";
-    in-out property <string> bed-target: "0.0";
-    in-out property <string> hotend-temp: "0.0";
-    in-out property <string> hotend-target: "0.0";
+    background: root.is-active ? #3e3e3e : (touch.has-hover ? #2e2e2e : Theme.panel-bg);
+    border-radius: 6px;
+    border-width: 1px;
+    border-color: root.is-active ? root.highlight : #3a3a3a;
+    height: 48px;
+
+    TouchArea {
+        clicked => { root.clicked(); }
+    }
 
     HorizontalLayout {
-        spacing: 10px;
-        padding: 10px;
+        padding-left: 12px;
+        padding-right: 12px;
+        alignment: space-between;
 
-        // Left area: Heaters & Graph
-        VerticalLayout {
-            width: 300px;
-            spacing: 10px;
-            
-            Rectangle {
-                background: Theme.panel-bg;
-                border-radius: 5px;
-                height: 120px;
-                
-                VerticalLayout {
-                    padding: 10px;
-                    spacing: 5px;
-                    Text { text: "Temperatures"; color: Theme.accent; font-size: 16px; }
-                    
-                    HorizontalLayout {
-                        spacing: 10px;
-                        Rectangle {
-                            background: root.active-heater == "extruder" ? Theme.active : Theme.button-bg;
-                            border-radius: 4px;
-                            TouchArea { clicked => { root.active-heater = root.active-heater == "extruder" ? "" : "extruder"; } }
-                            VerticalLayout {
-                                padding: 5px;
-                                Text { text: "Hotend"; color: Theme.text; }
-                                Text { text: root.hotend-temp + " / " + root.hotend-target + "°"; color: #ff5252; font-size: 20px; }
-                            }
-                        }
-                        Rectangle {
-                            background: root.active-heater == "bed" ? Theme.active : Theme.button-bg;
-                            border-radius: 4px;
-                            TouchArea { clicked => { root.active-heater = root.active-heater == "bed" ? "" : "bed"; } }
-                            VerticalLayout {
-                                padding: 5px;
-                                Text { text: "Bed"; color: Theme.text; }
-                                Text { text: root.bed-temp + " / " + root.bed-target + "°"; color: #448aff; font-size: 20px; }
-                            }
-                        }
-                    }
-                }
+        HorizontalLayout {
+            spacing: 8px;
+            alignment: start;
+            Text {
+                text: root.icon;
+                color: root.highlight;
+                font-size: 18px;
+                vertical-alignment: center;
             }
-            
-            Rectangle {
-                background: Theme.panel-bg;
-                border-radius: 5px;
-                // Graph placeholder
+            VerticalLayout {
+                alignment: center;
+                spacing: 1px;
                 Text {
-                    text: "Temperature Graph Placeholder";
+                    text: root.name;
+                    color: #a0a0a0;
+                    font-size: 11px;
+                    font-weight: 600;
+                }
+                Text {
+                    text: Math.round(root.actual) + "° / " + Math.round(root.target) + "°C";
                     color: Theme.text;
-                    horizontal-alignment: center;
-                    vertical-alignment: center;
+                    font-size: 14px;
+                    font-weight: 700;
                 }
             }
         }
 
-        // Right area: Menu or Keypad
+        // Small indicator dot
+        VerticalLayout {
+            alignment: center;
+            Rectangle {
+                width: 8px;
+                height: 8px;
+                border-radius: 4px;
+                background: root.target > 0.0 ? (root.actual >= root.target - 2.0 ? #4caf50 : #ff9800) : #757575;
+            }
+        }
+    }
+}
+
+export component MainMenuPanel inherits BasePanel {
+    title: "KlipperScreen";
+    show-back: false;
+    show-home: false;
+
+    callback menu-selected(string);
+    callback set-heater-target(string, float);
+
+    in-out property <string> active-heater: "";
+    in-out property <float> hotend-temp-num: 0.0;
+    in-out property <float> hotend-target-num: 0.0;
+    in-out property <float> bed-temp-num: 0.0;
+    in-out property <float> bed-target-num: 0.0;
+    in-out property <float> chamber-temp-num: 0.0;
+    in-out property <float> chamber-target-num: 0.0;
+
+    VerticalLayout {
+        padding: 10px;
+        spacing: 10px;
+
+        // Top Row: Live Temperature Status Pills
+        HorizontalLayout {
+            spacing: 10px;
+            height: 48px;
+
+            TempPill {
+                name: "Extruder";
+                icon: "♨";
+                actual: root.hotend-temp-num;
+                target: root.hotend-target-num;
+                highlight: #ff5252;
+                is-active: root.active-heater == "extruder";
+                clicked => {
+                    root.active-heater = root.active-heater == "extruder" ? "" : "extruder";
+                }
+            }
+
+            TempPill {
+                name: "Heater Bed";
+                icon: "♨";
+                actual: root.bed-temp-num;
+                target: root.bed-target-num;
+                highlight: #448aff;
+                is-active: root.active-heater == "bed";
+                clicked => {
+                    root.active-heater = root.active-heater == "bed" ? "" : "bed";
+                }
+            }
+
+            TempPill {
+                name: "Chamber";
+                icon: "🌡";
+                actual: root.chamber-temp-num;
+                target: root.chamber-target-num;
+                highlight: #ab47bc;
+                is-active: root.active-heater == "chamber";
+                clicked => {
+                    root.active-heater = root.active-heater == "chamber" ? "" : "chamber";
+                }
+            }
+        }
+
+        // Main Area: If a heater is tapped, show the quick Keypad; otherwise show the official KlipperScreen Tile Grid
         if root.active-heater != "" : Rectangle {
             background: Theme.panel-bg;
-            border-radius: 5px;
-            padding: 10px;
-            VerticalLayout {
-                spacing: 10px;
-                Text { text: "Set Target: " + (root.active-heater == "extruder" ? "Hotend" : "Bed"); color: Theme.accent; font-size: 18px; }
+            border-radius: 8px;
+            padding: 12px;
+
+            HorizontalLayout {
+                spacing: 20px;
+                alignment: center;
+
+                VerticalLayout {
+                    spacing: 10px;
+                    alignment: center;
+                    Text {
+                        text: "Set Target: " + (root.active-heater == "extruder" ? "Extruder" : (root.active-heater == "bed" ? "Heater Bed" : "Chamber"));
+                        color: Theme.accent;
+                        font-size: 20px;
+                        font-weight: 700;
+                    }
+                    HorizontalLayout {
+                        spacing: 8px;
+                        Rectangle {
+                            background: Theme.button-bg;
+                            border-radius: 4px;
+                            width: 80px;
+                            height: 36px;
+                            TouchArea { clicked => { root.active-heater = ""; } }
+                            Text { text: "Done"; color: Theme.text; vertical-alignment: center; horizontal-alignment: center; }
+                        }
+                        Rectangle {
+                            background: #c62828;
+                            border-radius: 4px;
+                            width: 80px;
+                            height: 36px;
+                            TouchArea {
+                                clicked => {
+                                    root.set-heater-target(root.active-heater, 0.0);
+                                    root.active-heater = "";
+                                }
+                            }
+                            Text { text: "Cooldown"; color: #ffffff; vertical-alignment: center; horizontal-alignment: center; }
+                        }
+                    }
+                }
+
                 Keypad {
-                    key-pressed(k) => { /* Handle keypad input */ }
+                    key-pressed(k) => {
+                        // Handled by client
+                    }
                 }
             }
         }
 
         if root.active-heater == "" : GridLayout {
             spacing: 10px;
+
+            // Row 1: Move, Extrude, Temperature
             Row {
-                MenuButton { text: "Actions"; icon: "⚙"; clicked => { root.menu-selected("actions"); } }
-                MenuButton { text: "Configuration"; icon: "🛠"; clicked => { root.menu-selected("configuration"); } }
+                KlipperMenuTile {
+                    label: "Move";
+                    icon: "✥";
+                    subtitle: "Jog & Home";
+                    accent-color: #448aff;
+                    clicked => { root.menu-selected("move"); }
+                }
+                KlipperMenuTile {
+                    label: "Extrude";
+                    icon: "⭳";
+                    subtitle: "Filament";
+                    accent-color: #ff9800;
+                    clicked => { root.menu-selected("extrude"); }
+                }
+                KlipperMenuTile {
+                    label: "Temperature";
+                    icon: "♨";
+                    subtitle: "Heaters & Graphs";
+                    accent-color: #ff5252;
+                    clicked => { root.menu-selected("temperature"); }
+                }
             }
+
+            // Row 2: Print Files, Bed Level / Mesh, Fans
             Row {
-                MenuButton { text: "Print"; icon: "⎙"; clicked => { root.menu-selected("print"); } }
-                MenuButton { text: "System"; icon: "💻"; clicked => { root.menu-selected("system"); } }
+                KlipperMenuTile {
+                    label: "Print";
+                    icon: "⎙";
+                    subtitle: "G-Code Files";
+                    accent-color: #4caf50;
+                    clicked => { root.menu-selected("files"); }
+                }
+                KlipperMenuTile {
+                    label: "Bed Level";
+                    icon: "◫";
+                    subtitle: "Mesh & Calibrate";
+                    accent-color: #ab47bc;
+                    clicked => { root.menu-selected("bed_mesh"); }
+                }
+                KlipperMenuTile {
+                    label: "Fans";
+                    icon: "❄";
+                    subtitle: "Speed & Outputs";
+                    accent-color: #00bcd4;
+                    clicked => { root.menu-selected("fan"); }
+                }
+            }
+
+            // Row 3: Macros, Settings, Power / System
+            Row {
+                KlipperMenuTile {
+                    label: "Macros";
+                    icon: "⚙";
+                    subtitle: "G-Code Scripts";
+                    accent-color: #78909c;
+                    clicked => { root.menu-selected("gcode_macros"); }
+                }
+                KlipperMenuTile {
+                    label: "Settings";
+                    icon: "🛠";
+                    subtitle: "Network & Config";
+                    accent-color: #607d8b;
+                    clicked => { root.menu-selected("settings"); }
+                }
+                KlipperMenuTile {
+                    label: "Power";
+                    icon: "⏻";
+                    subtitle: "Devices & Host";
+                    accent-color: #e91e63;
+                    clicked => { root.menu-selected("power"); }
+                }
             }
         }
     }

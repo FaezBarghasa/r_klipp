@@ -186,13 +186,24 @@ export component AppWindow inherits Window {
 
         if root.active-screen == "main_menu" : MainMenuPanel {
             time: root.header-time;
-            hotend-temp: root.nozzle-temp-actual + "";
-            hotend-target: root.nozzle-temp-target + "";
-            bed-temp: root.bed-temp-actual + "";
-            bed-target: root.bed-temp-target + "";
+            hotend-temp-num: root.nozzle-temp-actual;
+            hotend-target-num: root.nozzle-temp-target;
+            bed-temp-num: root.bed-temp-actual;
+            bed-target-num: root.bed-temp-target;
+            chamber-temp-num: root.chamber-temp-actual;
+            chamber-target-num: root.chamber-temp-target;
             menu-selected(panel) => {
                 root.active-screen = panel;
                 root.navigate-to(panel);
+            }
+            set-heater-target(heater, temp) => {
+                if (heater == "extruder") {
+                    root.set-nozzle-target(temp);
+                } else if (heater == "bed") {
+                    root.set-bed-target(temp);
+                } else if (heater == "chamber") {
+                    root.set-chamber-target(temp);
+                }
             }
             home-clicked => { root.active-screen = "main_menu"; }
             estop-clicked => { root.emergency-stop(); }
