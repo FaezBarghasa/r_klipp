@@ -92,6 +92,11 @@ fn App() -> Element {
 
 
     rsx! {
+        document::Title { "r_klipp Fluidd Host" }
+        document::Meta { name: "viewport", content: "width=device-width, initial-scale=1.0" }
+        document::Link { rel: "stylesheet", href: "https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" }
+        document::Link { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" }
+
         div {
             class: "min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-blue-500 selection:text-white",
 
