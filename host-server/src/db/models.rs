@@ -3,6 +3,7 @@ use chrono::{DateTime, Utc};
 use std::collections::HashMap;
 
 #[derive(Debug, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct MachineConfig {
     pub name: String,
     pub config: HashMap<String, serde_json::Value>, // Store as generic JSON object
@@ -33,6 +34,7 @@ pub struct Thumbnail {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct PrintHistory {
     pub id: Option<surrealdb::sql::Thing>, // SurrealDB ID
     pub start_time: DateTime<Utc>,
@@ -42,6 +44,7 @@ pub struct PrintHistory {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub enum PrintStatus {
     #[serde(rename = "in_progress")]
     InProgress,
@@ -54,6 +57,7 @@ pub enum PrintStatus {
 }
 
 #[derive(Debug, Serialize, Deserialize, Default)]
+#[allow(dead_code)]
 pub struct PrintTelemetrySummary {
     pub max_nozzle_temp: Option<f32>,
     pub max_bed_temp: Option<f32>,
