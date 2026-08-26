@@ -1,0 +1,69 @@
+{
+  "$schema": "v1",
+  "embedding": null,
+  "rag": {
+    "remoteUrl": null,
+    "remoteApiKey": null,
+    "remoteBatchIntervalMs": 5000,
+    "remoteSyncMode": "full"
+  },
+  "memory": {
+    "enabled": true,
+    "mode": "balanced",
+    "maxEntries": 1000,
+    "compressThreshold": 500,
+    "forgetAfterDays": 30,
+    "stopWordsLanguages": [
+      "ind",
+      "eng"
+    ],
+    "search": {
+      "keywordWeight": 0.3,
+      "vectorWeight": 0.7
+    },
+    "ragDeepEscalate": true,
+    "ragDeepEscalateThreshold": 0.35
+  },
+  "agent": {
+    "maxDelegationDepth": 3,
+    "autoSkillExtract": true,
+    "defaultRole": "developer",
+    "requireSemanticCheck": true,
+    "autoHallucinationCheck": true,
+    "blockOnHallucination": false,
+    "hallucinationThreshold": 0.3,
+    "hardBlockReliability": 0.2,
+    "softBlockReliability": 0.4,
+    "minSampleSize": 5,
+    "workflowPolicyMode": "advisory",
+    "dumbModelMode": "auto",
+    "deepVerification": {
+      "security": true,
+      "performance": true,
+      "architecture": true,
+      "deps": true
+    },
+    "toolGuardrails": {
+      "enabled": true,
+      "exactRepeatWarn": 2,
+      "exactRepeatBlock": 5,
+      "sameStepFailWarn": 3,
+      "sameStepFailBlock": 8,
+      "idempotentNoProgressBlock": 3,
+      "hardStop": false
+    }
+  },
+  "storage": {
+    "traceRetentionDays": 7,
+    "skillMaxCount": 200
+  },
+  "fineTuning": null,
+  "curator": {
+    "enabled": true,
+    "staleAfterDays": 30,
+    "archiveAfterDays": 90,
+    "maxSkillsInPrompt": 3,
+    "injectThreshold": 0.15,
+    "consolidationEnabled": false
+  }
+}

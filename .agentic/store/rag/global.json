@@ -1,0 +1,949 @@
+{
+  "key": "global",
+  "data": {
+    "automotive": {
+      "episodes": [],
+      "skills": [],
+      "tfidfDocs": []
+    },
+    "financial": {
+      "episodes": [],
+      "skills": [],
+      "tfidfDocs": []
+    },
+    "personal": {
+      "episodes": [],
+      "skills": [],
+      "tfidfDocs": []
+    },
+    "tech": {
+      "episodes": [],
+      "skills": [],
+      "tfidfDocs": []
+    },
+    "general": {
+      "episodes": [],
+      "skills": [],
+      "tfidfDocs": []
+    },
+    "knowledge-tech": {
+      "episodes": [
+        {
+          "id": "bootstrap-understand-opencode-agentic-engine-archi",
+          "sessionId": "bootstrap",
+          "planGoal": "Understand opencode-agentic-engine architecture",
+          "summary": "opencode-agentic-engine is an OpenCode plugin implementing agentic software engineering. It has TypeScript source files across 6 layers: core/ (engine: planning, execution, verification, LLM, git, budget), agents/ (multi-agent coordination + A2A protocol), drift/ (error detection, hallucination guard), memory/ (episodic store, skill store, vector store, RAG), evaluation/ (live evaluator), observability/ (trace logger, dashboard). The entry point is src/index.ts which registers 31 agentic tools and OpenCode hooks.",
+          "outcome": "success",
+          "decisions": [
+            "Entry: src/index.ts",
+            "Core engine: src/core/",
+            "Multi-agent: src/agents/",
+            "Memory: src/memory/"
+          ],
+          "filesChanged": [],
+          "timestamp": "2026-08-26T12:02:19.372Z",
+          "tags": [
+            "architecture",
+            "structure",
+            "overview",
+            "plugin",
+            "bootstrap",
+            "high-confidence"
+          ],
+          "score": 0.95,
+          "usageCount": 1,
+          "significance": "routine"
+        },
+        {
+          "id": "bootstrap-what-are-the-31-agentic-tools-",
+          "sessionId": "bootstrap",
+          "planGoal": "What are the 31 agentic tools?",
+          "summary": "Stage I Foundation (5): agentic_plan, agentic_execute, agentic_reflect, agentic_verify, agentic_status. Stage II Intelligence (9): agentic_nav, agentic_context, agentic_snapshot, agentic_pr, agentic_score, agentic_model (includes reset), agentic_budget, agentic_db, agentic_memo. Stage III Orchestration (8): agentic_delegate, agentic_pipeline, agentic_message, agentic_parallel, agentic_skill, agentic_episodes, agentic_guard, agentic_finetune. Stage IV Evolution (1): agentic_evolve. Stage V Autonomous (1): agentic_auto. Blueprint (7): agentic_debate, agentic_router, agentic_clean, agentic_rag, agentic_mcp, agentic_a2a, agentic_tools. All tools use the agentic_ prefix.",
+          "outcome": "success",
+          "decisions": [
+            "31 registered agentic tools total; agentic_dashboard and agentic_model_reset are merged into agentic_status detail=full and agentic_model reset actions",
+            "Grouped by stage (I-V + Blueprint)",
+            "All public tools prefixed with agentic_"
+          ],
+          "filesChanged": [],
+          "timestamp": "2026-08-26T12:02:19.372Z",
+          "tags": [
+            "tools",
+            "agentic",
+            "reference",
+            "list",
+            "bootstrap",
+            "high-confidence"
+          ],
+          "score": 0.95,
+          "usageCount": 1,
+          "significance": "routine"
+        },
+        {
+          "id": "bootstrap-recommended-workflow--research---plan---",
+          "sessionId": "bootstrap",
+          "planGoal": "Recommended workflow: research → plan → implement → verify",
+          "summary": "Phase 1 (Research): Use agentic_nav to scan codebase, agentic_skill find to find reusable skills, agentic_episodes search to learn from past sessions. Phase 2 (Plan): agentic_plan to decompose the goal into ordered subtasks with dependencies. Phase 3 (Implement): agentic_execute for each step, agentic_delegate for complex sub-tasks, agentic_parallel for concurrent independent steps. Phase 4 (Verify): agentic_verify for deep multi-dimensional checks (compile, lint, test, security, performance, architecture, deps). If a step fails, use agentic_reflect to diagnose error category and propagation.",
+          "outcome": "success",
+          "decisions": [
+            "Research first: nav + skill + episodes",
+            "Plan: decompose with dependencies",
+            "Implement: execute steps, delegate complex",
+            "Verify: multi-dimensional checks"
+          ],
+          "filesChanged": [],
+          "timestamp": "2026-08-26T12:02:19.372Z",
+          "tags": [
+            "workflow",
+            "pattern",
+            "recommended",
+            "best-practice",
+            "bootstrap",
+            "high-confidence"
+          ],
+          "score": 0.95,
+          "usageCount": 1,
+          "significance": "routine"
+        },
+        {
+          "id": "bootstrap-how-model-preferences-work",
+          "sessionId": "bootstrap",
+          "planGoal": "How model preferences work",
+          "summary": "The plugin has a 3-level model resolution system: (1) Per-call explicit model override via llmEngine.call({ model: {...} }), (2) Per-tool override via agentic_model set tool=agentic_plan model=..., (3) Category fallback by complexity tier (quick, unspecified-low, unspecified-high, deep). Tool complexity: agentic_nav/clean/pr/router are 'quick', agentic_debate/plan are 'unspecified-high', agentic_verify/finetune are 'deep'. Model preferences are persisted to .agentic/models.json.",
+          "outcome": "success",
+          "decisions": [
+            "3-level resolution: call > tool > category > default",
+            "Persisted to .agentic/models.json",
+            "Per-role preferences for delegation"
+          ],
+          "filesChanged": [],
+          "timestamp": "2026-08-26T12:02:19.372Z",
+          "tags": [
+            "model",
+            "preference",
+            "configuration",
+            "llm",
+            "bootstrap",
+            "high-confidence"
+          ],
+          "score": 0.95,
+          "usageCount": 1,
+          "significance": "routine"
+        },
+        {
+          "id": "bootstrap-how-error-analysis-and-recovery-works",
+          "sessionId": "bootstrap",
+          "planGoal": "How error analysis and recovery works",
+          "summary": "When a step fails, agentic_reflect calls ErrorAnalyzer which categorizes errors into: import, type, compile, test, runtime, or unknown. The DependencyTracker traces error propagation across the step chain — if step A depends on step B and B failed, A is marked as affected. The AgentLoop has auto-retry with exponential backoff and jitter (via auto-retry.ts). After maxRetries, it attempts LLM-based repair via attemptRepair(). HallucinationGuard checks file/function/import claims on every successful execute.",
+          "outcome": "success",
+          "decisions": [
+            "Error categories: import, type, compile, test, runtime, unknown",
+            "Auto-retry with exponential backoff + jitter",
+            "LLM-based repair on repeated failure",
+            "HallucinationGuard on every execute"
+          ],
+          "filesChanged": [],
+          "timestamp": "2026-08-26T12:02:19.372Z",
+          "tags": [
+            "error",
+            "recovery",
+            "reflect",
+            "retry",
+            "debugging",
+            "bootstrap",
+            "high-confidence"
+          ],
+          "score": 0.95,
+          "usageCount": 1,
+          "significance": "routine"
+        },
+        {
+          "id": "bootstrap-how-multi-agent-coordination-works",
+          "sessionId": "bootstrap",
+          "planGoal": "How multi-agent coordination works",
+          "summary": "The agents/ layer has: Orchestrator (multi-agent workflow pipelines), Coordinator (task delegation, shared memory, inter-agent messaging), AgentRuntime (sub-process spawner), RoleRegistry (built-in roles: architect, developer, qa, coordinator, pm + custom). Pipelines chain PM → Architect → Developer → QA with cross-validation between stages. Inter-agent messaging supports: result, review_request, review_response, clarification, approval, revision.",
+          "outcome": "success",
+          "decisions": [
+            "Roles: architect, developer, qa, coordinator, pm",
+            "Pipeline: PM → Architect → Developer → QA",
+            "Cross-validation between stages",
+            "Inter-agent messaging with review/approval flow"
+          ],
+          "filesChanged": [],
+          "timestamp": "2026-08-26T12:02:19.372Z",
+          "tags": [
+            "multi-agent",
+            "pipeline",
+            "delegate",
+            "orchestrator",
+            "bootstrap",
+            "high-confidence"
+          ],
+          "score": 0.95,
+          "usageCount": 1,
+          "significance": "routine"
+        },
+        {
+          "id": "bootstrap-how-memory-and-skills-work-across-sessio",
+          "sessionId": "bootstrap",
+          "planGoal": "How memory and skills work across sessions",
+          "summary": "The memory/ layer provides cross-session persistence: EpisodicStore (past task outcomes with project scoping), SkillStore (reusable skill extraction from successful tasks with success rate tracking), VectorStore (TF-IDF sparse retrieval), MultiIndexRAG (hybrid TF-IDF + vector search with category segregation), LocalEmbedder (text embedding via API or hash fallback). Skills use self-describing format (agentic-skill/v1 schema). Episodes are scoped per project. Skills are globally shared.",
+          "outcome": "success",
+          "decisions": [
+            "Episodes: project-scoped",
+            "Skills: globally shared",
+            "Vector: TF-IDF + optional embedding",
+            "RAG: hybrid search with category segregation"
+          ],
+          "filesChanged": [],
+          "timestamp": "2026-08-26T12:02:19.372Z",
+          "tags": [
+            "memory",
+            "skills",
+            "episodes",
+            "RAG",
+            "cross-session",
+            "bootstrap",
+            "high-confidence"
+          ],
+          "score": 0.95,
+          "usageCount": 1,
+          "significance": "routine"
+        },
+        {
+          "id": "bootstrap-how-to-add-a-new-feature-to-the-plugin",
+          "sessionId": "bootstrap",
+          "planGoal": "How to add a new feature to the plugin",
+          "summary": "1) Create source file in appropriate src/ subdirectory. 2) Add import + instance in src/index.ts. 3) Add tool definition in the tools object. 4) Add to expected tool list in test/run.mjs, test/dropin.mjs, test/load-samedir.mjs. 5) Add ≥2 test cases — Part A core tests in test/_runall.mjs, specialized tests in test/_b_*.mjs. 6) Run npm run build && node test/run.mjs (orchestrator runs all). 7) If Docker: ./test-container.sh. Conventions: English for code, Indonesian for communication, ESM imports with .js extensions, use execFileSync not execSync for shell safety.",
+          "outcome": "success",
+          "decisions": [
+            "File in appropriate subdirectory",
+            "Register in src/index.ts tools object",
+            "Add to 3 test files + Part A in _runall.mjs or _b_*.mjs",
+            "2+ test cases per tool",
+            "npm run build && node test/run.mjs"
+          ],
+          "filesChanged": [],
+          "timestamp": "2026-08-26T12:02:19.372Z",
+          "tags": [
+            "development",
+            "contribution",
+            "new-feature",
+            "howto",
+            "bootstrap",
+            "high-confidence"
+          ],
+          "score": 0.95,
+          "usageCount": 1,
+          "significance": "routine"
+        },
+        {
+          "id": "bootstrap-opencode-plugin-api-and-hooks",
+          "sessionId": "bootstrap",
+          "planGoal": "OpenCode Plugin API and hooks",
+          "summary": "The plugin implements 5 hooks: config (agent registration), experimental.chat.system.transform (injects Knowledge-First system prompt with RAG results), chat.params (model tracking), tool.execute.after (observability tracing), and dispose (cleanup). All LLM calls go through client.session.prompt() via LLMEngine, never directly to external APIs. The experimental.chat.system.transform hook is the ONLY way to dynamically inject system prompt content — it appends RAG results, tool definitions, guardrails, and mandatory research instructions to every chat-mode LLM call.",
+          "outcome": "success",
+          "decisions": [
+            "5 hooks: config, system.transform, chat.params, tool.execute.after, dispose",
+            "All LLM via SDK client.session.prompt()",
+            "No direct external API calls for LLM inference"
+          ],
+          "filesChanged": [],
+          "timestamp": "2026-08-26T12:02:19.372Z",
+          "tags": [
+            "hooks",
+            "plugin-api",
+            "opencode",
+            "sdk",
+            "integration",
+            "bootstrap",
+            "high-confidence"
+          ],
+          "score": 0.95,
+          "usageCount": 1,
+          "significance": "routine"
+        },
+        {
+          "id": "bootstrap-how-testing-works",
+          "sessionId": "bootstrap",
+          "planGoal": "How testing works",
+          "summary": "Tests live across multiple files: test/_runall.mjs (core), test/_b_*.mjs (specialized), and test/run.mjs (orchestrator). 2727+ unit tests total. Additional test files: dropin.mjs (plugin discovery), load-samedir.mjs (E2E workflow), e2e-scenario.mjs (EvoClaw benchmark), swebench-harness.mjs (SWE-bench), e2e-llm.mjs (LLM E2E). Tests use custom assert() functions, not Jest/Mocha. Each tool must have ≥2 test cases. Run with: node test/run.mjs for unit tests, LLM_OFF=true node test/swebench-harness.mjs for mock mode.",
+          "outcome": "success",
+          "decisions": [
+            "2727+ unit tests across multiple files",
+            "22+ test files total",
+            "Custom assert() framework",
+            "Each tool: 2+ test cases"
+          ],
+          "filesChanged": [],
+          "timestamp": "2026-08-26T12:02:19.372Z",
+          "tags": [
+            "testing",
+            "test",
+            "run.mjs",
+            "e2e",
+            "benchmark",
+            "bootstrap",
+            "high-confidence"
+          ],
+          "score": 0.95,
+          "usageCount": 1,
+          "significance": "routine"
+        },
+        {
+          "id": "bootstrap-checklist--definition-of-done---every-ch",
+          "sessionId": "bootstrap",
+          "planGoal": "Checklist: Definition of Done — every change must clear this bar",
+          "summary": "CORRECTNESS: All acceptance criteria met. Code runs and behaves as intended (verified at runtime). New behavior covered by tests that fail without change and pass with it. Existing tests still pass — no regressions. Edge cases and error paths handled. QUALITY: Code reveals intent through naming and structure — no comments needed to explain WHAT it does. No duplicated business logic. No dead code, debug output, or commented-out blocks. Changes scoped to task — no unrelated refactors. Linting and formatting pass. INTEGRATION: Change works with rest of system. Database migrations, config changes, and feature flags accounted for. Backward compatibility considered for public interfaces. DOCUMENTATION: Public interfaces, APIs, and user-facing behavior documented. Architectural decisions worth preserving recorded as ADRs. SHIP-READINESS: Security implications reviewed for untrusted input, auth, data handling. Observability in place for new critical paths (logs, metrics, traces). Rollback path exists for risky changes. Human has reviewed and approved before merge.",
+          "outcome": "success",
+          "decisions": [
+            "DoD applies to EVERY change",
+            "Not negotiable per deadline",
+            "Acceptance criteria + DoD = done"
+          ],
+          "filesChanged": [],
+          "timestamp": "2026-08-26T12:02:19.372Z",
+          "tags": [
+            "checklist",
+            "definition-of-done",
+            "quality",
+            "gate",
+            "reference",
+            "bootstrap",
+            "high-confidence"
+          ],
+          "score": 0.95,
+          "usageCount": 1,
+          "significance": "routine"
+        },
+        {
+          "id": "bootstrap-checklist--security-review---owasp-top-1",
+          "sessionId": "bootstrap",
+          "planGoal": "Checklist: Security review — OWASP Top 10 prevention",
+          "summary": "INPUT VALIDATION: All user input validated and sanitized at system boundaries. SQL queries parameterized (no string concatenation). Output encoded to prevent XSS. AUTHENTICATION & AUTHORIZATION: Auth checked where needed. Secrets kept out of code, logs, and version control. Use environment variables or secrets manager. Least privilege principle applied. DEPENDENCIES: Dependencies from trusted sources with no known vulnerabilities. Run `npm audit` or equivalent. No unnecessary dependencies (every dependency is a liability). DATA PROTECTION: Data from external sources (APIs, logs, user content, config files) treated as untrusted. External data flows validated at system boundaries before use in logic or rendering. No sensitive data in logs, error messages, or URLs. BOUNDARY SECURITY: Three-tier boundary system for untrusted data. CORS configured properly. Rate limiting on public endpoints.",
+          "outcome": "success",
+          "decisions": [
+            "Validate ALL input at boundaries",
+            "Parameterized queries always",
+            "Secrets never in code",
+            "Least privilege"
+          ],
+          "filesChanged": [],
+          "timestamp": "2026-08-26T12:02:19.372Z",
+          "tags": [
+            "checklist",
+            "security",
+            "owasp",
+            "reference",
+            "hardening",
+            "bootstrap",
+            "high-confidence"
+          ],
+          "score": 0.95,
+          "usageCount": 1,
+          "significance": "routine"
+        },
+        {
+          "id": "bootstrap-checklist--performance-optimization---me",
+          "sessionId": "bootstrap",
+          "planGoal": "Checklist: Performance optimization — measure-first approach",
+          "summary": "MEASURE BEFORE OPTIMIZING: Establish baseline metrics before any optimization. Profile hot paths — don't guess. Use real data, not synthetic. FRONTEND: Core Web Vitals targets: LCP < 2.5s, FID < 100ms, CLS < 0.1. Bundle size audit — tree-shake unused imports. Lazy load non-critical components. Avoid layout thrashing. Minimize re-renders. BACKEND: No N+1 query patterns. Pagination on ALL list endpoints. Unbounded loops or unconstrained data fetching — flag immediately. Synchronous operations that should be async. Database query optimization — use indexes, avoid full table scans. INFRASTRUCTURE: CDN caching for static assets. Response compression enabled. Connection pooling for databases. Rate limiting to prevent abuse. ANTI-PATTERNS: Premature optimization without measurement. Over-fetching in GraphQL/REST. Missing indexes on queried columns. Blocking the event loop with CPU-intensive sync operations.",
+          "outcome": "success",
+          "decisions": [
+            "Measure first, optimize second",
+            "Core Web Vitals as targets",
+            "No N+1 queries",
+            "Pagination on all lists"
+          ],
+          "filesChanged": [],
+          "timestamp": "2026-08-26T12:02:19.372Z",
+          "tags": [
+            "checklist",
+            "performance",
+            "optimization",
+            "reference",
+            "web-vitals",
+            "bootstrap",
+            "high-confidence"
+          ],
+          "score": 0.95,
+          "usageCount": 1,
+          "significance": "routine"
+        },
+        {
+          "id": "bootstrap-checklist--testing-patterns---test-pyram",
+          "sessionId": "bootstrap",
+          "planGoal": "Checklist: Testing patterns — test pyramid & best practices",
+          "summary": "TEST PYRAMID: Unit tests (~80%) — pure logic, isolated, milliseconds each. Integration tests (~15%) — component interactions, API boundaries, test DB. E2E tests (~5%) — full user flows, real browser. WRITING GOOD TESTS: Test state (outcome-based assertions), not interactions (method call verification). DAMP over DRY in tests — each test tells a complete story. Prefer real implementations over mocks (real > fake > stub > mock). Arrange-Act-Assert pattern. One assertion per concept. Descriptive test names that read like specification. THE BEYONCE RULE: If you liked it, you should have put a test on it. Infrastructure changes, refactoring, and migrations are not responsible for catching bugs — your tests are. TEST SIZES: Small (single process, no I/O, milliseconds) — pure function tests. Medium (localhost, seconds) — API tests with test DB. Large (external services, minutes) — E2E tests, performance benchmarks. ANTI-PATTERNS: Testing implementation details (tests break on refactor). Flaky tests (timing, order-dependent). Testing framework code. Snapshot abuse. No test isolation. Mocking everything.",
+          "outcome": "success",
+          "decisions": [
+            "Test pyramid: 80/15/5",
+            "Test outcomes not interactions",
+            "DAMP over DRY in tests",
+            "Beyonce Rule applied"
+          ],
+          "filesChanged": [],
+          "timestamp": "2026-08-26T12:02:19.372Z",
+          "tags": [
+            "checklist",
+            "testing",
+            "tdd",
+            "patterns",
+            "reference",
+            "bootstrap",
+            "high-confidence"
+          ],
+          "score": 0.95,
+          "usageCount": 1,
+          "significance": "routine"
+        },
+        {
+          "id": "bootstrap-checklist--accessibility---wcag-2-1-aa-c",
+          "sessionId": "bootstrap",
+          "planGoal": "Checklist: Accessibility — WCAG 2.1 AA compliance",
+          "summary": "KEYBOARD: All interactive elements reachable via keyboard. Focus indicators visible (not just :focus-visible). No keyboard traps. SCREEN READERS: All images have alt text. ARIA landmarks for page structure. Form inputs have associated labels. Dynamic content changes announced via live regions. VISUAL: Color contrast ratio ≥ 4.5:1 for normal text, ≥ 3:1 for large text. Content not conveyed by color alone. Text zoomable to 200% without loss. TESTING: Run axe DevTools or Lighthouse accessibility audit. Test with screen reader (VoiceOver/NVDA). Test keyboard-only navigation.",
+          "outcome": "success",
+          "decisions": [
+            "WCAG 2.1 AA minimum",
+            "Keyboard nav required",
+            "Screen reader tested",
+            "Color contrast 4.5:1"
+          ],
+          "filesChanged": [],
+          "timestamp": "2026-08-26T12:02:19.372Z",
+          "tags": [
+            "checklist",
+            "accessibility",
+            "wcag",
+            "a11y",
+            "reference",
+            "bootstrap",
+            "high-confidence"
+          ],
+          "score": 0.95,
+          "usageCount": 1,
+          "significance": "routine"
+        },
+        {
+          "id": "bootstrap-checklist--observability---logs--metrics",
+          "sessionId": "bootstrap",
+          "planGoal": "Checklist: Observability — logs, metrics, traces, alerts",
+          "summary": "STRUCTURED LOGGING: Log in structured format (JSON) — not plain text. Include correlation ID per request. Log levels: debug, info, warn, error — use appropriately. No sensitive data in logs. METRICS: RED metrics for services: Rate (requests/sec), Errors (failed requests/sec), Duration (latency distribution). USE metrics for resources: Utilization, Saturation, Errors. TRACING: Distributed tracing for requests crossing service boundaries. Include trace ID in all logs. Instrument database queries, external API calls, and async operations. ALERTING: Symptom-based alerting (user-visible problems) NOT cause-based (disk full). Alert on SLIs/SLOs. Runbook for every alert. ON-CALL: Clear escalation path. Documented runbooks for common issues. Dashboard for every service.",
+          "outcome": "success",
+          "decisions": [
+            "RED/USE metrics",
+            "Structured JSON logging",
+            "Distributed tracing",
+            "Symptom-based alerting"
+          ],
+          "filesChanged": [],
+          "timestamp": "2026-08-26T12:02:19.372Z",
+          "tags": [
+            "checklist",
+            "observability",
+            "monitoring",
+            "logging",
+            "tracing",
+            "reference",
+            "bootstrap",
+            "high-confidence"
+          ],
+          "score": 0.95,
+          "usageCount": 1,
+          "significance": "routine"
+        },
+        {
+          "id": "bootstrap-checklist--how-to-add-a-new-agentic--too",
+          "sessionId": "bootstrap",
+          "planGoal": "Checklist: How to add a new agentic_ tool",
+          "summary": "STEP 1: Create source file in src/core/ or src/agents/ or src/memory/. STEP 2: Add import in src/index.ts at top. STEP 3: Add tool definition in the `tools` object inside AgenticEngine function — include name, description, schema, execute handler. STEP 4: Add new tool name to the expected list in test/run.mjs (EXPECTED_TOOLS array). STEP 5: Also add to test/dropin.mjs and test/load-samedir.mjs expected tool lists. STEP 6: Add ≥2 test cases — Part A core tests in test/_runall.mjs, specialized tests in test/_b_*.mjs. STEP 7: Run `npm run build` — must pass with zero errors. STEP 8: Run `node test/run.mjs` (orchestrator runs all) — all tests must pass. STEP 9: Run `node test/realtest.mjs` — 166+ tests must pass. STEP 10: Commit with descriptive message.",
+          "outcome": "success",
+          "decisions": [
+            "Register in src/index.ts tools object",
+            "Update 3 test files",
+            "2+ test cases required",
+            "Build + test before commit"
+          ],
+          "filesChanged": [],
+          "timestamp": "2026-08-26T12:02:19.372Z",
+          "tags": [
+            "checklist",
+            "procedure",
+            "new-tool",
+            "howto",
+            "step-by-step",
+            "bootstrap",
+            "high-confidence"
+          ],
+          "score": 0.95,
+          "usageCount": 1,
+          "significance": "routine"
+        },
+        {
+          "id": "bootstrap-checklist--how-to-update-opencode-plugin",
+          "sessionId": "bootstrap",
+          "planGoal": "Checklist: How to update OpenCode plugin tests",
+          "summary": "STEP 1: Tests live in test/_runall.mjs (core), test/_b_*.mjs (specialized), and test/run.mjs (orchestrator). STEP 2: Find the section for the tool/feature being tested (sections are numbered [1], [2], etc.). STEP 3: Add new assert() calls — use the pattern: assert(condition, 'descriptive message'). STEP 4: If testing a new export, add it to the destructured import at the top of the test file. STEP 5: Run `npm run build` first — tests import from dist/. STEP 6: Run `node test/run.mjs` — check that new tests appear in output. STEP 7: Run `node test/realtest.mjs` — must still pass (166+ tests). STEP 8: If the new feature adds a tool, also update expected tool count in test/dropin.mjs and test/load-samedir.mjs.",
+          "outcome": "success",
+          "decisions": [
+            "Tests split: _runall.mjs (core), _b_*.mjs (specialized), run.mjs (orchestrator)",
+            "Custom assert() not Jest",
+            "Build before test",
+            "Check realtest.mjs too"
+          ],
+          "filesChanged": [],
+          "timestamp": "2026-08-26T12:02:19.372Z",
+          "tags": [
+            "checklist",
+            "procedure",
+            "testing",
+            "howto",
+            "step-by-step",
+            "bootstrap",
+            "high-confidence"
+          ],
+          "score": 0.95,
+          "usageCount": 1,
+          "significance": "routine"
+        },
+        {
+          "id": "bootstrap-checklist--how-to-verify-prompt-injectio",
+          "sessionId": "bootstrap",
+          "planGoal": "Checklist: How to verify prompt injection changes",
+          "summary": "STEP 1: Read src/core/prompt-builder.ts and src/core/prompt-template.ts to understand current prompt structure. STEP 2: Check the system.transform hook in src/index.ts — this is where RAG results and knowledge context are injected. STEP 3: Make changes to prompt sections. STEP 4: Run `npm run build`. STEP 5: Run `node test/realtest.mjs` — it validates prompt content (tool count, section presence). STEP 6: Search test/realtest.mjs for 'system.transform' or 'prompt' tests to see what's checked. STEP 7: Manually inspect generated prompt by setting DEBUG_AGENTIC=1 and running a tool. STEP 8: Verify knowledge-context XML tags are present and properly escaped.",
+          "outcome": "success",
+          "decisions": [
+            "Prompt built in prompt-builder.ts",
+            "Injected via system.transform hook",
+            "realtest.mjs validates prompt",
+            "Check XML tag escaping"
+          ],
+          "filesChanged": [],
+          "timestamp": "2026-08-26T12:02:19.372Z",
+          "tags": [
+            "checklist",
+            "procedure",
+            "prompt",
+            "injection",
+            "howto",
+            "step-by-step",
+            "bootstrap",
+            "high-confidence"
+          ],
+          "score": 0.95,
+          "usageCount": 1,
+          "significance": "routine"
+        },
+        {
+          "id": "bootstrap-checklist--how-to-recover-typescript-bui",
+          "sessionId": "bootstrap",
+          "planGoal": "Checklist: How to recover TypeScript build failures",
+          "summary": "STEP 1: Run `npm run build` and read the FULL error output. STEP 2: Identify error type — TS6133 (unused import/var), TS2345 (type mismatch), TS2304 (undeclared name), TS2322 (type assignment). STEP 3: For TS6133 — remove the unused import/variable. STEP 4: For TS2345/TS2322 — check the expected type and fix the argument or assignment. STEP 5: For TS2304 — add the missing import or declaration. STEP 6: After fix, run `npm run build` again — must be zero errors. STEP 7: Run `node test/run.mjs` to ensure no regressions. STEP 8: Common pitfall: ESM requires .js extension in imports even for .ts files (e.g., import from './foo.js' not './foo.ts').",
+          "outcome": "success",
+          "decisions": [
+            "Read full error output",
+            "Fix by error code",
+            "ESM requires .js extensions",
+            "Build + test after every fix"
+          ],
+          "filesChanged": [],
+          "timestamp": "2026-08-26T12:02:19.372Z",
+          "tags": [
+            "checklist",
+            "procedure",
+            "build",
+            "typescript",
+            "error-recovery",
+            "step-by-step",
+            "bootstrap",
+            "high-confidence"
+          ],
+          "score": 0.95,
+          "usageCount": 1,
+          "significance": "routine"
+        }
+      ],
+      "skills": [],
+      "tfidfDocs": [
+        {
+          "id": "ep-bootstrap-understand-opencode-agentic-engine-archi",
+          "category": "knowledge-tech",
+          "title": "Understand opencode-agentic-engine architecture",
+          "content": "opencode-agentic-engine is an OpenCode plugin implementing agentic software engineering. It has TypeScript source files across 6 layers: core/ (engine: planning, execution, verification, LLM, git, budget), agents/ (multi-agent coordination + A2A protocol), drift/ (error detection, hallucination guard), memory/ (episodic store, skill store, vector store, RAG), evaluation/ (live evaluator), observability/ (trace logger, dashboard). The entry point is src/index.ts which registers 31 agentic tools and OpenCode hooks.\nEntry: src/index.ts\nCore engine: src/core/\nMulti-agent: src/agents/\nMemory: src/memory/",
+          "keywords": [
+            "architecture",
+            "structure",
+            "overview",
+            "plugin",
+            "bootstrap",
+            "high-confidence"
+          ],
+          "metadata": {
+            "type": "episode",
+            "episodeId": "bootstrap-understand-opencode-agentic-engine-archi"
+          }
+        },
+        {
+          "id": "ep-bootstrap-what-are-the-31-agentic-tools-",
+          "category": "knowledge-tech",
+          "title": "What are the 31 agentic tools?",
+          "content": "Stage I Foundation (5): agentic_plan, agentic_execute, agentic_reflect, agentic_verify, agentic_status. Stage II Intelligence (9): agentic_nav, agentic_context, agentic_snapshot, agentic_pr, agentic_score, agentic_model (includes reset), agentic_budget, agentic_db, agentic_memo. Stage III Orchestration (8): agentic_delegate, agentic_pipeline, agentic_message, agentic_parallel, agentic_skill, agentic_episodes, agentic_guard, agentic_finetune. Stage IV Evolution (1): agentic_evolve. Stage V Autonomous (1): agentic_auto. Blueprint (7): agentic_debate, agentic_router, agentic_clean, agentic_rag, agentic_mcp, agentic_a2a, agentic_tools. All tools use the agentic_ prefix.\n31 registered agentic tools total; agentic_dashboard and agentic_model_reset are merged into agentic_status detail=full and agentic_model reset actions\nGrouped by stage (I-V + Blueprint)\nAll public tools prefixed with agentic_",
+          "keywords": [
+            "tools",
+            "agentic",
+            "reference",
+            "list",
+            "bootstrap",
+            "high-confidence"
+          ],
+          "metadata": {
+            "type": "episode",
+            "episodeId": "bootstrap-what-are-the-31-agentic-tools-"
+          }
+        },
+        {
+          "id": "ep-bootstrap-recommended-workflow--research---plan---",
+          "category": "knowledge-tech",
+          "title": "Recommended workflow: research → plan → implement → verify",
+          "content": "Phase 1 (Research): Use agentic_nav to scan codebase, agentic_skill find to find reusable skills, agentic_episodes search to learn from past sessions. Phase 2 (Plan): agentic_plan to decompose the goal into ordered subtasks with dependencies. Phase 3 (Implement): agentic_execute for each step, agentic_delegate for complex sub-tasks, agentic_parallel for concurrent independent steps. Phase 4 (Verify): agentic_verify for deep multi-dimensional checks (compile, lint, test, security, performance, architecture, deps). If a step fails, use agentic_reflect to diagnose error category and propagation.\nResearch first: nav + skill + episodes\nPlan: decompose with dependencies\nImplement: execute steps, delegate complex\nVerify: multi-dimensional checks",
+          "keywords": [
+            "workflow",
+            "pattern",
+            "recommended",
+            "best-practice",
+            "bootstrap",
+            "high-confidence"
+          ],
+          "metadata": {
+            "type": "episode",
+            "episodeId": "bootstrap-recommended-workflow--research---plan---"
+          }
+        },
+        {
+          "id": "ep-bootstrap-how-model-preferences-work",
+          "category": "knowledge-tech",
+          "title": "How model preferences work",
+          "content": "The plugin has a 3-level model resolution system: (1) Per-call explicit model override via llmEngine.call({ model: {...} }), (2) Per-tool override via agentic_model set tool=agentic_plan model=..., (3) Category fallback by complexity tier (quick, unspecified-low, unspecified-high, deep). Tool complexity: agentic_nav/clean/pr/router are 'quick', agentic_debate/plan are 'unspecified-high', agentic_verify/finetune are 'deep'. Model preferences are persisted to .agentic/models.json.\n3-level resolution: call > tool > category > default\nPersisted to .agentic/models.json\nPer-role preferences for delegation",
+          "keywords": [
+            "model",
+            "preference",
+            "configuration",
+            "llm",
+            "bootstrap",
+            "high-confidence"
+          ],
+          "metadata": {
+            "type": "episode",
+            "episodeId": "bootstrap-how-model-preferences-work"
+          }
+        },
+        {
+          "id": "ep-bootstrap-how-error-analysis-and-recovery-works",
+          "category": "knowledge-tech",
+          "title": "How error analysis and recovery works",
+          "content": "When a step fails, agentic_reflect calls ErrorAnalyzer which categorizes errors into: import, type, compile, test, runtime, or unknown. The DependencyTracker traces error propagation across the step chain — if step A depends on step B and B failed, A is marked as affected. The AgentLoop has auto-retry with exponential backoff and jitter (via auto-retry.ts). After maxRetries, it attempts LLM-based repair via attemptRepair(). HallucinationGuard checks file/function/import claims on every successful execute.\nError categories: import, type, compile, test, runtime, unknown\nAuto-retry with exponential backoff + jitter\nLLM-based repair on repeated failure\nHallucinationGuard on every execute",
+          "keywords": [
+            "error",
+            "recovery",
+            "reflect",
+            "retry",
+            "debugging",
+            "bootstrap",
+            "high-confidence"
+          ],
+          "metadata": {
+            "type": "episode",
+            "episodeId": "bootstrap-how-error-analysis-and-recovery-works"
+          }
+        },
+        {
+          "id": "ep-bootstrap-how-multi-agent-coordination-works",
+          "category": "knowledge-tech",
+          "title": "How multi-agent coordination works",
+          "content": "The agents/ layer has: Orchestrator (multi-agent workflow pipelines), Coordinator (task delegation, shared memory, inter-agent messaging), AgentRuntime (sub-process spawner), RoleRegistry (built-in roles: architect, developer, qa, coordinator, pm + custom). Pipelines chain PM → Architect → Developer → QA with cross-validation between stages. Inter-agent messaging supports: result, review_request, review_response, clarification, approval, revision.\nRoles: architect, developer, qa, coordinator, pm\nPipeline: PM → Architect → Developer → QA\nCross-validation between stages\nInter-agent messaging with review/approval flow",
+          "keywords": [
+            "multi-agent",
+            "pipeline",
+            "delegate",
+            "orchestrator",
+            "bootstrap",
+            "high-confidence"
+          ],
+          "metadata": {
+            "type": "episode",
+            "episodeId": "bootstrap-how-multi-agent-coordination-works"
+          }
+        },
+        {
+          "id": "ep-bootstrap-how-memory-and-skills-work-across-sessio",
+          "category": "knowledge-tech",
+          "title": "How memory and skills work across sessions",
+          "content": "The memory/ layer provides cross-session persistence: EpisodicStore (past task outcomes with project scoping), SkillStore (reusable skill extraction from successful tasks with success rate tracking), VectorStore (TF-IDF sparse retrieval), MultiIndexRAG (hybrid TF-IDF + vector search with category segregation), LocalEmbedder (text embedding via API or hash fallback). Skills use self-describing format (agentic-skill/v1 schema). Episodes are scoped per project. Skills are globally shared.\nEpisodes: project-scoped\nSkills: globally shared\nVector: TF-IDF + optional embedding\nRAG: hybrid search with category segregation",
+          "keywords": [
+            "memory",
+            "skills",
+            "episodes",
+            "RAG",
+            "cross-session",
+            "bootstrap",
+            "high-confidence"
+          ],
+          "metadata": {
+            "type": "episode",
+            "episodeId": "bootstrap-how-memory-and-skills-work-across-sessio"
+          }
+        },
+        {
+          "id": "ep-bootstrap-how-to-add-a-new-feature-to-the-plugin",
+          "category": "knowledge-tech",
+          "title": "How to add a new feature to the plugin",
+          "content": "1) Create source file in appropriate src/ subdirectory. 2) Add import + instance in src/index.ts. 3) Add tool definition in the tools object. 4) Add to expected tool list in test/run.mjs, test/dropin.mjs, test/load-samedir.mjs. 5) Add ≥2 test cases — Part A core tests in test/_runall.mjs, specialized tests in test/_b_*.mjs. 6) Run npm run build && node test/run.mjs (orchestrator runs all). 7) If Docker: ./test-container.sh. Conventions: English for code, Indonesian for communication, ESM imports with .js extensions, use execFileSync not execSync for shell safety.\nFile in appropriate subdirectory\nRegister in src/index.ts tools object\nAdd to 3 test files + Part A in _runall.mjs or _b_*.mjs\n2+ test cases per tool\nnpm run build && node test/run.mjs",
+          "keywords": [
+            "development",
+            "contribution",
+            "new-feature",
+            "howto",
+            "bootstrap",
+            "high-confidence"
+          ],
+          "metadata": {
+            "type": "episode",
+            "episodeId": "bootstrap-how-to-add-a-new-feature-to-the-plugin"
+          }
+        },
+        {
+          "id": "ep-bootstrap-opencode-plugin-api-and-hooks",
+          "category": "knowledge-tech",
+          "title": "OpenCode Plugin API and hooks",
+          "content": "The plugin implements 5 hooks: config (agent registration), experimental.chat.system.transform (injects Knowledge-First system prompt with RAG results), chat.params (model tracking), tool.execute.after (observability tracing), and dispose (cleanup). All LLM calls go through client.session.prompt() via LLMEngine, never directly to external APIs. The experimental.chat.system.transform hook is the ONLY way to dynamically inject system prompt content — it appends RAG results, tool definitions, guardrails, and mandatory research instructions to every chat-mode LLM call.\n5 hooks: config, system.transform, chat.params, tool.execute.after, dispose\nAll LLM via SDK client.session.prompt()\nNo direct external API calls for LLM inference",
+          "keywords": [
+            "hooks",
+            "plugin-api",
+            "opencode",
+            "sdk",
+            "integration",
+            "bootstrap",
+            "high-confidence"
+          ],
+          "metadata": {
+            "type": "episode",
+            "episodeId": "bootstrap-opencode-plugin-api-and-hooks"
+          }
+        },
+        {
+          "id": "ep-bootstrap-how-testing-works",
+          "category": "knowledge-tech",
+          "title": "How testing works",
+          "content": "Tests live across multiple files: test/_runall.mjs (core), test/_b_*.mjs (specialized), and test/run.mjs (orchestrator). 2727+ unit tests total. Additional test files: dropin.mjs (plugin discovery), load-samedir.mjs (E2E workflow), e2e-scenario.mjs (EvoClaw benchmark), swebench-harness.mjs (SWE-bench), e2e-llm.mjs (LLM E2E). Tests use custom assert() functions, not Jest/Mocha. Each tool must have ≥2 test cases. Run with: node test/run.mjs for unit tests, LLM_OFF=true node test/swebench-harness.mjs for mock mode.\n2727+ unit tests across multiple files\n22+ test files total\nCustom assert() framework\nEach tool: 2+ test cases",
+          "keywords": [
+            "testing",
+            "test",
+            "run.mjs",
+            "e2e",
+            "benchmark",
+            "bootstrap",
+            "high-confidence"
+          ],
+          "metadata": {
+            "type": "episode",
+            "episodeId": "bootstrap-how-testing-works"
+          }
+        },
+        {
+          "id": "ep-bootstrap-checklist--definition-of-done---every-ch",
+          "category": "knowledge-tech",
+          "title": "Checklist: Definition of Done — every change must clear this bar",
+          "content": "CORRECTNESS: All acceptance criteria met. Code runs and behaves as intended (verified at runtime). New behavior covered by tests that fail without change and pass with it. Existing tests still pass — no regressions. Edge cases and error paths handled. QUALITY: Code reveals intent through naming and structure — no comments needed to explain WHAT it does. No duplicated business logic. No dead code, debug output, or commented-out blocks. Changes scoped to task — no unrelated refactors. Linting and formatting pass. INTEGRATION: Change works with rest of system. Database migrations, config changes, and feature flags accounted for. Backward compatibility considered for public interfaces. DOCUMENTATION: Public interfaces, APIs, and user-facing behavior documented. Architectural decisions worth preserving recorded as ADRs. SHIP-READINESS: Security implications reviewed for untrusted input, auth, data handling. Observability in place for new critical paths (logs, metrics, traces). Rollback path exists for risky changes. Human has reviewed and approved before merge.\nDoD applies to EVERY change\nNot negotiable per deadline\nAcceptance criteria + DoD = done",
+          "keywords": [
+            "checklist",
+            "definition-of-done",
+            "quality",
+            "gate",
+            "reference",
+            "bootstrap",
+            "high-confidence"
+          ],
+          "metadata": {
+            "type": "episode",
+            "episodeId": "bootstrap-checklist--definition-of-done---every-ch"
+          }
+        },
+        {
+          "id": "ep-bootstrap-checklist--security-review---owasp-top-1",
+          "category": "knowledge-tech",
+          "title": "Checklist: Security review — OWASP Top 10 prevention",
+          "content": "INPUT VALIDATION: All user input validated and sanitized at system boundaries. SQL queries parameterized (no string concatenation). Output encoded to prevent XSS. AUTHENTICATION & AUTHORIZATION: Auth checked where needed. Secrets kept out of code, logs, and version control. Use environment variables or secrets manager. Least privilege principle applied. DEPENDENCIES: Dependencies from trusted sources with no known vulnerabilities. Run `npm audit` or equivalent. No unnecessary dependencies (every dependency is a liability). DATA PROTECTION: Data from external sources (APIs, logs, user content, config files) treated as untrusted. External data flows validated at system boundaries before use in logic or rendering. No sensitive data in logs, error messages, or URLs. BOUNDARY SECURITY: Three-tier boundary system for untrusted data. CORS configured properly. Rate limiting on public endpoints.\nValidate ALL input at boundaries\nParameterized queries always\nSecrets never in code\nLeast privilege",
+          "keywords": [
+            "checklist",
+            "security",
+            "owasp",
+            "reference",
+            "hardening",
+            "bootstrap",
+            "high-confidence"
+          ],
+          "metadata": {
+            "type": "episode",
+            "episodeId": "bootstrap-checklist--security-review---owasp-top-1"
+          }
+        },
+        {
+          "id": "ep-bootstrap-checklist--performance-optimization---me",
+          "category": "knowledge-tech",
+          "title": "Checklist: Performance optimization — measure-first approach",
+          "content": "MEASURE BEFORE OPTIMIZING: Establish baseline metrics before any optimization. Profile hot paths — don't guess. Use real data, not synthetic. FRONTEND: Core Web Vitals targets: LCP < 2.5s, FID < 100ms, CLS < 0.1. Bundle size audit — tree-shake unused imports. Lazy load non-critical components. Avoid layout thrashing. Minimize re-renders. BACKEND: No N+1 query patterns. Pagination on ALL list endpoints. Unbounded loops or unconstrained data fetching — flag immediately. Synchronous operations that should be async. Database query optimization — use indexes, avoid full table scans. INFRASTRUCTURE: CDN caching for static assets. Response compression enabled. Connection pooling for databases. Rate limiting to prevent abuse. ANTI-PATTERNS: Premature optimization without measurement. Over-fetching in GraphQL/REST. Missing indexes on queried columns. Blocking the event loop with CPU-intensive sync operations.\nMeasure first, optimize second\nCore Web Vitals as targets\nNo N+1 queries\nPagination on all lists",
+          "keywords": [
+            "checklist",
+            "performance",
+            "optimization",
+            "reference",
+            "web-vitals",
+            "bootstrap",
+            "high-confidence"
+          ],
+          "metadata": {
+            "type": "episode",
+            "episodeId": "bootstrap-checklist--performance-optimization---me"
+          }
+        },
+        {
+          "id": "ep-bootstrap-checklist--testing-patterns---test-pyram",
+          "category": "knowledge-tech",
+          "title": "Checklist: Testing patterns — test pyramid & best practices",
+          "content": "TEST PYRAMID: Unit tests (~80%) — pure logic, isolated, milliseconds each. Integration tests (~15%) — component interactions, API boundaries, test DB. E2E tests (~5%) — full user flows, real browser. WRITING GOOD TESTS: Test state (outcome-based assertions), not interactions (method call verification). DAMP over DRY in tests — each test tells a complete story. Prefer real implementations over mocks (real > fake > stub > mock). Arrange-Act-Assert pattern. One assertion per concept. Descriptive test names that read like specification. THE BEYONCE RULE: If you liked it, you should have put a test on it. Infrastructure changes, refactoring, and migrations are not responsible for catching bugs — your tests are. TEST SIZES: Small (single process, no I/O, milliseconds) — pure function tests. Medium (localhost, seconds) — API tests with test DB. Large (external services, minutes) — E2E tests, performance benchmarks. ANTI-PATTERNS: Testing implementation details (tests break on refactor). Flaky tests (timing, order-dependent). Testing framework code. Snapshot abuse. No test isolation. Mocking everything.\nTest pyramid: 80/15/5\nTest outcomes not interactions\nDAMP over DRY in tests\nBeyonce Rule applied",
+          "keywords": [
+            "checklist",
+            "testing",
+            "tdd",
+            "patterns",
+            "reference",
+            "bootstrap",
+            "high-confidence"
+          ],
+          "metadata": {
+            "type": "episode",
+            "episodeId": "bootstrap-checklist--testing-patterns---test-pyram"
+          }
+        },
+        {
+          "id": "ep-bootstrap-checklist--accessibility---wcag-2-1-aa-c",
+          "category": "knowledge-tech",
+          "title": "Checklist: Accessibility — WCAG 2.1 AA compliance",
+          "content": "KEYBOARD: All interactive elements reachable via keyboard. Focus indicators visible (not just :focus-visible). No keyboard traps. SCREEN READERS: All images have alt text. ARIA landmarks for page structure. Form inputs have associated labels. Dynamic content changes announced via live regions. VISUAL: Color contrast ratio ≥ 4.5:1 for normal text, ≥ 3:1 for large text. Content not conveyed by color alone. Text zoomable to 200% without loss. TESTING: Run axe DevTools or Lighthouse accessibility audit. Test with screen reader (VoiceOver/NVDA). Test keyboard-only navigation.\nWCAG 2.1 AA minimum\nKeyboard nav required\nScreen reader tested\nColor contrast 4.5:1",
+          "keywords": [
+            "checklist",
+            "accessibility",
+            "wcag",
+            "a11y",
+            "reference",
+            "bootstrap",
+            "high-confidence"
+          ],
+          "metadata": {
+            "type": "episode",
+            "episodeId": "bootstrap-checklist--accessibility---wcag-2-1-aa-c"
+          }
+        },
+        {
+          "id": "ep-bootstrap-checklist--observability---logs--metrics",
+          "category": "knowledge-tech",
+          "title": "Checklist: Observability — logs, metrics, traces, alerts",
+          "content": "STRUCTURED LOGGING: Log in structured format (JSON) — not plain text. Include correlation ID per request. Log levels: debug, info, warn, error — use appropriately. No sensitive data in logs. METRICS: RED metrics for services: Rate (requests/sec), Errors (failed requests/sec), Duration (latency distribution). USE metrics for resources: Utilization, Saturation, Errors. TRACING: Distributed tracing for requests crossing service boundaries. Include trace ID in all logs. Instrument database queries, external API calls, and async operations. ALERTING: Symptom-based alerting (user-visible problems) NOT cause-based (disk full). Alert on SLIs/SLOs. Runbook for every alert. ON-CALL: Clear escalation path. Documented runbooks for common issues. Dashboard for every service.\nRED/USE metrics\nStructured JSON logging\nDistributed tracing\nSymptom-based alerting",
+          "keywords": [
+            "checklist",
+            "observability",
+            "monitoring",
+            "logging",
+            "tracing",
+            "reference",
+            "bootstrap",
+            "high-confidence"
+          ],
+          "metadata": {
+            "type": "episode",
+            "episodeId": "bootstrap-checklist--observability---logs--metrics"
+          }
+        },
+        {
+          "id": "ep-bootstrap-checklist--how-to-add-a-new-agentic--too",
+          "category": "knowledge-tech",
+          "title": "Checklist: How to add a new agentic_ tool",
+          "content": "STEP 1: Create source file in src/core/ or src/agents/ or src/memory/. STEP 2: Add import in src/index.ts at top. STEP 3: Add tool definition in the `tools` object inside AgenticEngine function — include name, description, schema, execute handler. STEP 4: Add new tool name to the expected list in test/run.mjs (EXPECTED_TOOLS array). STEP 5: Also add to test/dropin.mjs and test/load-samedir.mjs expected tool lists. STEP 6: Add ≥2 test cases — Part A core tests in test/_runall.mjs, specialized tests in test/_b_*.mjs. STEP 7: Run `npm run build` — must pass with zero errors. STEP 8: Run `node test/run.mjs` (orchestrator runs all) — all tests must pass. STEP 9: Run `node test/realtest.mjs` — 166+ tests must pass. STEP 10: Commit with descriptive message.\nRegister in src/index.ts tools object\nUpdate 3 test files\n2+ test cases required\nBuild + test before commit",
+          "keywords": [
+            "checklist",
+            "procedure",
+            "new-tool",
+            "howto",
+            "step-by-step",
+            "bootstrap",
+            "high-confidence"
+          ],
+          "metadata": {
+            "type": "episode",
+            "episodeId": "bootstrap-checklist--how-to-add-a-new-agentic--too"
+          }
+        },
+        {
+          "id": "ep-bootstrap-checklist--how-to-update-opencode-plugin",
+          "category": "knowledge-tech",
+          "title": "Checklist: How to update OpenCode plugin tests",
+          "content": "STEP 1: Tests live in test/_runall.mjs (core), test/_b_*.mjs (specialized), and test/run.mjs (orchestrator). STEP 2: Find the section for the tool/feature being tested (sections are numbered [1], [2], etc.). STEP 3: Add new assert() calls — use the pattern: assert(condition, 'descriptive message'). STEP 4: If testing a new export, add it to the destructured import at the top of the test file. STEP 5: Run `npm run build` first — tests import from dist/. STEP 6: Run `node test/run.mjs` — check that new tests appear in output. STEP 7: Run `node test/realtest.mjs` — must still pass (166+ tests). STEP 8: If the new feature adds a tool, also update expected tool count in test/dropin.mjs and test/load-samedir.mjs.\nTests split: _runall.mjs (core), _b_*.mjs (specialized), run.mjs (orchestrator)\nCustom assert() not Jest\nBuild before test\nCheck realtest.mjs too",
+          "keywords": [
+            "checklist",
+            "procedure",
+            "testing",
+            "howto",
+            "step-by-step",
+            "bootstrap",
+            "high-confidence"
+          ],
+          "metadata": {
+            "type": "episode",
+            "episodeId": "bootstrap-checklist--how-to-update-opencode-plugin"
+          }
+        },
+        {
+          "id": "ep-bootstrap-checklist--how-to-verify-prompt-injectio",
+          "category": "knowledge-tech",
+          "title": "Checklist: How to verify prompt injection changes",
+          "content": "STEP 1: Read src/core/prompt-builder.ts and src/core/prompt-template.ts to understand current prompt structure. STEP 2: Check the system.transform hook in src/index.ts — this is where RAG results and knowledge context are injected. STEP 3: Make changes to prompt sections. STEP 4: Run `npm run build`. STEP 5: Run `node test/realtest.mjs` — it validates prompt content (tool count, section presence). STEP 6: Search test/realtest.mjs for 'system.transform' or 'prompt' tests to see what's checked. STEP 7: Manually inspect generated prompt by setting DEBUG_AGENTIC=1 and running a tool. STEP 8: Verify knowledge-context XML tags are present and properly escaped.\nPrompt built in prompt-builder.ts\nInjected via system.transform hook\nrealtest.mjs validates prompt\nCheck XML tag escaping",
+          "keywords": [
+            "checklist",
+            "procedure",
+            "prompt",
+            "injection",
+            "howto",
+            "step-by-step",
+            "bootstrap",
+            "high-confidence"
+          ],
+          "metadata": {
+            "type": "episode",
+            "episodeId": "bootstrap-checklist--how-to-verify-prompt-injectio"
+          }
+        },
+        {
+          "id": "ep-bootstrap-checklist--how-to-recover-typescript-bui",
+          "category": "knowledge-tech",
+          "title": "Checklist: How to recover TypeScript build failures",
+          "content": "STEP 1: Run `npm run build` and read the FULL error output. STEP 2: Identify error type — TS6133 (unused import/var), TS2345 (type mismatch), TS2304 (undeclared name), TS2322 (type assignment). STEP 3: For TS6133 — remove the unused import/variable. STEP 4: For TS2345/TS2322 — check the expected type and fix the argument or assignment. STEP 5: For TS2304 — add the missing import or declaration. STEP 6: After fix, run `npm run build` again — must be zero errors. STEP 7: Run `node test/run.mjs` to ensure no regressions. STEP 8: Common pitfall: ESM requires .js extension in imports even for .ts files (e.g., import from './foo.js' not './foo.ts').\nRead full error output\nFix by error code\nESM requires .js extensions\nBuild + test after every fix",
+          "keywords": [
+            "checklist",
+            "procedure",
+            "build",
+            "typescript",
+            "error-recovery",
+            "step-by-step",
+            "bootstrap",
+            "high-confidence"
+          ],
+          "metadata": {
+            "type": "episode",
+            "episodeId": "bootstrap-checklist--how-to-recover-typescript-bui"
+          }
+        }
+      ]
+    }
+  },
+  "updatedAt": "2026-08-26T12:18:00.726Z"
+}
