@@ -59,7 +59,7 @@ export component TempPill inherits Rectangle {
     border-color: root.is-active ? root.highlight : #3a3a3a;
     height: 48px;
 
-    TouchArea {
+    touch := TouchArea {
         clicked => { root.clicked(); }
     }
 
