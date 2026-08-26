@@ -3,7 +3,7 @@ use std::sync::Arc;
 use tokio::sync::{broadcast, mpsc, RwLock};
 
 use host_server::api::{
-    get_printer_info, get_server_files_list, get_server_info, post_gcode_script,
+    get_printer_info, get_server_files_list, get_server_info,
     query_printer_objects, AppState, MachineState,
 };
 use host_server::db::Database;
