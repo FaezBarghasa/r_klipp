@@ -10,6 +10,7 @@ use thiserror::Error;
 use crate::db::models::{GCodeFile, MachineConfig, PrintHistory};
 
 #[derive(Error, Debug)]
+#[allow(dead_code)]
 pub enum HostError {
     #[error("Database error: {0}")]
     DbError(#[from] surrealdb::Error),
@@ -23,6 +24,7 @@ pub struct Database {
     db: Surreal<Db>,
 }
 
+#[allow(dead_code)]
 impl Database {
     pub async fn new(path: &str) -> Result<Self, HostError> {
         let db = Surreal::new::<SurrealKv>(path).await?;

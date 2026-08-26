@@ -7,10 +7,12 @@ use std::collections::HashMap;
 /// Extracts typed query parameters matching Moonraker's `?key:type=value` syntax.
 /// Types supported: `int`, `float`, `bool`, `json`, `str` (default).
 #[derive(Debug, Clone, Default)]
+#[allow(dead_code)]
 pub struct TypedQuery {
     pub params: HashMap<String, Value>,
 }
 
+#[allow(dead_code)]
 impl TypedQuery {
     pub fn get_str(&self, key: &str) -> Option<&str> {
         self.params.get(key).and_then(|v| v.as_str())
