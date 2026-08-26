@@ -1,39 +1,67 @@
-import { HorizontalBox } from "std-widgets.slint";
 import { Theme } from "../themes/material_dark.slint";
 
 export component Titlebar inherits Rectangle {
     in-out property <string> title: "Printer";
     in-out property <string> time: "00:00 AM";
-    in-out property <int> battery-percent: 100;
-    in-out property <bool> show-battery: false;
+    in-out property <string> printer-state: "READY";
+    in-out property <string> current-file: "";
 
     background: Theme.panel-bg;
-    height: 50px;
+    height: 48px;
 
     HorizontalLayout {
-        padding: 10px;
+        padding-left: 14px;
+        padding-right: 14px;
         alignment: space-between;
 
-        Text {
-            text: root.title;
-            font-size: 20px;
-            color: Theme.text;
-            vertical-alignment: center;
-        }
-
+        // Left: Title & Active Screen / File
         HorizontalLayout {
-            spacing: 10px;
-            alignment: end;
-
-            if root.show-battery: Text {
-                text: root.battery-percent + "%";
+            spacing: 12px;
+            alignment: start;
+            Text {
+                text: root.title;
+                font-size: 18px;
+                font-weight: 700;
                 color: Theme.text;
                 vertical-alignment: center;
             }
+            if root.current-file != "" : Text {
+                text: "• " + root.current-file;
+                font-size: 14px;
+                color: Theme.active;
+                vertical-alignment: center;
+            }
+        }
 
+        // Right: Status Pill & Time
+        HorizontalLayout {
+            spacing: 14px;
+            alignment: end;
+
+            // Status Badge
+            Rectangle {
+                height: 26px;
+                background: root.printer-state == "printing" ? #2e7d32 : (root.printer-state == "paused" ? #f57f17 : (root.printer-state == "error" ? #c62828 : #37474f));
+                border-radius: 13px;
+                padding-left: 10px;
+                padding-right: 10px;
+
+                Text {
+                    text: root.printer-state;
+                    color: #ffffff;
+                    font-size: 11px;
+                    font-weight: 700;
+                    vertical-alignment: center;
+                    horizontal-alignment: center;
+                }
+            }
+
+            // Clock
             Text {
                 text: root.time;
                 color: Theme.text;
+                font-size: 15px;
+                font-weight: 600;
                 vertical-alignment: center;
             }
         }
