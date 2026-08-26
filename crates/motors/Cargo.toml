@@ -7,12 +7,12 @@ edition = "2021"
 micromath = "2.1.0"
 r_klipp_api = { path = "../libs/r_klipp_api" }
 hal = { path = "../hal" }
-embassy-time = { version = "0.3.0", features = [
+embassy-time = { version = "0.5.1", features = [
     "defmt",
     "defmt-timestamp-uptime",
 ] }
 [target.'cfg(target_arch = "arm")'.dependencies]
-embassy-executor = { version = "0.6.0", features = [
+embassy-executor = { version = "0.10.0", features = [
     "task-arena-size-32768",
     "arch-cortex-m",
     "executor-interrupt",
@@ -20,7 +20,7 @@ embassy-executor = { version = "0.6.0", features = [
 ] }
 
 [target.'cfg(not(target_arch = "arm"))'.dependencies]
-embassy-executor = { version = "0.6.0", features = [
+embassy-executor = { version = "0.10.0", features = [
     "task-arena-size-32768",
     "arch-std",
     "executor-thread",
