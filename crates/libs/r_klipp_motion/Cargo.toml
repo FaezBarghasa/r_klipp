@@ -3,7 +3,13 @@ name = "r_klipp_motion"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+default = []
+std = ["dep:tokio", "dep:nalgebra"]
+
 [dependencies]
 r_klipp_api = { path = "../r_klipp_api" }
-heapless = "0.9.3"
+heapless = "0.8.0"
 micromath = "2.1.0"
+tokio = { version = "1.36.0", features = ["full"], optional = true }
+nalgebra = { version = "0.33", default-features = false, features = ["libm"], optional = true }

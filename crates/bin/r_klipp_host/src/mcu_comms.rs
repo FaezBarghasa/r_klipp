@@ -1,32 +1,38 @@
 use tokio::sync::mpsc;
 use r_klipp_api::HostToMcu;
-use crc8_rs::Crc8;
 
-struct Frame {
-    payload: Vec<u8>,
-    crc: u8,
+pub struct Frame {
+    pub payload: Vec<u8>,
+    pub crc: u8,
 }
 
 impl Frame {
-    fn new(payload: Vec<u8>) -> Self {
-        let mut crc8 = Crc8::new();
-        crc8.update(&payload);
-        Self {
-            payload,
-            crc: crc8.finish(),
+    pub fn new(payload: Vec<u8>) -> Self {
+        let crc = Self::compute_crc8(&payload);
+        Self { payload, crc }
+    }
+
+    fn compute_crc8(data: &[u8]) -> u8 {
+        let mut crc: u8 = 0x00;
+        for &byte in data {
+            crc ^= byte;
+            for _ in 0..8 {
+                if (crc & 0x80) != 0 {
+                    crc = (crc << 1) ^ 0x07;
+                } else {
+                    crc <<= 1;
+                }
+            }
         }
+        crc
     }
 }
 
 pub async fn mcu_comms_actor(mut rx: mpsc::Receiver<HostToMcu>) {
-    // In a real implementation, this would be a serial port
-    let mut serial_writer = tokio::io::stdout();
-
     while let Some(cmd) = rx.recv().await {
         let mut buf = [0u8; 256];
         if let Ok(encoded) = postcard::to_slice(&cmd, &mut buf) {
-            let frame = Frame::new(encoded.to_vec());
-            // In a real implementation, we'd send frame.payload and frame.crc
+            let _frame = Frame::new(encoded.to_vec());
         }
     }
 }
@@ -35,6 +41,7 @@ pub async fn mcu_comms_actor(mut rx: mpsc::Receiver<HostToMcu>) {
 mod tests {
     use super::*;
     use tokio::sync::mpsc;
+    use r_klipp_api::HostCommand;
 
     #[tokio::test]
     async fn test_mcu_comms_actor() {
@@ -42,11 +49,10 @@ mod tests {
         let actor_handle = tokio::spawn(mcu_comms_actor(rx));
 
         let waypoints = heapless::Vec::new();
-        let cmd = HostToMcu::BasicTrajectory { waypoints, max_jerk: 10.0 };
+        let cmd = HostToMcu::new(1, HostCommand::BasicTrajectory { waypoints, max_jerk: 10.0 });
         tx.send(cmd).await.unwrap();
 
-        // In a real test, we'd need to mock the serial port and check the output.
-        // For now, we just ensure the actor doesn't crash.
-        actor_handle.await.unwrap();
+        drop(tx);
+        let _ = actor_handle.await;
     }
 }

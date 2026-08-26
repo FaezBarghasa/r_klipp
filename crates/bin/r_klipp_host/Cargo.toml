@@ -1,21 +1,20 @@
 [package]
 name = "r_klipp_host"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 [dependencies]
 r_klipp_api = { path = "../../libs/r_klipp_api" }
-r_klipp_motion = { path = "../../libs/r_klipp_motion" }
+r_klipp_motion = { path = "../../libs/r_klipp_motion", features = ["std"] }
 tokio = { version = "1.36.0", features = ["full"] }
-axum = "0.7.4"
+axum = "0.8.9"
 tokio-serial = "5.4.4"
 postcard = { version = "1.0.8", features = ["use-std"] }
 serde = { version = "1.0.197", features = ["derive"] }
 serde_json = "1.0.114"
-nalgebra = "0.32.5"
-gstreamer = "0.22.1"
-dioxus = { version = "0.5.1", features = ["fullstack"] }
-slint = "1.5.1"
+nalgebra = "0.35.0"
+dioxus = { version = "0.7.10", features = ["fullstack"] }
+futures-util = "0.3"
 
 [dev-dependencies]
-criterion = "0.5.1"
+criterion = "0.8.2"

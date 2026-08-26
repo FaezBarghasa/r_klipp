@@ -1,6 +1,3 @@
-use embassy_time::Instant;
-use micromath::F32Ext;
-
 pub trait Clock {
     fn get_freq(&self) -> u32;
     fn set_freq(&mut self, freq: u32);
@@ -23,8 +20,7 @@ impl Dpll {
         }
     }
 
-    pub fn sync_clock(&mut self, clock: &mut impl Clock, host_timestamp: u64) {
-        let mcu_timestamp = Instant::now().as_micros();
+    pub fn sync_clock(&mut self, clock: &mut impl Clock, host_timestamp: u64, mcu_timestamp: u64) {
         let phase_error = (host_timestamp as i64 - mcu_timestamp as i64) as f32;
 
         self.integral += phase_error * self.ki;
@@ -62,13 +58,11 @@ mod tests {
         let mut dpll = Dpll::new(1_000_000, 0.1, 0.01);
 
         // Simulate host time being ahead
-        let host_timestamp = Instant::now().as_micros() + 100;
-        dpll.sync_clock(&mut clock, host_timestamp);
+        dpll.sync_clock(&mut clock, 1_000_100, 1_000_000);
         assert!(clock.get_freq() > 1_000_000);
 
         // Simulate host time being behind
-        let host_timestamp = Instant::now().as_micros() - 100;
-        dpll.sync_clock(&mut clock, host_timestamp);
+        dpll.sync_clock(&mut clock, 999_900, 1_000_000);
         assert!(clock.get_freq() < 1_000_000);
     }
 }
