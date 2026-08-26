@@ -72,15 +72,10 @@ where
         };
         self.can.transmit(&frame).await.map_err(|_| ())
     }
-}
-
-#[embassy_executor::task]
-pub async fn cia402_proxy_task<CAN>(mut proxy: Cia402Proxy<CAN>)
-where
-    CAN: Can + 'static,
-{
-    loop {
-        // This task would receive commands from the motion planner and send them to the drive.
-        embassy_time::Timer::after(embassy_time::Duration::from_millis(10)).await;
+    pub async fn run_proxy_loop(&mut self) {
+        loop {
+            // This task would receive commands from the motion planner and send them to the drive.
+            embassy_time::Timer::after(embassy_time::Duration::from_millis(10)).await;
+        }
     }
 }

@@ -1,16 +1,16 @@
-use embedded_hal_async::serial::{Read, Write};
+use hal::uart::Uart;
 use r_klipp_api::FaultCode;
 
 pub struct Tmc2209<UART>
 where
-    UART: Read + Write,
+    UART: Uart,
 {
     uart: UART,
 }
 
 impl<UART> Tmc2209<UART>
 where
-    UART: Read + Write,
+    UART: Uart,
 {
     pub fn new(uart: UART) -> Self {
         Self { uart }
@@ -32,19 +32,15 @@ where
         self.uart.write(&write_buf).await.map_err(|_| ())?;
         Ok(())
     }
-}
 
-#[embassy_executor::task]
-pub async fn tmc_poll_task<UART>(mut driver: Tmc2209<UART>, fault_queue: embassy_sync::channel::Sender<'static, FaultCode, 1>)
-where
-    UART: Read + Write + 'static,
-{
-    loop {
-        if let Ok(sg_result) = driver.read_register(0x6F).await {
-            if sg_result == 0 {
-                fault_queue.send(FaultCode::StallGuard).await;
+    pub async fn poll_task(&mut self, fault_queue: embassy_sync::channel::Sender<'static, FaultCode, 1>) {
+        loop {
+            if let Ok(sg_result) = self.read_register(0x6F).await {
+                if sg_result == 0 {
+                    fault_queue.send(FaultCode::StallGuard).await;
+                }
             }
+            embassy_time::Timer::after(embassy_time::Duration::from_millis(100)).await;
         }
-        embassy_time::Timer::after(embassy_time::Duration::from_millis(100)).await;
     }
 }

@@ -1,7 +1,7 @@
 [package]
 name = "r_klipp_firmware"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 [dependencies]
 r_klipp_api = { path = "../../libs/r_klipp_api" }

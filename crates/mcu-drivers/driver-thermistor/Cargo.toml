@@ -2,7 +2,7 @@
 [package]
 name = "driver-thermistor"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 license = "MIT OR Apache-2.0"
 description = "A no_std NTC thermistor temperature conversion library."
 

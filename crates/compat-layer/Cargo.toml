@@ -1,7 +1,7 @@
 [package]
 name = "compat-layer"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 description = "Compatibility and migration helpers for Klipper printer.cfg files."
 license = "MIT"
 

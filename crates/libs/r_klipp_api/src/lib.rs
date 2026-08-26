@@ -88,6 +88,7 @@ pub enum FaultCode {
     GcodeError,
     VersionMismatch { expected: u32, received: u32 },
     WatchdogTimeout,
+    StallGuard,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
