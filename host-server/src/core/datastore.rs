@@ -28,7 +28,7 @@ impl DataStore {
                 if let (Value::Object(target_map), Value::Object(source_map)) =
                     (existing, &mut new_val)
                 {
-                    for (k, v) in source_map.drain() {
+                    for (k, v) in std::mem::take(source_map) {
                         target_map.insert(k, v);
                     }
                 }

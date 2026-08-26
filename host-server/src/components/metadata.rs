@@ -30,6 +30,7 @@ pub struct GCodeMetadata {
     pub thumbnails: Vec<Thumbnail>,
 }
 
+#[derive(Clone)]
 pub struct MetadataParser {
     cura_time_re: Regex,
     cura_filament_re: Regex,

@@ -4967,6 +4967,7 @@ dependencies = [
  "tokio",
  "tokio-serial",
  "tokio-util",
+ "urlencoding",
  "uuid",
 ]
 
@@ -6742,12 +6743,11 @@ dependencies = [
 
 [[package]]
 name = "minijinja"
-version = "1.0.22"
+version = "2.24.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3287d827e6da221ea11aa173c66b82ab69db27a1b177e8439f730b478bf33a7b"
+checksum = "86886cf6dbf4e614b19c9a1eec9775f021869d7eadde0fc73921a81b90c9b4c9"
 dependencies = [
  "memo-map",
- "self_cell",
  "serde",
  "serde_json",
 ]
@@ -9922,12 +9922,6 @@ dependencies = [
  "core-foundation-sys",
  "libc",
 ]
-
-[[package]]
-name = "self_cell"
-version = "1.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2ab42ca02749e120097e328d91d415325bdf43b1c72c4c8badf37375fe40a813"
 
 [[package]]
 name = "semver"

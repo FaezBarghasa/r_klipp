@@ -29,7 +29,7 @@ impl TemplateEngine {
 
     /// Render a raw config or macro string through the template engine.
     pub fn render_string(&self, template_str: &str, context: &HashMap<String, serde_json::Value>) -> Result<String> {
-        let mut minijinja_ctx = minijinja::value::Value::from(context.clone());
+        let minijinja_ctx = minijinja::Value::from_serialize(context);
         let rendered = self.env.render_str(template_str, minijinja_ctx)?;
         Ok(rendered)
     }

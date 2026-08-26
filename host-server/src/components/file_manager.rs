@@ -23,15 +23,25 @@ impl FileManager {
 
     /// Resolve and sanitize requested relative path against base root.
     pub fn sanitize_path(&self, root: &Path, rel_path: &str) -> Result<PathBuf> {
-        let clean_rel = rel_path.trim_start_matches('/');
-        let target = root.join(clean_rel);
+        let path = Path::new(rel_path);
+        let mut target = root.to_path_buf();
 
-        // Guard against path traversal
-        if target.starts_with(root) {
-            Ok(target)
-        } else {
-            Err(anyhow!("Access denied: Path traversal outside sandbox detected"))
+        for component in path.components() {
+            match component {
+                std::path::Component::Normal(c) => {
+                    target.push(c);
+                }
+                std::path::Component::CurDir => {}
+                std::path::Component::ParentDir
+                | std::path::Component::RootDir
+                | std::path::Component::Prefix(_) => {
+                    return Err(anyhow!(
+                        "Access denied: Path traversal outside sandbox detected"
+                    ));
+                }
+            }
         }
+        Ok(target)
     }
 
     /// List files in the gcodes directory with metadata.
