@@ -3,6 +3,7 @@
 
 use cortex_m_rt::entry;
 use cortex_m_semihosting::hprintln;
+use stm32f4xx_hal as _;
 
 #[panic_handler]
 fn panic(_info: &core::panic::PanicInfo) -> ! {
@@ -11,15 +12,6 @@ fn panic(_info: &core::panic::PanicInfo) -> ! {
         cortex_m::asm::bkpt();
     }
 }
-
-#[no_mangle]
-pub extern "C" fn DefaultHandler_() {}
-
-#[no_mangle]
-pub extern "C" fn FLASH() {}
-
-#[no_mangle]
-pub extern "C" fn RNG() {}
 
 // UART0 Data Register on LM3S6965EVB / QEMU
 const UART0_DR: *mut u32 = 0x4000_C000 as *mut u32;
