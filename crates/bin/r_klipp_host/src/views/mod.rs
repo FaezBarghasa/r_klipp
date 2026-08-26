@@ -1,0 +1,19 @@
+pub mod dashboard;
+pub mod files;
+pub mod console;
+pub mod hardware;
+pub mod webcam;
+pub mod tune;
+pub mod farm;
+pub mod history;
+pub mod configure;
+
+pub use dashboard::DashboardView;
+pub use files::FilesView;
+pub use console::ConsoleView;
+pub use hardware::HardwareView;
+pub use webcam::WebcamView;
+pub use tune::TuneView;
+pub use farm::FarmView;
+pub use history::HistoryView;
+pub use configure::ConfigureView;

@@ -1,10 +1,9 @@
-
 use dioxus::prelude::*;
 use r_klipp_api::LinkHealth;
 
 #[component]
-pub fn Dashboard(cx: Scope) -> Element {
-    let link_health = use_signal(cx, || LinkHealth {
+pub fn Dashboard() -> Element {
+    let link_health = use_signal(|| LinkHealth {
         rtt_us: 0,
         buffer_fill_percent: 100,
         dropped_packets: 0,
@@ -21,7 +20,7 @@ pub fn Dashboard(cx: Scope) -> Element {
         }
     };
 
-    cx.render(rsx! {
+    rsx! {
         div {
             class: "p-4",
             h1 { class: "text-2xl font-bold", "r_klipp Dashboard" },
@@ -35,5 +34,5 @@ pub fn Dashboard(cx: Scope) -> Element {
                 p { "Buffer Fill: {link_health.read().buffer_fill_percent}%" }
             }
         }
-    })
+    }
 }
