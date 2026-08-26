@@ -1,5 +1,5 @@
-use crate::traits::{MotorAxis, StepDirControl, MotorError};
-use hal::gpio::{OutputPin, PinState};
+use crate::traits::{MotorAxis, MotorError};
+use hal::gpio::OutputPin;
 use hal::timer::Timer;
 
 pub struct StepperMotor<DIR, STEP, TIMER>
@@ -40,6 +40,7 @@ where
 {
     async fn command_position(&mut self, position: f32) -> Result<(), MotorError> {
         let steps_to_move = (position - self.position) * self.steps_per_mm;
+        let forward = steps_to_move > 0.0;
         if forward {
             let _ = self.dir_pin.set_high();
         } else {

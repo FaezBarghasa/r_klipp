@@ -33,7 +33,7 @@ where
         Ok(())
     }
 
-    pub async fn poll_task(&mut self, fault_queue: embassy_sync::channel::Sender<'static, FaultCode, 1>) {
+    pub async fn poll_task(&mut self, fault_queue: embassy_sync::channel::Sender<'static, embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex, FaultCode, 1>) {
         loop {
             if let Ok(sg_result) = self.read_register(0x6F).await {
                 if sg_result == 0 {

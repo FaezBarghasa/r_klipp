@@ -21,7 +21,7 @@ impl<const N: usize> MessageBus<N> {
         }
     }
 
-    pub fn split(&mut self) -> (MessageProducer<N>, MessageConsumer<N>) {
+    pub fn split(&mut self) -> (MessageProducer<'_, N>, MessageConsumer<'_, N>) {
         let (producer, consumer) = self.queue.split();
         (
             MessageProducer { producer },
@@ -31,7 +31,7 @@ impl<const N: usize> MessageBus<N> {
 }
 
 pub struct MessageProducer<'a, const N: usize> {
-    producer: Producer<'a, Message, N>,
+    producer: Producer<'a, Message>,
 }
 
 impl<'a, const N: usize> MessageProducer<'a, N> {
@@ -41,7 +41,7 @@ impl<'a, const N: usize> MessageProducer<'a, N> {
 }
 
 pub struct MessageConsumer<'a, const N: usize> {
-    consumer: Consumer<'a, Message, N>,
+    consumer: Consumer<'a, Message>,
     subscribed: AtomicBool,
 }
 
