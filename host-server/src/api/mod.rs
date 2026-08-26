@@ -226,6 +226,81 @@ pub async fn websocket_route(
     Ok(response)
 }
 
+pub mod typed_query;
+pub use typed_query::TypedQuery;
+
+#[derive(Deserialize)]
+pub struct JsonRpcRequest {
+    pub jsonrpc: Option<String>,
+    pub method: String,
+    pub params: Option<serde_json::Value>,
+    pub id: Option<serde_json::Value>,
+}
+
+/// POST /server/jsonrpc -> JSON-RPC 2.0 endpoint for HTTP clients
+pub async fn post_jsonrpc(
+    req: web::Json<JsonRpcRequest>,
+    state: web::Data<AppState>,
+) -> HttpResponse {
+    let method = &req.method;
+    let req_id = req.id.clone().unwrap_or(serde_json::Value::Null);
+
+    let result = match method.as_str() {
+        "server.info" => json!({
+            "klippy_state": "ready",
+            "klippy_connected": true,
+            "api_version": [0, 1, 0],
+            "api_version_string": "0.1.0-rklipp",
+            "hostname": "r-klipp-host",
+            "plugins": ["database", "file_manager", "gcode"]
+        }),
+        "printer.info" => {
+            let ms = state.machine_state.read().await;
+            json!({
+                "state": if ms.is_printing { "printing" } else { "ready" },
+                "state_message": ms.state_message,
+                "hostname": "r-klipp-host",
+                "software_version": "0.1.0-rklipp"
+            })
+        }
+        "printer.objects.query" => {
+            let ms = state.machine_state.read().await;
+            json!({
+                "status": {
+                    "toolhead": {
+                        "position": ms.toolhead.position,
+                        "homed_axes": ms.toolhead.homed_axes
+                    },
+                    "extruder": {
+                        "temperature": ms.nozzle_temp,
+                        "target": ms.nozzle_target
+                    },
+                    "heater_bed": {
+                        "temperature": ms.bed_temp,
+                        "target": ms.bed_target
+                    }
+                }
+            })
+        }
+        _ => {
+            return HttpResponse::Ok().json(json!({
+                "jsonrpc": "2.0",
+                "error": {
+                    "code": -32601,
+                    "message": format!("Method not found: {}", method)
+                },
+                "id": req_id
+            }));
+        }
+    };
+
+    HttpResponse::Ok().json(json!({
+        "jsonrpc": "2.0",
+        "result": result,
+        "id": req_id
+    }))
+}
+
 pub async fn run_api_server(
     db: Arc<Database>,
     telemetry_broadcaster: broadcast::Sender<serde_json::Value>,
@@ -257,6 +332,7 @@ pub async fn run_api_server(
             .route("/printer/gcode/script", web::post().to(post_gcode_script))
             .route("/server/info", web::get().to(get_server_info))
             .route("/server/files/list", web::get().to(get_server_files_list))
+            .route("/server/jsonrpc", web::post().to(post_jsonrpc))
     })
     .bind("0.0.0.0:7125")?
     .run()

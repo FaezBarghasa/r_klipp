@@ -1,4 +1,9 @@
 pub mod api;
 pub mod bridge;
+pub mod components;
+pub mod config;
+pub mod core;
 pub mod db;
+pub mod ipc;
+pub mod klippy_api;
 pub mod openpnp;

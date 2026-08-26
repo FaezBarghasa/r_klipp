@@ -34,4 +34,5 @@ regex = "1.10"
 actix-multipart = "0.8.1"
 memmap2 = "0.9"
 hostname = "0.4"
+urlencoding = "2.1"
 host-ui = { path = "../host-ui" } # Add host-ui as a dependency
