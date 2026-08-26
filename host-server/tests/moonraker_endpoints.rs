@@ -2,13 +2,10 @@ use actix_web::{test, web, App};
 use std::sync::Arc;
 use tokio::sync::{broadcast, mpsc, RwLock};
 
-use host_server::api::{
-    get_printer_info, get_server_files_list, get_server_info, post_gcode_script,
-    post_jsonrpc, query_printer_objects, AppState, MachineState,
-};
-use host_server::db::Database;
-use host_server::components::{FileManager, MetadataParser};
+use host_server::api::{post_jsonrpc, AppState, MachineState};
+use host_server::components::FileManager;
 use host_server::config::parse_case_sensitive_ini;
+use host_server::db::Database;
 
 #[actix_web::test]
 async fn test_moonraker_jsonrpc_endpoint() {
