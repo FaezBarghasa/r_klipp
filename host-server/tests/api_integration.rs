@@ -49,7 +49,7 @@ async fn test_printer_info_endpoint() {
 
     let body: serde_json::Value = test::read_body_json(resp).await;
     assert_eq!(body["result"]["state"], "ready");
-    assert_eq!(body["result"]["software_version"], "0.1.0-rklipp");
+    assert_eq!(body["result"]["software_version"], env!("CARGO_PKG_VERSION"));
 
     let req_server = test::TestRequest::get().uri("/server/info").to_request();
     let resp_server = test::call_service(&app, req_server).await;

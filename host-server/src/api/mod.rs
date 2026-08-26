@@ -2,11 +2,11 @@
 
 use actix_cors::Cors;
 use actix_multipart::Multipart;
-use actix_web::{web, App, HttpRequest, HttpResponse, HttpServer, Responder};
+use actix_web::{web, App, HttpRequest, HttpResponse, HttpServer};
 use actix_ws::Message;
 use anyhow::Result;
 use futures_util::{StreamExt, TryStreamExt};
-use log::{error, info, warn};
+use log::info;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::{sync::Arc, time::Duration};
@@ -16,11 +16,11 @@ use crate::bridge::HostToMcu;
 use crate::components::{
     DataStore, FileManager, JobQueue, MachineManager, PowerManager, SpoolmanClient, UpdateManager,
 };
-use crate::db::models::{GCodeFile, GCodeMetadata, PrintHistory, PrintStatus};
+use crate::db::models::{GCodeFile, GCodeMetadata};
 use crate::db::Database;
 
 pub mod typed_query;
-pub use typed_query::TypedQuery;
+
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ToolheadState {

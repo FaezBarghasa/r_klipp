@@ -4,8 +4,8 @@
 //! Moonraker API server needs to communicate with the Klipper host process.
 //! In r_klipp the "Klipper host" is `crates/klipper-host`.
 
-use anyhow::{anyhow, Result};
-use log::{error, info, warn};
+use anyhow::Result;
+use log::{info, warn};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::HashMap;
