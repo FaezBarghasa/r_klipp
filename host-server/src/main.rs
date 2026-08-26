@@ -6,6 +6,7 @@ use tokio::sync::{broadcast, mpsc, RwLock};
 
 mod api;
 mod bridge;
+pub mod components;
 mod db;
 pub mod openpnp;
 
@@ -39,6 +40,15 @@ fn main() -> Result<()> {
 
     let api_db = db.clone();
 
+    // Initialize Moonraker components
+    let file_manager = Arc::new(components::FileManager::new("./data/gcodes", "./data/config"));
+    let job_queue = Arc::new(components::JobQueue::new());
+    let data_store = Arc::new(components::DataStore::new(1200.0)); // 20-min temperature history
+
+    let api_file_mgr = file_manager.clone();
+    let api_job_queue = job_queue.clone();
+    let api_data_store = data_store.clone();
+
     // 2. Initialize and spawn SerialBridge on Tokio
     let serial_port_path = "/dev/ttyUSB0".to_string();
     let baud_rate = 115200;
@@ -63,6 +73,9 @@ fn main() -> Result<()> {
             api_telemetry_tx,
             api_mcu_cmd_tx,
             api_machine_state,
+            api_file_mgr,
+            api_job_queue,
+            api_data_store,
         )) {
             error!("Actix-Web server error: {:?}", e);
         }

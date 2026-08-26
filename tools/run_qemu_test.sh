@@ -70,13 +70,23 @@ echo "[*] Step 2: Executing QEMU test on '${KERNEL_PATH}' (Timeout: ${TIMEOUT_SE
 echo "[*] Command: qemu-system-arm -machine olimex-stm32-h405 -nographic -semihosting-config enable=on,target=native -kernel ${KERNEL_PATH}"
 
 # Execute QEMU with timeout, enabling semihosting for output
-# Semihosting output goes to stderr, so capture both streams
 set +e
-timeout ${TIMEOUT_SEC} qemu-system-arm \
-    -machine olimex-stm32-h405 \
-    -nographic \
-    -semihosting-config enable=on,target=native \
-    -kernel "${KERNEL_PATH}" > "${LOG_FILE}" 2>&1
+python3 -c "
+import subprocess, sys
+
+cmd = ['qemu-system-arm', '-machine', 'olimex-stm32-h405', '-nographic', '-semihosting-config', 'enable=on,target=native', '-kernel', '${KERNEL_PATH}']
+try:
+    p = subprocess.run(cmd, capture_output=True, text=True, timeout=${TIMEOUT_SEC})
+    with open('${LOG_FILE}', 'w') as f:
+        f.write(p.stdout + '\n' + p.stderr)
+    sys.exit(p.returncode)
+except subprocess.TimeoutExpired as e:
+    with open('${LOG_FILE}', 'w') as f:
+        out = (e.stdout or b'').decode('utf-8', errors='ignore') if isinstance(e.stdout, bytes) else (e.stdout or '')
+        err = (e.stderr or b'').decode('utf-8', errors='ignore') if isinstance(e.stderr, bytes) else (e.stderr or '')
+        f.write(out + '\n' + err)
+    sys.exit(124)
+"
 QEMU_EXIT_CODE=$?
 set -e
 

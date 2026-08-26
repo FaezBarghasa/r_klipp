@@ -14,6 +14,9 @@ use log::{info, error};
 use crate::db::{Database, HostError};
 use crate::db::models::{GCodeFile, GCodeMetadata, PrintHistory, PrintStatus};
 use crate::bridge::HostToMcu;
+use crate::components::{
+    DataStore, FileManager, JobQueue, MachineManager, PowerManager, SpoolmanClient, UpdateManager,
+};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ToolheadState {
@@ -68,6 +71,13 @@ pub struct AppState {
     pub telemetry_broadcaster: broadcast::Sender<serde_json::Value>,
     pub mcu_cmd_sender: mpsc::Sender<HostToMcu>,
     pub machine_state: Arc<RwLock<MachineState>>,
+    pub file_manager: Arc<FileManager>,
+    pub job_queue: Arc<JobQueue>,
+    pub data_store: Arc<DataStore>,
+    pub machine_mgr: Arc<MachineManager>,
+    pub power_mgr: Arc<PowerManager>,
+    pub update_mgr: Arc<UpdateManager>,
+    pub spoolman: Arc<SpoolmanClient>,
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -182,6 +192,108 @@ pub async fn get_server_files_list(state: web::Data<AppState>) -> HttpResponse {
     }
 }
 
+pub async fn handle_jsonrpc_request(
+    req: JsonRpcRequest,
+    state: &AppState,
+) -> serde_json::Value {
+    let method = &req.method;
+    let req_id = req.id.clone().unwrap_or(serde_json::Value::Null);
+
+    let result = match method.as_str() {
+        "server.info" => json!({
+            "klippy_state": "ready",
+            "klippy_connected": true,
+            "api_version": [0, 1, 0],
+            "api_version_string": "0.1.0-rklipp",
+            "hostname": "r-klipp-host",
+            "plugins": ["database", "file_manager", "gcode", "data_store", "job_queue"]
+        }),
+        "printer.info" => {
+            let ms = state.machine_state.read().await;
+            json!({
+                "state": if ms.is_printing { "printing" } else { "ready" },
+                "state_message": ms.state_message,
+                "hostname": "r-klipp-host",
+                "software_version": "0.1.0-rklipp"
+            })
+        }
+        "printer.objects.query" => {
+            let ms = state.machine_state.read().await;
+            json!({
+                "status": {
+                    "toolhead": {
+                        "position": ms.toolhead.position,
+                        "homed_axes": ms.toolhead.homed_axes
+                    },
+                    "extruder": {
+                        "temperature": ms.nozzle_temp,
+                        "target": ms.nozzle_target
+                    },
+                    "heater_bed": {
+                        "temperature": ms.bed_temp,
+                        "target": ms.bed_target
+                    }
+                }
+            })
+        }
+        "server.files.list" => {
+            if let Ok(files) = state.file_manager.list_gcodes().await {
+                json!(files)
+            } else {
+                json!([])
+            }
+        }
+        "server.job_queue.status" => {
+            let queue = state.job_queue.get_queue().await;
+            let current = state.job_queue.get_current_job().await;
+            json!({
+                "queued_jobs": queue,
+                "current_job": current
+            })
+        }
+        "server.temperature_store" => {
+            let history = state.data_store.get_all_sensors().await;
+            json!(history)
+        }
+        "machine.proc_stats" => {
+            let stats = state.machine_mgr.get_proc_stats().await;
+            json!(stats)
+        }
+        "machine.system_info" => {
+            let info = state.machine_mgr.get_system_info().await;
+            json!(info)
+        }
+        "machine.device_power.devices" => {
+            let devs = state.power_mgr.get_device_list().await;
+            json!({ "devices": devs })
+        }
+        "machine.update.status" => {
+            let status = state.update_mgr.get_status().await;
+            json!(status)
+        }
+        "server.spoolman.get_spool" => {
+            let spool = state.spoolman.get_active_spool().await;
+            json!({ "spool": spool })
+        }
+        _ => {
+            return json!({
+                "jsonrpc": "2.0",
+                "error": {
+                    "code": -32601,
+                    "message": format!("Method not found: {}", method)
+                },
+                "id": req_id
+            });
+        }
+    };
+
+    json!({
+        "jsonrpc": "2.0",
+        "result": result,
+        "id": req_id
+    })
+}
+
 // ------------------------------------------------------------------------------------------------
 // WebSocket Stream
 // ------------------------------------------------------------------------------------------------
@@ -193,6 +305,7 @@ pub async fn websocket_route(
 ) -> Result<HttpResponse, actix_web::Error> {
     let (response, mut session, mut msg_stream) = actix_ws::handle(&req, stream)?;
     let mut rx = state.telemetry_broadcaster.subscribe();
+    let app_state_for_ws = state.clone();
 
     actix_web::rt::spawn(async move {
         let mut interval = tokio::time::interval(Duration::from_secs(5));
@@ -205,7 +318,12 @@ pub async fn websocket_route(
                             if session.pong(&bytes).await.is_err() { break; }
                         }
                         Some(Ok(Message::Text(text))) => {
-                            info!("WebSocket client message: {}", text);
+                            if let Ok(rpc_req) = serde_json::from_str::<JsonRpcRequest>(&text) {
+                                let rpc_resp = handle_jsonrpc_request(rpc_req, &app_state_for_ws).await;
+                                if session.text(rpc_resp.to_string()).await.is_err() { break; }
+                            } else {
+                                info!("WebSocket raw client message: {}", text);
+                            }
                         }
                         Some(Ok(Message::Close(_))) => break,
                         _ => break,
@@ -242,63 +360,9 @@ pub async fn post_jsonrpc(
     req: web::Json<JsonRpcRequest>,
     state: web::Data<AppState>,
 ) -> HttpResponse {
-    let method = &req.method;
-    let req_id = req.id.clone().unwrap_or(serde_json::Value::Null);
-
-    let result = match method.as_str() {
-        "server.info" => json!({
-            "klippy_state": "ready",
-            "klippy_connected": true,
-            "api_version": [0, 1, 0],
-            "api_version_string": "0.1.0-rklipp",
-            "hostname": "r-klipp-host",
-            "plugins": ["database", "file_manager", "gcode"]
-        }),
-        "printer.info" => {
-            let ms = state.machine_state.read().await;
-            json!({
-                "state": if ms.is_printing { "printing" } else { "ready" },
-                "state_message": ms.state_message,
-                "hostname": "r-klipp-host",
-                "software_version": "0.1.0-rklipp"
-            })
-        }
-        "printer.objects.query" => {
-            let ms = state.machine_state.read().await;
-            json!({
-                "status": {
-                    "toolhead": {
-                        "position": ms.toolhead.position,
-                        "homed_axes": ms.toolhead.homed_axes
-                    },
-                    "extruder": {
-                        "temperature": ms.nozzle_temp,
-                        "target": ms.nozzle_target
-                    },
-                    "heater_bed": {
-                        "temperature": ms.bed_temp,
-                        "target": ms.bed_target
-                    }
-                }
-            })
-        }
-        _ => {
-            return HttpResponse::Ok().json(json!({
-                "jsonrpc": "2.0",
-                "error": {
-                    "code": -32601,
-                    "message": format!("Method not found: {}", method)
-                },
-                "id": req_id
-            }));
-        }
-    };
-
-    HttpResponse::Ok().json(json!({
-        "jsonrpc": "2.0",
-        "result": result,
-        "id": req_id
-    }))
+    let rpc_req = req.into_inner();
+    let response = handle_jsonrpc_request(rpc_req, &state).await;
+    HttpResponse::Ok().json(response)
 }
 
 pub async fn run_api_server(
@@ -306,6 +370,13 @@ pub async fn run_api_server(
     telemetry_broadcaster: broadcast::Sender<serde_json::Value>,
     mcu_cmd_sender: mpsc::Sender<HostToMcu>,
     machine_state: Arc<RwLock<MachineState>>,
+    file_manager: Arc<FileManager>,
+    job_queue: Arc<JobQueue>,
+    data_store: Arc<DataStore>,
+    machine_mgr: Arc<MachineManager>,
+    power_mgr: Arc<PowerManager>,
+    update_mgr: Arc<UpdateManager>,
+    spoolman: Arc<SpoolmanClient>,
 ) -> Result<()> {
     info!("Starting Moonraker-Compatible Actix-Web server on 0.0.0.0:7125");
 
@@ -314,6 +385,13 @@ pub async fn run_api_server(
         telemetry_broadcaster,
         mcu_cmd_sender,
         machine_state,
+        file_manager,
+        job_queue,
+        data_store,
+        machine_mgr,
+        power_mgr,
+        update_mgr,
+        spoolman,
     });
 
     HttpServer::new(move || {

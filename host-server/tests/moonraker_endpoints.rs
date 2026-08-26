@@ -27,6 +27,9 @@ async fn test_moonraker_jsonrpc_endpoint() {
         telemetry_broadcaster: telemetry_tx,
         mcu_cmd_sender: mcu_tx,
         machine_state,
+        file_manager: Arc::new(FileManager::new("/tmp/test_gcodes", "/tmp/test_config")),
+        job_queue: Arc::new(host_server::components::JobQueue::new()),
+        data_store: Arc::new(host_server::components::DataStore::new(600.0)),
     });
 
     let app = test::init_service(
