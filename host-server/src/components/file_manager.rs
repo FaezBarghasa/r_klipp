@@ -44,6 +44,14 @@ impl FileManager {
         Ok(target)
     }
 
+    pub fn get_root(&self, root_name: &str) -> Result<&PathBuf> {
+        match root_name {
+            "gcodes" => Ok(&self.gcodes_root),
+            "config" => Ok(&self.config_root),
+            _ => Err(anyhow!("Invalid root name: {}", root_name)),
+        }
+    }
+
     /// List files in the gcodes directory with metadata.
     pub async fn list_gcodes(&self) -> Result<Vec<GCodeMetadata>> {
         let mut results = Vec::new();
@@ -67,14 +75,29 @@ impl FileManager {
         Ok(results)
     }
 
+    /// Get metadata for a specific gcode file.
+    pub async fn get_gcode_metadata(&self, filename: &str) -> Result<GCodeMetadata> {
+        let target = self.sanitize_path(&self.gcodes_root, filename)?;
+        if !target.exists() {
+            return Err(anyhow!("File not found: {}", filename));
+        }
+        self.parser.parse_file(target)
+    }
+
+    /// Save/write a file within a sandbox root.
+    pub async fn write_file(&self, root_name: &str, rel_path: &str, content: &[u8]) -> Result<()> {
+        let root = self.get_root(root_name)?;
+        let target = self.sanitize_path(root, rel_path)?;
+        if let Some(parent) = target.parent() {
+            fs::create_dir_all(parent).await?;
+        }
+        fs::write(target, content).await?;
+        Ok(())
+    }
+
     /// Delete a file within a sandbox root.
     pub async fn delete_file(&self, root_name: &str, rel_path: &str) -> Result<()> {
-        let root = match root_name {
-            "gcodes" => &self.gcodes_root,
-            "config" => &self.config_root,
-            _ => return Err(anyhow!("Invalid root name: {}", root_name)),
-        };
-
+        let root = self.get_root(root_name)?;
         let target = self.sanitize_path(root, rel_path)?;
         if target.exists() {
             fs::remove_file(target).await?;
@@ -82,5 +105,35 @@ impl FileManager {
         } else {
             Err(anyhow!("File not found: {}", rel_path))
         }
+    }
+
+    /// Move or rename a file within a sandbox root.
+    pub async fn move_file(&self, root_name: &str, source_path: &str, dest_path: &str) -> Result<()> {
+        let root = self.get_root(root_name)?;
+        let src = self.sanitize_path(root, source_path)?;
+        let dst = self.sanitize_path(root, dest_path)?;
+        if !src.exists() {
+            return Err(anyhow!("Source file not found: {}", source_path));
+        }
+        if let Some(parent) = dst.parent() {
+            fs::create_dir_all(parent).await?;
+        }
+        fs::rename(src, dst).await?;
+        Ok(())
+    }
+
+    /// Copy a file within a sandbox root.
+    pub async fn copy_file(&self, root_name: &str, source_path: &str, dest_path: &str) -> Result<()> {
+        let root = self.get_root(root_name)?;
+        let src = self.sanitize_path(root, source_path)?;
+        let dst = self.sanitize_path(root, dest_path)?;
+        if !src.exists() {
+            return Err(anyhow!("Source file not found: {}", source_path));
+        }
+        if let Some(parent) = dst.parent() {
+            fs::create_dir_all(parent).await?;
+        }
+        fs::copy(src, dst).await?;
+        Ok(())
     }
 }

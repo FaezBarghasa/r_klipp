@@ -1,4 +1,5 @@
 use anyhow::Result;
+use clap::Parser;
 use log::{error, info};
 use std::sync::Arc;
 use std::thread;
@@ -7,12 +8,43 @@ use tokio::sync::{broadcast, mpsc, RwLock};
 mod api;
 mod bridge;
 pub mod components;
+pub mod config;
 mod db;
+pub mod ipc;
 pub mod openpnp;
+
+#[derive(Parser, Debug)]
+#[command(author, version, about = "r_klipp Moonraker & OpenPnP Host Server")]
+struct CliArgs {
+    /// Serial port device path for MCU comms
+    #[arg(short, long, default_value = "/dev/ttyUSB0")]
+    serial: String,
+
+    /// Baud rate for serial communication
+    #[arg(short, long, default_value_t = 115200)]
+    baud: u32,
+
+    /// HTTP & WebSocket server bind address
+    #[arg(long, default_value = "0.0.0.0")]
+    host: String,
+
+    /// HTTP & WebSocket server port
+    #[arg(short, long, default_value_t = 7125)]
+    port: u16,
+
+    /// Data directory path for databases and uploads
+    #[arg(long, default_value = "./data")]
+    data_dir: String,
+
+    /// Disable GUI / run headless (CLI-only)
+    #[arg(long, default_value_t = false)]
+    no_ui: bool,
+}
 
 fn main() -> Result<()> {
     env_logger::init();
-    info!("Starting r_klipp host-server...");
+    let args = CliArgs::parse();
+    info!("Starting r_klipp host-server on {}:{}...", args.host, args.port);
 
     // Create a new Tokio runtime for background tasks (SerialBridge, channels)
     let rt = tokio::runtime::Builder::new_multi_thread()
@@ -30,10 +62,18 @@ fn main() -> Result<()> {
     let api_machine_state = machine_state.clone();
 
     // 1. Initialize SurrealDB on Tokio runtime
-    let db_path = "./data/r_klipp.db";
+    let gcodes_dir = format!("{}/gcodes", args.data_dir);
+    let config_dir = format!("{}/config", args.data_dir);
+    let db_path = format!("{}/r_klipp.db", args.data_dir);
+
     let db = rt.block_on(async {
-        let database = db::Database::new(db_path).await.expect("Failed to initialize SurrealDB");
-        database.init_schema().await.expect("Failed to initialize SurrealDB schema");
+        let database = db::Database::new(&db_path)
+            .await
+            .expect("Failed to initialize SurrealDB");
+        database
+            .init_schema()
+            .await
+            .expect("Failed to initialize SurrealDB schema");
         Arc::new(database)
     });
     info!("SurrealDB initialized at {}", db_path);
@@ -41,7 +81,7 @@ fn main() -> Result<()> {
     let api_db = db.clone();
 
     // Initialize Moonraker components
-    let file_manager = Arc::new(components::FileManager::new("./data/gcodes", "./data/config"));
+    let file_manager = Arc::new(components::FileManager::new(gcodes_dir, config_dir));
     let job_queue = Arc::new(components::JobQueue::new());
     let data_store = Arc::new(components::DataStore::new(1200.0)); // 20-min temperature history
     let machine_mgr = Arc::new(components::MachineManager::new());
@@ -58,11 +98,9 @@ fn main() -> Result<()> {
     let api_spoolman = spoolman.clone();
 
     // 2. Initialize and spawn SerialBridge on Tokio
-    let serial_port_path = "/dev/ttyUSB0".to_string();
-    let baud_rate = 115200;
     let serial_bridge = bridge::SerialBridge::new(
-        serial_port_path.clone(),
-        baud_rate,
+        args.serial.clone(),
+        args.baud,
         telemetry_tx.clone(),
         mcu_cmd_rx,
         machine_state.clone(),
@@ -93,18 +131,26 @@ fn main() -> Result<()> {
         }
     });
 
-    // 4. Run Slint UI on the main thread
-    info!("Starting Slint UI on main thread...");
-    let (ui_cmd_tx, mut ui_cmd_rx) = mpsc::channel::<host_ui::HostToMcu>(1024);
-    let mcu_tx = mcu_cmd_tx.clone();
-    rt.spawn(async move {
-        while let Some(host_ui::HostToMcu::GCode(cmd)) = ui_cmd_rx.recv().await {
-            let _ = mcu_tx.send(bridge::HostToMcu::GCode(cmd)).await;
-        }
-    });
+    // 4. Run Slint UI on main thread or wait for Ctrl+C in headless mode
+    if args.no_ui {
+        info!("Running in headless mode (no UI). Waiting for SIGINT/SIGTERM...");
+        rt.block_on(async {
+            let _ = tokio::signal::ctrl_c().await;
+            info!("Shutdown signal received.");
+        });
+    } else {
+        info!("Starting Slint UI on main thread...");
+        let (ui_cmd_tx, mut ui_cmd_rx) = mpsc::channel::<host_ui::HostToMcu>(1024);
+        let mcu_tx = mcu_cmd_tx.clone();
+        rt.spawn(async move {
+            while let Some(host_ui::HostToMcu::GCode(cmd)) = ui_cmd_rx.recv().await {
+                let _ = mcu_tx.send(bridge::HostToMcu::GCode(cmd)).await;
+            }
+        });
 
-    if let Err(e) = rt.block_on(host_ui::run_ui(ui_cmd_tx)) {
-        error!("Slint UI failed: {:?}", e);
+        if let Err(e) = rt.block_on(host_ui::run_ui(ui_cmd_tx)) {
+            error!("Slint UI ended: {:?}", e);
+        }
     }
 
     info!("r_klipp host-server shut down cleanly.");

@@ -5054,6 +5054,7 @@ dependencies = [
  "async-trait",
  "bytes",
  "chrono",
+ "clap",
  "cobs 0.5.1",
  "dashmap 6.2.1",
  "env_logger",

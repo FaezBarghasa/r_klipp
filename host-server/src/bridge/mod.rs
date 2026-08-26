@@ -14,20 +14,20 @@ use tokio_serial::{SerialPortBuilderExt, SerialStream};
 use crate::api::MachineState;
 
 // --- Postcard Message Definitions ---
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub enum McuToHost {
     Telemetry(Telemetry),
     Response(Response),
     Error(String),
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub enum HostToMcu {
     GCode(String),
     Command(Command),
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct Telemetry {
     pub nozzle_temp: f32,
     pub bed_temp: f32,
@@ -36,13 +36,13 @@ pub struct Telemetry {
     pub z_pos: f32,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub enum Response {
     Ok,
     Value(String),
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub enum Command {
     SetToolTemp(f32),
     SetBedTemp(f32),
@@ -50,7 +50,7 @@ pub enum Command {
     Move { x: Option<f32>, y: Option<f32>, z: Option<f32> },
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub enum Axis {
     X,
     Y,
@@ -85,11 +85,15 @@ impl SerialBridge {
     }
 
     pub async fn run(mut self) -> Result<()> {
-        info!("Starting SerialBridge task.");
+        info!("Starting SerialBridge task on port: {}", self.port_path);
+        let mut retry_delay = Duration::from_secs(1);
+        let max_retry_delay = Duration::from_secs(10);
+
         loop {
             match self.connect().await {
                 Ok(port) => {
                     info!("Connected to serial port: {}", self.port_path);
+                    retry_delay = Duration::from_secs(1); // Reset backoff on successful connect
                     let (mut reader, mut writer) = tokio::io::split(port);
 
                     let telemetry_tx = self.telemetry_broadcaster.clone();
@@ -99,17 +103,21 @@ impl SerialBridge {
                     let write_loop = Self::write_loop(&mut self.mcu_cmd_receiver, &mut writer);
 
                     tokio::select! {
-                        _ = read_loop => {
-                            warn!("Serial read loop ended. Attempting reconnect...");
+                        res = read_loop => {
+                            warn!("Serial read loop ended: {:?}. Attempting reconnect...", res);
                         }
-                        _ = write_loop => {
-                            warn!("Serial write loop ended. Attempting reconnect...");
+                        res = write_loop => {
+                            warn!("Serial write loop ended: {:?}. Attempting reconnect...", res);
                         }
                     }
                 }
                 Err(e) => {
-                    error!("Failed to connect to serial port: {}. Retrying in 5 seconds...", e);
-                    sleep(Duration::from_secs(5)).await;
+                    warn!(
+                        "Serial port {} not available ({}). Retrying in {:?} (running in simulation/fallback mode)...",
+                        self.port_path, e, retry_delay
+                    );
+                    sleep(retry_delay).await;
+                    retry_delay = (retry_delay * 2).min(max_retry_delay);
                 }
             }
         }
@@ -126,14 +134,13 @@ impl SerialBridge {
         machine_state: Arc<RwLock<MachineState>>,
         reader: &mut (impl AsyncReadExt + Unpin),
     ) -> Result<()> {
-        let mut buf = vec![0u8; 256];
-        let mut cobs_buf = vec![0u8; 256];
+        let mut cobs_buf = vec![0u8; 4096];
         let mut read_pos = 0;
 
         loop {
-            let bytes_read = match reader.read(&mut buf[read_pos..]).await {
+            let bytes_read = match reader.read(&mut cobs_buf[read_pos..]).await {
                 Ok(0) => {
-                    warn!("Serial port closed unexpectedly (read).");
+                    warn!("Serial port closed unexpectedly (read 0 bytes).");
                     return Err(anyhow!("Serial port closed"));
                 }
                 Ok(n) => n,
@@ -148,14 +155,23 @@ impl SerialBridge {
 
             while let Some(frame_end) = cobs_buf[..read_pos].iter().position(|&b| b == 0x00) {
                 let frame_data = &mut cobs_buf[..frame_end];
-                let decoded_len = decode_in_place(frame_data).map_err(|e| anyhow!("COBS decode error: {:?}", e))?;
-
-                match from_bytes::<McuToHost>(&frame_data[..decoded_len]) {
-                    Ok(mcu_msg) => {
-                        Self::handle_mcu_message(&telemetry_broadcaster, &machine_state, mcu_msg).await?;
-                    }
-                    Err(e) => {
-                        error!("Postcard deserialize error: {:?}", e);
+                if !frame_data.is_empty() {
+                    match decode_in_place(frame_data) {
+                        Ok(decoded_len) => {
+                            match from_bytes::<McuToHost>(&frame_data[..decoded_len]) {
+                                Ok(mcu_msg) => {
+                                    if let Err(e) = Self::handle_mcu_message(&telemetry_broadcaster, &machine_state, mcu_msg).await {
+                                        error!("Error handling MCU message: {:?}", e);
+                                    }
+                                }
+                                Err(e) => {
+                                    error!("Postcard deserialize error: {:?}", e);
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            error!("COBS decode error: {:?}", e);
+                        }
                     }
                 }
 
@@ -165,17 +181,15 @@ impl SerialBridge {
             }
 
             if read_pos >= cobs_buf.len() {
-                warn!("COBS buffer overflow. Dropping data.");
+                warn!("COBS buffer overflow. Resetting buffer.");
                 read_pos = 0;
             }
         }
     }
 
     async fn write_loop(cmd_rx: &mut mpsc::Receiver<HostToMcu>, writer: &mut (impl AsyncWriteExt + Unpin)) -> Result<()> {
-        loop {
-            let cmd = cmd_rx.recv().await.ok_or_else(|| anyhow!("MCU command channel closed"))?;
+        while let Some(cmd) = cmd_rx.recv().await {
             info!("Sending command to MCU: {:?}", cmd);
-
             let used = to_allocvec_cobs(&cmd).map_err(|e| anyhow!("Postcard serialize error: {:?}", e))?;
 
             match writer.write_all(&used).await {
@@ -186,6 +200,7 @@ impl SerialBridge {
                 }
             }
         }
+        Ok(())
     }
 
     async fn handle_mcu_message(
@@ -198,12 +213,13 @@ impl SerialBridge {
                 let mut state = machine_state.write().await;
                 state.nozzle_temp = telemetry.nozzle_temp;
                 state.bed_temp = telemetry.bed_temp;
+                state.toolhead.position[0] = telemetry.x_pos as f64;
+                state.toolhead.position[1] = telemetry.y_pos as f64;
+                state.toolhead.position[2] = telemetry.z_pos as f64;
                 drop(state);
 
                 let json_telemetry = serde_json::to_value(&telemetry)?;
-                if let Err(e) = telemetry_broadcaster.send(json_telemetry) {
-                    error!("Failed to send telemetry to broadcaster: {}", e);
-                }
+                let _ = telemetry_broadcaster.send(json_telemetry);
             }
             McuToHost::Response(response) => {
                 info!("Received MCU response: {:?}", response);

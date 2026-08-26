@@ -2,7 +2,7 @@ pub mod models;
 
 use anyhow::Result;
 use surrealdb::{
-    engine::local::{Db, SurrealKV},
+    engine::local::{Db, SurrealKv},
     Surreal,
 };
 use thiserror::Error;
@@ -25,59 +25,25 @@ pub struct Database {
 
 impl Database {
     pub async fn new(path: &str) -> Result<Self, HostError> {
-        let db = Surreal::new::<SurrealKV>(path).await?;
+        let db = Surreal::new::<SurrealKv>(path).await?;
         db.use_ns("r_klipp").use_db("host_data").await?;
         Ok(Self { db })
     }
 
     pub async fn init_schema(&self) -> Result<(), HostError> {
-        // Define tables and indexes
         // MachineConfig table
         self.db
-            .query("DEFINE TABLE machine_config SCHEMAFULL;")
-            .await?;
-        self.db
-            .query("DEFINE FIELD name ON TABLE machine_config TYPE string;")
-            .await?;
-        self.db
-            .query("DEFINE FIELD config ON TABLE machine_config TYPE object;")
+            .query("DEFINE TABLE machine_config SCHEMALESS;")
             .await?;
 
         // GCodeFile table
         self.db
-            .query("DEFINE TABLE gcode_file SCHEMAFULL;")
-            .await?;
-        self.db
-            .query("DEFINE FIELD path ON TABLE gcode_file TYPE string;")
-            .await?;
-        self.db
-            .query("DEFINE FIELD size ON TABLE gcode_file TYPE int;")
-            .await?;
-        self.db
-            .query("DEFINE FIELD upload_date ON TABLE gcode_file TYPE datetime;")
-            .await?;
-        self.db
-            .query("DEFINE FIELD metadata ON TABLE gcode_file TYPE object;")
-            .await?;
-        self.db
-            .query("DEFINE INDEX unique_path ON TABLE gcode_file COLUMNS path UNIQUE;")
+            .query("DEFINE TABLE gcode_file SCHEMALESS;")
             .await?;
 
         // PrintHistory table
         self.db
-            .query("DEFINE TABLE print_history SCHEMAFULL;")
-            .await?;
-        self.db
-            .query("DEFINE FIELD start_time ON TABLE print_history TYPE datetime;")
-            .await?;
-        self.db
-            .query("DEFINE FIELD end_time ON TABLE print_history TYPE datetime;")
-            .await?;
-        self.db
-            .query("DEFINE FIELD status ON TABLE print_history TYPE string;")
-            .await?;
-        self.db
-            .query("DEFINE FIELD telemetry_summary ON TABLE print_history TYPE object;")
+            .query("DEFINE TABLE print_history SCHEMALESS;")
             .await?;
 
         Ok(())
