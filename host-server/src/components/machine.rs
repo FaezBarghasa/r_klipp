@@ -61,12 +61,16 @@ impl MachineManager {
             .collect::<Vec<&str>>()
             .join(" ");
 
+        let cpu_count = std::thread::available_parallelism()
+            .map(|n| n.get())
+            .unwrap_or(4);
+
         let info = SystemInfo {
             hostname,
             os,
             kernel,
             cpu_info: SystemCpuInfo {
-                cpu_count: num_cpus::get(),
+                cpu_count,
                 total_memory_mb: 2048,
                 available_memory_mb: 1450,
                 cpu_usage_percent: 12.5,
@@ -81,8 +85,12 @@ impl MachineManager {
     }
 
     pub async fn get_proc_stats(&self) -> SystemCpuInfo {
+        let cpu_count = std::thread::available_parallelism()
+            .map(|n| n.get())
+            .unwrap_or(4);
+
         SystemCpuInfo {
-            cpu_count: num_cpus::get(),
+            cpu_count,
             total_memory_mb: 2048,
             available_memory_mb: 1420,
             cpu_usage_percent: 14.8,
