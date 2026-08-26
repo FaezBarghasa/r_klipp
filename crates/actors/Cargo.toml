@@ -6,6 +6,6 @@ edition = "2024"
 [dependencies]
 hal = { path = "../hal" }
 comms = { path = "../comms" }
-heapless = "0.8.0"
-embassy-time = { version = "0.3.2", features = ["defmt"] }
+heapless = "0.9.3"
+embassy-time = { version = "0.5.1", features = ["defmt"] }
 kinematics = { path = "../kinematics" }

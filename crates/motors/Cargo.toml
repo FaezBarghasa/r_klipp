@@ -11,20 +11,17 @@ embassy-time = { version = "0.5.1", features = [
     "defmt",
     "defmt-timestamp-uptime",
 ] }
+embassy-sync = "0.8.0"
 [target.'cfg(target_arch = "arm")'.dependencies]
 embassy-executor = { version = "0.10.0", features = [
-    "task-arena-size-32768",
-    "arch-cortex-m",
+    "platform-cortex-m",
     "executor-interrupt",
-    "integrated-timers",
 ] }
 
 [target.'cfg(not(target_arch = "arm"))'.dependencies]
 embassy-executor = { version = "0.10.0", features = [
-    "task-arena-size-32768",
-    "arch-std",
+    "platform-std",
     "executor-thread",
-    "integrated-timers",
 ] }
 embedded-hal-async = "1.0.0"
 

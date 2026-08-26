@@ -7,6 +7,6 @@ edition = "2024"
 experimental = []
 
 [dependencies]
-heapless = "0.8.0"
-nalgebra = { version = "0.32.3", default-features = false, features = ["libm"] }
-log = "0.4.17"
+heapless = "0.9.3"
+nalgebra = { version = "0.35.0", default-features = false, features = ["libm"] }
+log = "0.4.34"

@@ -5,5 +5,5 @@ edition = "2024"
 
 [dependencies]
 r_klipp_api = { path = "../r_klipp_api" }
-heapless = "0.8"
+heapless = "0.9.3"
 micromath = "2.1.0"

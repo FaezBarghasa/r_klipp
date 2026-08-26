@@ -1,0 +1,354 @@
+{
+  "actix": {
+    "max": "0.13.5",
+    "stable": "0.13.5"
+  },
+  "actix-cors": {
+    "max": "0.7.2",
+    "stable": "0.7.2"
+  },
+  "actix-multipart": {
+    "max": "0.8.1",
+    "stable": "0.8.1"
+  },
+  "actix-rt": {
+    "max": "2.12.0",
+    "stable": "2.12.0"
+  },
+  "actix-web": {
+    "max": "4.15.0",
+    "stable": "4.15.0"
+  },
+  "actix-web-actors": {
+    "max": "4.3.1+deprecated",
+    "stable": "4.3.1+deprecated"
+  },
+  "actix-ws": {
+    "max": "0.4.0",
+    "stable": "0.4.0"
+  },
+  "anyhow": {
+    "max": "1.0.104",
+    "stable": "1.0.104"
+  },
+  "approx": {
+    "max": "0.6.0-rc2",
+    "stable": "0.5.1"
+  },
+  "async-trait": {
+    "max": "0.1.92",
+    "stable": "0.1.92"
+  },
+  "atomic_float": {
+    "max": "1.1.0",
+    "stable": "1.1.0"
+  },
+  "axum": {
+    "max": "0.8.9",
+    "stable": "0.8.9"
+  },
+  "bitfield": {
+    "max": "0.19.5",
+    "stable": "0.19.5"
+  },
+  "bytes": {
+    "max": "1.12.1",
+    "stable": "1.12.1"
+  },
+  "chrono": {
+    "max": "0.4.45",
+    "stable": "0.4.45"
+  },
+  "clap": {
+    "max": "4.6.6",
+    "stable": "4.6.6"
+  },
+  "cobs": {
+    "max": "0.5.1",
+    "stable": "0.5.1"
+  },
+  "configparser": {
+    "max": "3.2.0",
+    "stable": "3.2.0"
+  },
+  "cortex-m": {
+    "max": "0.7.9",
+    "stable": "0.7.9"
+  },
+  "cortex-m-rt": {
+    "max": "0.7.6",
+    "stable": "0.7.6"
+  },
+  "cortex-m-semihosting": {
+    "max": "0.6.0",
+    "stable": "0.6.0"
+  },
+  "crc": {
+    "max": "3.4.0",
+    "stable": "3.4.0"
+  },
+  "criterion": {
+    "max": "0.8.2",
+    "stable": "0.8.2"
+  },
+  "crossbeam-channel": {
+    "max": "0.5.16",
+    "stable": "0.5.16"
+  },
+  "csv": {
+    "max": "1.4.0",
+    "stable": "1.4.0"
+  },
+  "dashmap": {
+    "max": "7.0.0-rc2",
+    "stable": "6.2.1"
+  },
+  "defmt": {
+    "max": "1.1.1",
+    "stable": "1.1.1"
+  },
+  "defmt-rtt": {
+    "max": "1.3.0",
+    "stable": "1.3.0"
+  },
+  "dioxus": {
+    "max": "0.8.0-alpha.1",
+    "stable": "0.7.10"
+  },
+  "embassy-executor": {
+    "max": "0.10.0",
+    "stable": "0.10.0"
+  },
+  "embassy-stm32": {
+    "max": "0.6.0",
+    "stable": "0.6.0"
+  },
+  "embassy-sync": {
+    "max": "0.8.0",
+    "stable": "0.8.0"
+  },
+  "embassy-time": {
+    "max": "0.5.1",
+    "stable": "0.5.1"
+  },
+  "embedded-hal": {
+    "max": "1.0.0",
+    "stable": "1.0.0"
+  },
+  "embedded-hal-async": {
+    "max": "1.0.0",
+    "stable": "1.0.0"
+  },
+  "embedded-hal-mock": {
+    "max": "0.11.1",
+    "stable": "0.11.1"
+  },
+  "embedded-hal-nb": {
+    "max": "1.0.0",
+    "stable": "1.0.0"
+  },
+  "env_logger": {
+    "max": "0.11.11",
+    "stable": "0.11.11"
+  },
+  "fixed": {
+    "max": "2.0.0-alpha.28.0",
+    "stable": "1.31.0"
+  },
+  "float-cmp": {
+    "max": "0.10.0",
+    "stable": "0.10.0"
+  },
+  "futures": {
+    "max": "0.3.34",
+    "stable": "0.3.34"
+  },
+  "futures-util": {
+    "max": "0.3.34",
+    "stable": "0.3.34"
+  },
+  "heapless": {
+    "max": "0.9.3",
+    "stable": "0.9.3"
+  },
+  "hostname": {
+    "max": "0.4.2",
+    "stable": "0.4.2"
+  },
+  "lazy_static": {
+    "max": "1.5.0",
+    "stable": "1.5.0"
+  },
+  "lexical-core": {
+    "max": "1.0.6",
+    "stable": "1.0.6"
+  },
+  "libm": {
+    "max": "0.2.16",
+    "stable": "0.2.16"
+  },
+  "log": {
+    "max": "0.4.34",
+    "stable": "0.4.34"
+  },
+  "memmap2": {
+    "max": "0.9.11",
+    "stable": "0.9.11"
+  },
+  "micromath": {
+    "max": "2.1.0",
+    "stable": "2.1.0"
+  },
+  "mime": {
+    "max": "0.3.17",
+    "stable": "0.3.17"
+  },
+  "minijinja": {
+    "max": "3.0.0-alpha.0",
+    "stable": "2.24.0"
+  },
+  "nalgebra": {
+    "max": "0.35.0",
+    "stable": "0.35.0"
+  },
+  "nb": {
+    "max": "1.1.0",
+    "stable": "1.1.0"
+  },
+  "nom": {
+    "max": "8.0.0",
+    "stable": "8.0.0"
+  },
+  "num-traits": {
+    "max": "0.2.19",
+    "stable": "0.2.19"
+  },
+  "panic-halt": {
+    "max": "1.0.0",
+    "stable": "1.0.0"
+  },
+  "panic-probe": {
+    "max": "1.0.0",
+    "stable": "1.0.0"
+  },
+  "parking_lot": {
+    "max": "0.12.5",
+    "stable": "0.12.5"
+  },
+  "portable-atomic": {
+    "max": "1.15.0",
+    "stable": "1.15.0"
+  },
+  "postcard": {
+    "max": "1.1.3",
+    "stable": "1.1.3"
+  },
+  "proptest": {
+    "max": "1.11.0",
+    "stable": "1.11.0"
+  },
+  "rand": {
+    "max": "0.10.2",
+    "stable": "0.10.2"
+  },
+  "regex": {
+    "max": "1.13.1",
+    "stable": "1.13.1"
+  },
+  "reqwest": {
+    "max": "0.13.4",
+    "stable": "0.13.4"
+  },
+  "rhai": {
+    "max": "1.26.0",
+    "stable": "1.26.0"
+  },
+  "rtic": {
+    "max": "2.3.1",
+    "stable": "2.3.1"
+  },
+  "rtic-monotonics": {
+    "max": "2.2.1",
+    "stable": "2.2.1"
+  },
+  "rustfft": {
+    "max": "6.4.1",
+    "stable": "6.4.1"
+  },
+  "serde": {
+    "max": "1.0.229",
+    "stable": "1.0.229"
+  },
+  "serde_json": {
+    "max": "1.0.151",
+    "stable": "1.0.151"
+  },
+  "slint": {
+    "max": "1.17.1",
+    "stable": "1.17.1"
+  },
+  "slint-build": {
+    "max": "1.17.1",
+    "stable": "1.17.1"
+  },
+  "smallvec": {
+    "max": "2.0.0-alpha.12",
+    "stable": "1.15.2"
+  },
+  "stm32-metapac": {
+    "max": "21.0.0",
+    "stable": "21.0.0"
+  },
+  "stm32f4xx-hal": {
+    "max": "0.23.0",
+    "stable": "0.23.0"
+  },
+  "surrealdb": {
+    "max": "3.3.0-beta.3",
+    "stable": "3.2.4"
+  },
+  "tempfile": {
+    "max": "3.27.0",
+    "stable": "3.27.0"
+  },
+  "thiserror": {
+    "max": "2.0.20",
+    "stable": "2.0.20"
+  },
+  "tokio": {
+    "max": "1.53.1",
+    "stable": "1.53.1"
+  },
+  "tokio-serial": {
+    "max": "5.5.0",
+    "stable": "5.5.0"
+  },
+  "tokio-tungstenite": {
+    "max": "0.30.0",
+    "stable": "0.30.0"
+  },
+  "tokio-util": {
+    "max": "0.7.19",
+    "stable": "0.7.19"
+  },
+  "tracing": {
+    "max": "0.1.44",
+    "stable": "0.1.44"
+  },
+  "tracing-subscriber": {
+    "max": "0.3.23",
+    "stable": "0.3.23"
+  },
+  "url": {
+    "max": "2.5.8",
+    "stable": "2.5.8"
+  },
+  "urlencoding": {
+    "max": "2.1.3",
+    "stable": "2.1.3"
+  },
+  "uuid": {
+    "max": "1.25.0",
+    "stable": "1.25.0"
+  }
+}

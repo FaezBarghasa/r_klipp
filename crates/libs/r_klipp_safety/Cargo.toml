@@ -5,10 +5,13 @@ edition = "2024"
 
 [dependencies]
 r_klipp_api = { path = "../r_klipp_api" }
-heapless = "0.8.0"
+heapless = "0.9.3"
 micromath = "2.1.0"
-fixed = { version = "1.23.1", features = ["serde"] }
-embassy-time = { version = "0.3.0", features = ["defmt", "defmt-timestamp-uptime"] }
+fixed = { version = "1.31.0", features = ["serde"] }
+embassy-time = { version = "0.5.1", features = [
+    "defmt",
+    "defmt-timestamp-uptime",
+] }
 
 [features]
 default = []

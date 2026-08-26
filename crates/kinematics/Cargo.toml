@@ -5,6 +5,6 @@ edition = "2024"
 
 [dependencies]
 micromath = "2.1.0"
-libm = "0.2"
-nalgebra = { version = "0.33", default-features = false, features = ["libm"] }
+libm = "0.2.16"
+nalgebra = { version = "0.35.0", default-features = false, features = ["libm"] }
 heapless = "0.9.3"

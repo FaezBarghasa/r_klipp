@@ -10,7 +10,7 @@ description = "A no_std driver for Trinamic TMC stepper motor drivers (e.g., TMC
 embedded-hal = { workspace = true }
 embedded-hal-nb = { workspace = true }
 nb = { workspace = true }
-bitfield = "0.14.0"
+bitfield = "0.19.5"
 
 [dev-dependencies]
 embedded-hal-mock = { workspace = true }

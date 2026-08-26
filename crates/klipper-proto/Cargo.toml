@@ -4,13 +4,13 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-serde = { version = "1.0", default-features = false, features = [
+serde = { version = "1.0.229", default-features = false, features = [
     "derive",
     "alloc",
 ] }
-crc = "3.2.1"
+crc = "3.4.0"
 heapless = "0.9.3"
-libm = "0.2"
+libm = "0.2.16"
 
 [features]
 default = ["std"]
