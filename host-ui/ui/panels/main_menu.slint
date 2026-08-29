@@ -253,7 +253,7 @@ export component MainMenuPanel inherits BasePanel {
                 }
 
                 KlipperMenuTile {
-                    icon: @image-url("../icons/hotend.svg");
+                    icon: @image-url("../icons/extrude.svg");
                     label: "Extrude";
                     accent-color: #ff8f00;
                     clicked => { root.menu-selected("extrude"); }
@@ -270,28 +270,28 @@ export component MainMenuPanel inherits BasePanel {
             // Row 1: Console, Files, Bed Level / Mesh, Z Calibrate
             Row {
                 KlipperMenuTile {
-                    icon: @image-url("../icons/macros.svg");
+                    icon: @image-url("../icons/console.svg");
                     label: "Console";
                     accent-color: #66bb6a;
                     clicked => { root.menu-selected("console"); }
                 }
 
                 KlipperMenuTile {
-                    icon: @image-url("../icons/print.svg");
+                    icon: @image-url("../icons/files.svg");
                     label: "Print Files";
                     accent-color: #ffa726;
                     clicked => { root.menu-selected("files"); }
                 }
 
                 KlipperMenuTile {
-                    icon: @image-url("../icons/level.svg");
+                    icon: @image-url("../icons/bed-level.svg");
                     label: "Bed Level";
                     accent-color: #26c6da;
                     clicked => { root.menu-selected("bed_level"); }
                 }
 
                 KlipperMenuTile {
-                    icon: @image-url("../icons/tune.svg");
+                    icon: @image-url("../icons/fine-tune.svg");
                     label: "Fine Tune";
                     accent-color: #ab47bc;
                     clicked => { root.menu-selected("fine_tune"); }
@@ -301,7 +301,7 @@ export component MainMenuPanel inherits BasePanel {
             // Row 2: Macros, Settings, System, Power
             Row {
                 KlipperMenuTile {
-                    icon: @image-url("../icons/macros.svg");
+                    icon: @image-url("../icons/custom-script.svg");
                     label: "Macros";
                     accent-color: #7e57c2;
                     clicked => { root.menu-selected("gcode_macros"); }

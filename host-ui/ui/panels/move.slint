@@ -75,7 +75,7 @@ export component MovePanel inherits Rectangle {
                     Rectangle { width: 64px; height: 48px; } // spacer
 
                     IconButton {
-                        icon: @image-url("../icons/move.svg");
+                        icon: @image-url("../icons/arrow-up.svg");
                         text: "Y+";
                         clicked => { root.jog-move("Y", root.jog-increment); }
                     }
@@ -88,7 +88,7 @@ export component MovePanel inherits Rectangle {
                     alignment: center;
 
                     IconButton {
-                        icon: @image-url("../icons/move.svg");
+                        icon: @image-url("../icons/arrow-left.svg");
                         text: "X-";
                         clicked => { root.jog-move("X", -root.jog-increment); }
                     }
@@ -100,7 +100,7 @@ export component MovePanel inherits Rectangle {
                     }
 
                     IconButton {
-                        icon: @image-url("../icons/move.svg");
+                        icon: @image-url("../icons/arrow-right.svg");
                         text: "X+";
                         clicked => { root.jog-move("X", root.jog-increment); }
                     }
@@ -113,7 +113,7 @@ export component MovePanel inherits Rectangle {
                     Rectangle { width: 64px; height: 48px; } // spacer
 
                     IconButton {
-                        icon: @image-url("../icons/move.svg");
+                        icon: @image-url("../icons/arrow-down.svg");
                         text: "Y-";
                         clicked => { root.jog-move("Y", -root.jog-increment); }
                     }
@@ -129,19 +129,19 @@ export component MovePanel inherits Rectangle {
                 width: 72px;
 
                 IconButton {
-                    icon: @image-url("../icons/move.svg");
+                    icon: @image-url("../icons/arrow-up.svg");
                     text: "Z+";
                     clicked => { root.jog-move("Z", root.jog-increment); }
                 }
 
                 IconButton {
-                    icon: @image-url("../icons/home.svg");
+                    icon: @image-url("../icons/home-z.svg");
                     text: "Z";
                     clicked => { root.home-axis("z"); }
                 }
 
                 IconButton {
-                    icon: @image-url("../icons/move.svg");
+                    icon: @image-url("../icons/arrow-down.svg");
                     text: "Z-";
                     clicked => { root.jog-move("Z", -root.jog-increment); }
                 }
