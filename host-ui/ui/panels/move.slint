@@ -3,9 +3,14 @@ import { L10n } from "./temperature.slint";
 
 component IconButton inherits Rectangle {
     in-out property <string> text;
+    in property <image> icon;
     in-out property <bool> active: false;
-    callback clicked;
+    callback clicked();
 
+    min-width: 56px;
+    min-height: 48px;
+    width: 64px;
+    height: 48px;
     background: self.active ? Theme.active : (touch.pressed ? Theme.active : Theme.button-bg);
     border-radius: 6px;
     border-width: 1px;
@@ -15,70 +20,155 @@ component IconButton inherits Rectangle {
         clicked => { root.clicked(); }
     }
 
-    Text {
-        text: root.text;
-        color: Theme.text;
-        font-size: 14px;
-        horizontal-alignment: center;
-        vertical-alignment: center;
+    VerticalLayout {
+        alignment: center;
+        spacing: 2px;
+
+        if root.icon.width > 0px : Image {
+            source: root.icon;
+            width: 20px;
+            height: 20px;
+            image-fit: contain;
+        }
+
+        Text {
+            text: root.text;
+            color: Theme.text;
+            font-size: 13px;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
     }
 }
 
-export component MovePanel inherits HorizontalLayout {
+export component MovePanel inherits Rectangle {
     in-out property <float> jog-increment: 10.0;
 
     callback jog-move(string, float);
     callback home-axis(string);
 
-    padding: 12px;
-    spacing: 12px;
+    background: Theme.bg;
 
-    // Jogging grid
     VerticalLayout {
+        padding: 12px;
         spacing: 12px;
-        Text { text: L10n.translate("Move Toolhead"); color: Theme.text; font-weight: 700; }
+
+        Text {
+            text: L10n.translate("Move Toolhead");
+            color: Theme.text;
+            font-size: 15px;
+            font-weight: 700;
+        }
+
+        // XY + Z columns layout (KlipperScreen-like)
         HorizontalLayout {
-            spacing: 8px;
-            // Jog left/right/up/down
+            spacing: 16px;
+            alignment: center;
+
+            // XY cross
             VerticalLayout {
                 spacing: 8px;
                 alignment: center;
-                HorizontalLayout {
-                    alignment: center;
-                    IconButton { text: "Y+"; clicked => { root.jog-move("Y", root.jog-increment); } }
-                }
+
                 HorizontalLayout {
                     spacing: 8px;
-                    IconButton { text: "X-"; clicked => { root.jog-move("X", -root.jog-increment); } }
-                    IconButton { text: L10n.translate("Home All"); clicked => { root.home-axis("all"); } }
-                    IconButton { text: "X+"; clicked => { root.jog-move("X", root.jog-increment); } }
-                }
-                HorizontalLayout {
                     alignment: center;
-                    IconButton { text: "Y-"; clicked => { root.jog-move("Y", -root.jog-increment); } }
+
+                    Rectangle { width: 64px; height: 48px; } // spacer
+
+                    IconButton {
+                        icon: @image-url("../icons/move.svg");
+                        text: "Y+";
+                        clicked => { root.jog-move("Y", root.jog-increment); }
+                    }
+
+                    Rectangle { width: 64px; height: 48px; } // spacer
+                }
+
+                HorizontalLayout {
+                    spacing: 8px;
+                    alignment: center;
+
+                    IconButton {
+                        icon: @image-url("../icons/move.svg");
+                        text: "X-";
+                        clicked => { root.jog-move("X", -root.jog-increment); }
+                    }
+
+                    IconButton {
+                        icon: @image-url("../icons/home.svg");
+                        text: L10n.translate("Home All");
+                        clicked => { root.home-axis("all"); }
+                    }
+
+                    IconButton {
+                        icon: @image-url("../icons/move.svg");
+                        text: "X+";
+                        clicked => { root.jog-move("X", root.jog-increment); }
+                    }
+                }
+
+                HorizontalLayout {
+                    spacing: 8px;
+                    alignment: center;
+
+                    Rectangle { width: 64px; height: 48px; } // spacer
+
+                    IconButton {
+                        icon: @image-url("../icons/move.svg");
+                        text: "Y-";
+                        clicked => { root.jog-move("Y", -root.jog-increment); }
+                    }
+
+                    Rectangle { width: 64px; height: 48px; } // spacer
                 }
             }
 
-            // Z controls
+            // Z column
             VerticalLayout {
                 spacing: 8px;
-                width: 100px;
                 alignment: center;
-                IconButton { text: "Z+"; clicked => { root.jog-move("Z", root.jog-increment); } }
-                IconButton { text: "Z-"; clicked => { root.jog-move("Z", -root.jog-increment); } }
+                width: 72px;
+
+                IconButton {
+                    icon: @image-url("../icons/move.svg");
+                    text: "Z+";
+                    clicked => { root.jog-move("Z", root.jog-increment); }
+                }
+
+                IconButton {
+                    icon: @image-url("../icons/home.svg");
+                    text: "Z";
+                    clicked => { root.home-axis("z"); }
+                }
+
+                IconButton {
+                    icon: @image-url("../icons/move.svg");
+                    text: "Z-";
+                    clicked => { root.jog-move("Z", -root.jog-increment); }
+                }
             }
         }
-    }
 
-    // Increments sidebar
-    VerticalLayout {
-        width: 120px;
-        spacing: 8px;
-        Text { text: L10n.translate("Distance"); color: Theme.text; font-size: 14px; }
-        IconButton { text: "0.1mm"; active: root.jog-increment == 0.1; clicked => { root.jog-increment = 0.1; } }
-        IconButton { text: "1mm"; active: root.jog-increment == 1.0; clicked => { root.jog-increment = 1.0; } }
-        IconButton { text: "10mm"; active: root.jog-increment == 10.0; clicked => { root.jog-increment = 10.0; } }
-        IconButton { text: "50mm"; active: root.jog-increment == 50.0; clicked => { root.jog-increment = 50.0; } }
-        IconButton { text: "100mm"; active: root.jog-increment == 100.0; clicked => { root.jog-increment = 100.0; } }
+        // Distance selector
+        VerticalLayout {
+            spacing: 8px;
+
+            Text {
+                text: L10n.translate("Distance");
+                color: Theme.text;
+                font-size: 14px;
+            }
+
+            HorizontalLayout {
+                spacing: 8px;
+
+                IconButton { text: "0.1mm"; active: root.jog-increment == 0.1; clicked => { root.jog-increment = 0.1; } }
+                IconButton { text: "1mm"; active: root.jog-increment == 1.0; clicked => { root.jog-increment = 1.0; } }
+                IconButton { text: "10mm"; active: root.jog-increment == 10.0; clicked => { root.jog-increment = 10.0; } }
+                IconButton { text: "50mm"; active: root.jog-increment == 50.0; clicked => { root.jog-increment = 50.0; } }
+                IconButton { text: "100mm"; active: root.jog-increment == 100.0; clicked => { root.jog-increment = 100.0; } }
+            }
+        }
     }
 }

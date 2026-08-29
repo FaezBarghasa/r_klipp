@@ -43,10 +43,11 @@ export component CameraPanel inherits BasePanel {
 
                         HorizontalLayout {
                             spacing: 15px;
-                            Text {
-                                text: "📷";
-                                font-size: 28px;
-                                vertical-alignment: center;
+                            Image {
+                                source: @image-url("../icons/camera.svg");
+                                width: 28px;
+                                height: 28px;
+                                image-fit: contain;
                             }
                             Text {
                                 text: cam.name;

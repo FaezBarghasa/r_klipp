@@ -109,7 +109,7 @@ export component BedMeshPanel inherits BasePanel {
                                             background: Theme.panel-bg;
                                             border-radius: 3px;
                                             TouchArea { clicked => { root.save-profile(profile.name); } }
-                                            Text { text: "💾"; horizontal-alignment: center; vertical-alignment: center; }
+                                            Image { source: @image-url("../icons/save.svg"); width: 18px; height: 18px; image-fit: contain; }
                                         }
                                         Rectangle {
                                             width: 30px;
@@ -117,7 +117,7 @@ export component BedMeshPanel inherits BasePanel {
                                             background: Theme.error;
                                             border-radius: 3px;
                                             TouchArea { clicked => { root.delete-profile(profile.name); } }
-                                            Text { text: "🗑"; horizontal-alignment: center; vertical-alignment: center; }
+                                            Image { source: @image-url("../icons/trash.svg"); width: 18px; height: 18px; image-fit: contain; }
                                         }
                                     }
                                 }

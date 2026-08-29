@@ -1,10 +1,1 @@
-{
-  "version": 2,
-  "tasks": [],
-  "lastVerification": {
-    "timestamp": "2026-08-26T13:00:04.749Z",
-    "command": "cargo test",
-    "success": false,
-    "output": "Compiling critical-section v1.2.0\nerror[E0428]: the name `RawRestoreStateInner` is defined multiple times\n  --> /home/jrad/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/critical-section-1.2.0/src/lib.rs:96:1\n   |\n87 | type RawRestoreStateInner = bool;\n   | --------------------------------- previous definition of the type `RawRestoreStateInner` here\n...\n96 | type RawRestoreStateInner = u32;\n   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `RawRestoreStateInner` redefined here\n   |\n   = note: `RawRestoreStateInner` must be defined only once in the type namespace of this module\n\nerror: You must set at most one of these Cargo features: restore-state-none, restore-state-bool, restore-state-u8, restore-state-u16, restore-state-u32, restore-state-u64, restore-state-usize\n  --> /home/jrad/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/critical-section-1.2.0/src/lib.rs:74:1\n   |\n74 | compile_error!(\"You must set at most one of these Cargo features: restore-state-none, restore-state-bool, restore-state-u8, restore-state-u16, restore-state-u32, restore-state-u64, restore-state-usize\");\n   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n   Compiling host-ui v0.1.0 (/home/jrad/RustroverProjects/r_klipp-workspace/r_klipp/host-ui)\n   Compiling rust-stemmers v1.2.0\n   Compiling ndarray-stats v0.5.1\nwarning: unused import: `libm`\n --> crates/motion/src/motion_tuner.rs:2:5\n  |\n2 | use libm;\n  |     ^^^^\n  |\n  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default\n\nwarning: unused import: `ControlMode`\n --> crates/motion/src/actors/thermal_actor.rs:3:48\n  |\n3 | use crate::smart_controller::{SmartController, ControlMode};\n  |                                                ^^^^^^^^^^^\n\nwarning: unused import: `ControlMode`\n --> crates/motion/src/actors/motion_actor.rs:3:48\n  |\n3 | use crate::smart_controller:"
-  }
-}
+{"version":2,"tasks":[],"lastVerification":{"timestamp":"2026-08-26T19:40:31.527Z","command":"echo ok","success":true,"output":"ok"}}

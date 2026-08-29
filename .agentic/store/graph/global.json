@@ -1,0 +1,32 @@
+{
+  "key": "global",
+  "data": [
+    {
+      "source": "developer",
+      "target": "wave1-icons-theme",
+      "relation": "assigned",
+      "metadata": {
+        "description": "Wave 1: Icons + Theme parity with KlipperScreen",
+        "timestamp": 1787772987849
+      }
+    },
+    {
+      "source": "llm",
+      "target": "opencode/muse-spark-1.2-contributor-free",
+      "relation": "cost",
+      "metadata": {
+        "costUsd": 0,
+        "timestamp": 1787773124843
+      }
+    },
+    {
+      "source": "wave1-icons-theme",
+      "target": "developer",
+      "relation": "failed_by",
+      "metadata": {
+        "timestamp": 1787773289359
+      }
+    }
+  ],
+  "updatedAt": "2026-08-26T19:41:29.359Z"
+}

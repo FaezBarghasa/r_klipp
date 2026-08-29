@@ -1,0 +1,13 @@
+{
+  "key": "global",
+  "data": [
+    {
+      "title": "Plan: Make touchscreen Slint UI exactly like KlipperScreen - 1:1 buttons, diagrams, ic",
+      "context": "Make touchscreen Slint UI exactly like KlipperScreen - 1:1 buttons, diagrams, icons, menus, functionalities, modules, components, pages. Analyze current host-ui gaps vs mainstream KlipperScreen (GTK/Python) and create waves to achieve pixel-perfect and UX parity. (3 subtasks)",
+      "sessionId": "ses_fc071606dffeZe5nnd88rMn0Ay",
+      "id": "dec-1787772947860-u95zka",
+      "timestamp": 1787772947860
+    }
+  ],
+  "updatedAt": "2026-08-26T19:35:47.860Z"
+}

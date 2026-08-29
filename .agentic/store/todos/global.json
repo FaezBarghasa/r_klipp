@@ -1,0 +1,16 @@
+{
+  "key": "global",
+  "data": [
+    {
+      "text": "[task] Delegated task wave1-icons-theme (developer) failed",
+      "priority": "medium",
+      "category": "task",
+      "sessionId": "ses_fc071606dffeZe5nnd88rMn0Ay",
+      "id": "todo-1787773289359-lavd",
+      "status": "pending",
+      "createdAt": 1787773289359,
+      "updatedAt": 1787773289359
+    }
+  ],
+  "updatedAt": "2026-08-26T19:41:29.359Z"
+}

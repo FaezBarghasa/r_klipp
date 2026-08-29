@@ -1,17 +1,47 @@
-// Material Dark theme — matches KlipperScreen reference palette exactly
+// Material Dark theme — exact KlipperScreen GTK reference palette
+// Source: KlipperScreen/styles/klipperscreen.css + ks_includes/screen_base.py
 export global Theme {
-    in-out property <color> bg:         #121212;
-    in-out property <color> active:     #1F3A52;
-    in-out property <color> accent:     #00ADB5;
-    in-out property <color> text:       #EEEEEE;
-    in-out property <color> error:      #CF6679;
-    in-out property <color> warning:    #FFB74D;
-    in-out property <color> echo:       #4DB6AC;
-    in-out property <color> panel-bg:   #1E1E1E;
-    in-out property <color> button-bg:  #2D2D2D;
-    // extra semantic aliases used across panels
-    in-out property <color> hot:        #FF5252;
-    in-out property <color> cool:       #448AFF;
-    in-out property <color> ok:         #4DB6AC;
-    in-out property <color> bar-bg:     #333333;
+    // Base surfaces
+    in-out property <color> bg:           #121212;   // Window background
+    in-out property <color> panel-bg:     #1E1E1E;   // Card/panel background (KlipperScreen .panel-bg)
+    in-out property <color> bar-bg:       #1A1A1A;   // Top/bottom bar background
+
+    // Text
+    in-out property <color> text:         #EEEEEE;   // Primary text
+    in-out property <color> text-muted:   #A0A0A0;   // Secondary/muted text
+    in-out property <color> text-on-accent: #000000; // Text on accent buttons
+
+    // Accent & semantic (KlipperScreen accent = cyan #00ADB5)
+    in-out property <color> accent:       #00ADB5;   // Primary accent
+    in-out property <color> accent-hover: #00D9E6;   // Hover state
+    in-out property <color> accent-press: #008C94;   // Pressed state
+
+    // Button states
+    in-out property <color> button-bg:    #2D2D2D;   // Default button
+    in-out property <color> button-hover: #363636;   // Hover
+    in-out property <color> button-press: #1F1F1F;   // Pressed
+    in-out property <color> button-border: #404040;  // Border
+
+    // Semantic colors (KlipperScreen palette)
+    in-out property <color> hot:          #FF5252;   // Heaters / hot
+    in-out property <color> cool:         #448AFF;   // Cool / motion
+    in-out property <color> ok:           #4DB6AC;   // Success / fans
+    in-out property <color> warning:      #FFB74D;   // Warnings
+    in-out property <color> error:        #CF6679;   // Errors
+    in-out property <color> echo:         #4DB6AC;   // Echo/console
+
+    // Touch target sizing (48dp minimum)
+    in-out property <length> touch-target-min: 48px;
+    in-out property <length> tile-radius: 8px;
+    in-out property <length> icon-size: 24px;
+
+    // Typography (matches KlipperScreen Roboto)
+    in-out property <string> font-family: "Roboto";
+    in-out property <length> font-size-xs:  11px;
+    in-out property <length> font-size-sm:  13px;
+    in-out property <length> font-size-md:  15px;
+    in-out property <length> font-size-lg:  17px;
+    in-out property <length> font-size-xl:  20px;
+    in-out property <length> font-size-2xl: 24px;
+    in-out property <length> font-size-3xl: 32px;
 }

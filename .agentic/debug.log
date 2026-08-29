@@ -1,0 +1,1 @@
+{"timestamp":"2026-08-26T19:40:16.760Z","source":"AgentRuntime","message":"Child session LLM failed, falling back to execute()","outputPreview":"[NO_LLM] No LLM available. Run within OpenCode for","childSessionId":"ses_fc06d163"}

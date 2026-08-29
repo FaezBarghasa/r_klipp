@@ -42,6 +42,20 @@
       <sourceFolder url="file://$MODULE_DIR$/crates/motors/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/crates/parser/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/crates/tools/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/bin/r_klipp_firmware/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/bin/r_klipp_host/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/kinematics/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/libs/r_klipp_api/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/libs/r_klipp_api/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/libs/r_klipp_motion/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/libs/r_klipp_safety/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/libs/r_klipp_thermal/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/parser/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/qemu-test-runner/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/host-server/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/host-server/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/host-ui/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/host-ui/tests" isTestSource="true" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>
     <orderEntry type="inheritedJdk" />
