@@ -176,7 +176,9 @@ export component MainMenuPanel inherits BasePanel {
                 }
 
                 Keypad {
-                    value <=> root.hotend-target-num;
+                    key-pressed(k) => {
+                        // Keypad input
+                    }
                 }
 
                 HorizontalLayout {
