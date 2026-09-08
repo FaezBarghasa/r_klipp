@@ -18,9 +18,8 @@ export component PowerPanel inherits BasePanel {
     callback toggle-device(string, bool);
 
     ScrollView {
-        padding: 15px;
-        
         VerticalLayout {
+            padding: 15px;
             spacing: 12px;
 
             for dev in root.devices : Rectangle {

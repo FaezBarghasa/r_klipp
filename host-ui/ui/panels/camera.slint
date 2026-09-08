@@ -19,9 +19,8 @@ export component CameraPanel inherits BasePanel {
     callback play-camera(string); // stream url
 
     ScrollView {
-        padding: 15px;
-        
         VerticalLayout {
+            padding: 15px;
             spacing: 12px;
 
             for cam in root.cameras : Rectangle {

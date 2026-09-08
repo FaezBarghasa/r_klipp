@@ -18,18 +18,17 @@ export component SystemPanel inherits BasePanel {
     in-out property <string> python-version: "3.9.2";
 
     ScrollView {
-        padding: 15px;
-        
         VerticalLayout {
+            padding: 15px;
             spacing: 15px;
 
             // System Load (CPU & RAM)
             Rectangle {
                 background: Theme.panel-bg;
                 border-radius: 5px;
-                padding: 15px;
                 
                 VerticalLayout {
+                    padding: 15px;
                     spacing: 10px;
                     Text { text: "System Load"; color: Theme.accent; font-size: 16px; font-weight: 700; }
                     
@@ -92,9 +91,9 @@ export component SystemPanel inherits BasePanel {
             Rectangle {
                 background: Theme.panel-bg;
                 border-radius: 5px;
-                padding: 15px;
                 
                 GridLayout {
+                    padding: 15px;
                     spacing: 12px;
                     
                     Row {
