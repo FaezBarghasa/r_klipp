@@ -14,5 +14,22 @@
 
 ---
 
-## 🎨 UI Definition
+## 🎨 UI Definition & Visual Gallery
+
 The graphical interface is defined declaratively in [`ui/main.slint`](ui/main.slint) and compiles directly into native Rust GUI types via `slint-build`.
+
+See the complete [🖼️ Visual Screenshots Gallery](../docs/screenshots.md) for all 29 panels and Playwright touch interactions.
+
+### Interface Previews
+
+| Main Menu (8-Tile Grid) | Jog & Motion Control (X/Y/Z) |
+| :---: | :---: |
+| ![Main Menu](../docs/img/screenshots/panel_main_menu.png) | ![Move Panel](../docs/img/screenshots/playwright_touch_move.png) |
+
+| Thermal Presets & Heating | Live Print Job Status |
+| :---: | :---: |
+| ![Temperature Panel](../docs/img/screenshots/playwright_touch_temperature.png) | ![Job Status Panel](../docs/img/screenshots/playwright_touch_job_status.png) |
+
+| Bed Mesh 3D Matrix | Z-Calibrate & Babystepping |
+| :---: | :---: |
+| ![Bed Mesh](../docs/img/screenshots/panel_bed_mesh.png) | ![Z-Calibrate](../docs/img/screenshots/panel_zcalibrate.png) |

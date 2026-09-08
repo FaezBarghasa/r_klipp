@@ -108,6 +108,7 @@ cargo run -p host-server
 ## 📖 Documentation Index
 
 - 📘 [Developer Guide](DEVELOPER_GUIDE.md): Architecture breakdown, build recipes, and flashing guides.
+- 🖼️ [Visual Screenshots Gallery](docs/screenshots.md): Complete visual overview of all 29 Slint GUI touchscreen panels and test captures.
 - 📐 [Architecture Deep Dive](docs/architecture.md): Complete system concurrency, DPLL math, and state machine diagrams.
 - 🛡️ [Safety & Interlock Protocols](docs/safety.md): Watchdog supervisors, probe latches, and runaway detection.
 - 📡 [Wire Protocol Specification](docs/protocol.md): Packet structures, COBS framing, and DPLL timestamping.
