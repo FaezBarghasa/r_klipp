@@ -23,9 +23,9 @@ export component JobStatusPanel inherits BasePanel {
         Rectangle {
             background: Theme.panel-bg;
             border-radius: 5px;
-            padding: 15px;
             
             VerticalLayout {
+                padding: 15px;
                 spacing: 10px;
                 Text { text: root.status; font-size: 24px; color: Theme.accent; horizontal-alignment: center; }
                 Text { text: root.filename; font-size: 18px; color: Theme.text; horizontal-alignment: center; }
@@ -36,9 +36,9 @@ export component JobStatusPanel inherits BasePanel {
         Rectangle {
             background: Theme.panel-bg;
             border-radius: 5px;
-            padding: 20px;
             
             VerticalLayout {
+                padding: 20px;
                 spacing: 20px;
                 
                 // Progress Bar Background

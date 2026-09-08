@@ -20,9 +20,8 @@ export component PinsPanel inherits BasePanel {
     callback pin-changed(string, float);
 
     ScrollView {
-        padding: 15px;
-        
         VerticalLayout {
+            padding: 15px;
             spacing: 15px;
 
             for pin in root.pins : Rectangle {
